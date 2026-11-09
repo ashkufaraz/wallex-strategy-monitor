@@ -1,0 +1,15 @@
+# Local runtime state; retain the empty data directory.
+/data/*
+!/data/.keep
+
+# Credentials and local configuration.
+.env
+.env.*
+!.env.example
+
+# Editors and operating-system files.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tmp
