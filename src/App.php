@@ -10,7 +10,24 @@ function recordAlert(array $s,string $version,string $event,int $at,float $price
 class Wallex {
  private array $cache=[];
  function __construct(private ?float $deadline=null) {}
- function get(string $path,array $params=[]):array {$url='https://api.wallex.ir'.$path.($params?'?'.http_build_query($params):'');$remaining=$this->deadline===null?20:(int)floor($this->deadline-microtime(true));if($remaining<1)throw new RuntimeException('Market request time budget exceeded; retry on next check');$ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>min(8,$remaining),CURLOPT_TIMEOUT=>min(20,$remaining),CURLOPT_FOLLOWLOCATION=>false,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_USERAGENT=>'WallexStrategyAlerts/1.0']);$raw=curl_exec($ch);$status=curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);if($raw===false || $status!==200) throw new RuntimeException('Wallex HTTP '.$status.' '.$error);$d=json_decode($raw,true,512,JSON_THROW_ON_ERROR);if(!is_array($d)) throw new RuntimeException('Invalid API response');return $d;}
+ protected function fetchResponse(string $url,int $remaining):string {
+  $ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>min(8,$remaining),CURLOPT_TIMEOUT=>min(20,$remaining),CURLOPT_FOLLOWLOCATION=>false,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_ENCODING=>'',CURLOPT_USERAGENT=>'WallexStrategyAlerts/1.0']);
+  $raw=curl_exec($ch);$status=curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);
+  if($raw===false||$status!==200)throw new RuntimeException('Wallex HTTP '.$status.' '.$error);
+  return $raw;
+ }
+ function get(string $path,array $params=[]):array {
+  $url='https://api.wallex.ir'.$path.($params?'?'.http_build_query($params):'');
+  $deadline=min($this->deadline??INF,microtime(true)+20);
+  for($attempt=0;$attempt<2;$attempt++){
+   $remaining=(int)floor($deadline-microtime(true));if($remaining<1)throw new RuntimeException('Market request time budget exceeded; retry on next check');
+   $raw=$this->fetchResponse($url,$remaining);
+   try{$d=json_decode($raw,true,512,JSON_THROW_ON_ERROR);}
+   catch(JsonException $e){if($attempt===0)continue;throw new RuntimeException('Invalid market JSON at '.$path.': '.$e->getMessage(),0,$e);}
+   if(!is_array($d))throw new RuntimeException('Invalid API response');return $d;
+  }
+  throw new RuntimeException('Invalid API response');
+ }
  function markets():array {return $this->cache['markets']??=$this->get('/v1/markets')['result']['symbols']??throw new RuntimeException('Markets missing');}
  function price(string $symbol):float {$m=$this->markets()[$symbol]??throw new RuntimeException('Market not found: '.$symbol);if(($m['quoteAsset']??null)!=='USDT') throw new RuntimeException('Market must be USDT');$v=$m['stats']['lastPrice']??null;if(!is_numeric($v)||!is_finite((float)$v)||(float)$v<=0) throw new RuntimeException('Invalid market price');return (float)$v;}
  function minutes(string $symbol,int $from,int $to):array {$key="$symbol:$from:$to";if(isset($this->cache[$key])) return $this->cache[$key];$out=[];

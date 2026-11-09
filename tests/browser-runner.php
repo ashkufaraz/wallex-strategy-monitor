@@ -24,3 +24,11 @@ try{
  verify($run(1101)['strategy_id']==='b','failed strategy does not starve others');
  verify($run(1102)['status']==='idle','failed checks are rate limited');
 }finally{unlink($path);}
+
+class JsonRetryWallex extends Wallex {
+ public int $calls=0; public bool $alwaysBad=false;
+ protected function fetchResponse(string $url,int $remaining):string {++$this->calls;return $this->calls===1||$this->alwaysBad?"{\"value\":\"bad\x00\"}":'{"value":74000}';}
+}
+$retry=new JsonRetryWallex();verify($retry->get('/test')['value']===74000&&$retry->calls===2,'malformed JSON retried without accepting corrupted data');
+$retry=new JsonRetryWallex();$retry->alwaysBad=true;try{$retry->get('/test');throw new RuntimeException('Expected JSON error');}catch(RuntimeException $e){verify(str_contains($e->getMessage(),'Invalid market JSON at /test')&&$retry->calls===2,'persistent malformed response has contextual bounded error');}
+$expired=new JsonRetryWallex(microtime(true)-1);try{$expired->get('/test');throw new RuntimeException('Expected budget error');}catch(RuntimeException $e){verify($expired->calls===0&&str_contains($e->getMessage(),'time budget'),'expired request budget prevents network access');}
