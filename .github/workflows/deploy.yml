@@ -1,0 +1,49 @@
+name: Test and deploy hosting
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: production-ftp
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install PHP test dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y php-cli php-curl php-sqlite3
+      - name: Run PHP and interface tests
+        run: |
+          php tests/all.php
+          node tests/notifications.js
+          node tests/trade.js
+          node tests/details.js
+          python3 tests/deployment.py
+  deploy:
+    needs: test
+    if: vars.FTP_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install PHP for password hashing
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y php-cli
+      - name: Build protected hosting package
+        env:
+          SITE_HOSTS: ${{ vars.SITE_HOSTS }}
+          PANEL_USERNAME: ${{ vars.PANEL_USERNAME || 'admin' }}
+          PANEL_PASSWORD: ${{ secrets.PANEL_PASSWORD }}
+        run: python3 deploy/build.py --output build-hosting
+      - name: Upload through FTPS
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/htdocs' }}
+        run: python3 deploy/upload.py --source build-hosting
