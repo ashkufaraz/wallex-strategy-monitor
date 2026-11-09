@@ -34,3 +34,13 @@ Integration checks include duplicate suppression, expiration, price invalidation
 Live exchange connectivity, browser interaction, and Windows notification delivery were not tested in this run. Adapter fixtures verify parsing and validation, not the current exchange API contract.
 
 Cancellation update: all 87 PHP checks passed, including 16 cancellation checks covering validation, persistent stopping across restart, reason snapshots, duplicate suppression, recovery, independent strategies, and cancellation precedence over entry/invalidation. Node notification and trade presentation tests passed. The active worker must be restarted to load updated PHP definitions.
+
+
+## InfinityFree transfer ? 2026-11-09
+
+- Verified FTPS authentication and `/htdocs` document root. The supplied domain directory `/wallex.free.nf/htdocs` does not exist in the FTP account.
+- Existing unrelated application files were preserved; uploaded 23 protected project files to `/htdocs/wallex`.
+- Intended panel URL: `https://wallex.free.nf/wallex/public/`. HTTPS verification currently fails; browser login and server PHP/database capabilities remain unverified.
+- PHP, Node interface suites and three deployment tests passed locally.
+- GitHub authentication renewed; deployment secrets configured for `/htdocs/wallex`. Automatic FTPS deployment enabled for pushes to main; website HTTPS and runtime verification remain pending.
+- Hosting panel credentials are stored only in ignored local `.env.hosting`. No permanent strategy worker is deployed on the free host.
