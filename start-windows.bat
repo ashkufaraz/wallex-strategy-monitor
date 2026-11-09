@@ -11,6 +11,6 @@ if errorlevel 1 (
  pause
  exit /b 1
 )
-start "Wallex Worker" cmd /k php worker.php
-start "Wallex Panel" cmd /k php -S 127.0.0.1:8080 -t public
-start "" http://127.0.0.1:8080
+start "Wallex Worker" /min cmd /k php worker.php
+start "Wallex Panel" /min cmd /k php -S 127.0.0.1:5078 -t public
+start "" http://127.0.0.1:5078

@@ -60,6 +60,8 @@ class DeploymentTests(unittest.TestCase):
             self.assertEqual(request('evil.example.com'), 'Host not allowed.')
             self.assertFalse(list((output / 'data').glob('auth-*')))
             self.assertIn('csrf', (output / 'public/api.php').read_text())
+            self.assertIn("define('HOSTING_BROWSER_CHECKS',true)", (output / 'public/api.php').read_text())
+            self.assertIn('public/browser-runner.js', [n for n, _ in uploader.inventory(output)])
 
     def test_invalid_inputs_and_nonempty_destination_rejected(self):
         with tempfile.TemporaryDirectory() as folder:

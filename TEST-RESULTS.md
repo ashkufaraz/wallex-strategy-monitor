@@ -51,3 +51,10 @@ Cancellation update: all 87 PHP checks passed, including 16 cancellation checks 
 - The authenticated InfinityFree domain dashboard explicitly reported the missing document root `wallex.free.nf/htdocs`. The earlier `/htdocs/wallex` upload was outside this domain document root.
 - Created `/wallex.free.nf/htdocs` through FTPS and corrected the repository FTP_REMOTE_DIR variable to this path. Existing `/htdocs` application files were preserved.
 - Correct panel URL is `https://wallex.free.nf/public/` (root redirects to public/). HTTPS and PHP runtime checks still required.
+
+
+## Browser checks and local startup ? 2026-11-09
+
+- Local PHP server and CLI worker started on 127.0.0.1:5078; API returned five strategies with current prices and no errors. Local host allowlist and Windows launcher now support port 5078.
+- Hosting package enables sequential browser-driven checks, one due strategy per request, 15-second network budget, per-strategy interval, shared lock and visible errors. No permanent PHP process is started by HTTP.
+- All PHP suites (including 10 new browser-runner assertions), Node interface suites and four deployment tests passed.

@@ -37,7 +37,7 @@ def build(destination, hosts, username, password, public_access=False):
     api = (destination / 'public' / 'api.php').read_text(encoding='utf-8')
     start = api.index("$host=$_SERVER['HTTP_HOST']")
     end = api.index('try {', start)
-    api = api[:start] + "require dirname(__DIR__).'/src/HostingAccess.php';\nrequireHostingAccess();\nsession_start(['cookie_httponly'=>true,'cookie_secure'=>true,'cookie_samesite'=>'Strict','use_strict_mode'=>true]);$_SESSION['csrf']??=bin2hex(random_bytes(24));\n" + api[end:]
+    api = api[:start] + "require dirname(__DIR__).'/src/HostingAccess.php';\nrequireHostingAccess();\ndefine('HOSTING_BROWSER_CHECKS',true);\nsession_start(['cookie_httponly'=>true,'cookie_secure'=>true,'cookie_samesite'=>'Strict','use_strict_mode'=>true]);$_SESSION['csrf']??=bin2hex(random_bytes(24));\n" + api[end:]
     (destination / 'public' / 'api.php').write_text(api, encoding='utf-8')
     (destination / 'public' / 'index.php').write_text(
         "<?php require dirname(__DIR__).'/src/HostingAccess.php'; requireHostingAccess(); header('Cache-Control: no-store'); readfile(__DIR__.'/index.html');\n", encoding='utf-8')
