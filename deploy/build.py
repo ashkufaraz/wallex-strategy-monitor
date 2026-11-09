@@ -9,19 +9,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def build(destination, hosts, username, password):
+def build(destination, hosts, username, password, public_access=False):
     destination = Path(destination)
     if destination.exists() and any(destination.iterdir()):
         raise ValueError('Build destination must be empty')
     hosts = [host.strip().lower() for host in hosts.split(',') if host.strip()]
     if not hosts or any(not re.fullmatch(r'[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?', h) for h in hosts):
         raise ValueError('SITE_HOSTS must contain domain names without protocol or paths')
-    if not username or ':' in username or any(c in username for c in '\r\n'):
+    if not public_access and (not username or ':' in username or any(c in username for c in '\r\n')):
         raise ValueError('Invalid PANEL_USERNAME')
-    if len(password) < 16:
+    if not public_access and len(password) < 16:
         raise ValueError('PANEL_PASSWORD must contain at least 16 characters')
     php = os.environ.get('PHP_BINARY', 'php')
-    hashed = subprocess.run([php, '-r', 'echo password_hash(stream_get_contents(STDIN), PASSWORD_DEFAULT);'],
+    hashed = '' if public_access else subprocess.run([php, '-r', 'echo password_hash(stream_get_contents(STDIN), PASSWORD_DEFAULT);'],
                             input=password, text=True, capture_output=True, check=True).stdout
     for folder in ['public', 'src']:
         shutil.copytree(ROOT / folder, destination / folder)
@@ -31,7 +31,7 @@ def build(destination, hosts, username, password):
         (path / '.htaccess').write_text('Require all denied\n', encoding='utf-8')
     shutil.copy2(ROOT / 'deploy' / 'HostingAccess.php', destination / 'src' / 'HostingAccess.php')
     # JSON is read as data; secrets never become executable PHP source.
-    config = {'hosts': hosts, 'username': username, 'password_hash': hashed}
+    config = {'public_access': public_access, 'hosts': hosts, 'username': username, 'password_hash': hashed}
     (destination / 'config' / 'hosting.php').write_text(
         '<?php return json_decode(' + php_string(json.dumps(config)) + ', true, 512, JSON_THROW_ON_ERROR);\n', encoding='utf-8')
     api = (destination / 'public' / 'api.php').read_text(encoding='utf-8')
@@ -58,5 +58,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
     args = parser.parse_args()
-    build(args.output, os.environ.get('SITE_HOSTS', ''), os.environ.get('PANEL_USERNAME', 'admin'), os.environ.get('PANEL_PASSWORD', ''))
+    build(args.output, os.environ.get('SITE_HOSTS', ''), os.environ.get('PANEL_USERNAME', 'admin'), os.environ.get('PANEL_PASSWORD', ''), os.environ.get('PUBLIC_ACCESS', 'false').lower() == 'true')
     print('Hosting package built; runtime databases and logs excluded.')

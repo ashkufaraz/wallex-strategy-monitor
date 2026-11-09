@@ -48,6 +48,19 @@ class DeploymentTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 uploader.inventory(output)
 
+    def test_public_package_allows_anonymous_access_but_checks_host(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / 'site'
+            builder.build(output, 'demo.example.com', '', '', public_access=True)
+            source = '$_SERVER=json_decode($argv[2],true);require $argv[1];requireHostingAccess();echo "AUTHORIZED";'
+            def request(host):
+                return subprocess.check_output([os.environ.get('PHP_BINARY', 'php'), '-r', source,
+                    str(output / 'src/HostingAccess.php'), json.dumps({'HTTP_HOST': host, 'HTTPS': 'on'})], text=True)
+            self.assertEqual(request('demo.example.com'), 'AUTHORIZED')
+            self.assertEqual(request('evil.example.com'), 'Host not allowed.')
+            self.assertFalse(list((output / 'data').glob('auth-*')))
+            self.assertIn('csrf', (output / 'public/api.php').read_text())
+
     def test_invalid_inputs_and_nonempty_destination_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
             with self.assertRaises(ValueError):

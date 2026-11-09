@@ -37,8 +37,7 @@ jobs:
       - name: Build protected hosting package
         env:
           SITE_HOSTS: ${{ vars.SITE_HOSTS }}
-          PANEL_USERNAME: ${{ vars.PANEL_USERNAME || 'admin' }}
-          PANEL_PASSWORD: ${{ secrets.PANEL_PASSWORD }}
+          PUBLIC_ACCESS: 'true'
         run: python3 deploy/build.py --output build-hosting
       - name: Upload through FTPS
         env:

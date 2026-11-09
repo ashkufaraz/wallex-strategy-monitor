@@ -20,6 +20,7 @@ function requireHostingAccess():void {
  if(($_SERVER['HTTPS']??'')!=='on'&&($_SERVER['HTTPS']??'')!=='1'){
   header('Location: https://'.$host.($_SERVER['REQUEST_URI']??'/'),true,308);exit;
  }
+ if(($config['public_access']??false)===true)return;
  [$username,$password]=hostingCredentials($_SERVER);
  $throttle=dirname(__DIR__).'/data/auth-'.hash('sha256',$_SERVER['REMOTE_ADDR']??'unknown').'.json';
  $handle=fopen($throttle,'c+');
