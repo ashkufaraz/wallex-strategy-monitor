@@ -44,3 +44,10 @@ Cancellation update: all 87 PHP checks passed, including 16 cancellation checks 
 - PHP, Node interface suites and three deployment tests passed locally.
 - GitHub authentication renewed; deployment secrets configured for `/htdocs/wallex`. Automatic FTPS deployment enabled for pushes to main; website HTTPS and runtime verification remain pending.
 - Hosting panel credentials are stored only in ignored local `.env.hosting`. No permanent strategy worker is deployed on the free host.
+
+
+## Domain directory correction ? 2026-11-09
+
+- The authenticated InfinityFree domain dashboard explicitly reported the missing document root `wallex.free.nf/htdocs`. The earlier `/htdocs/wallex` upload was outside this domain document root.
+- Created `/wallex.free.nf/htdocs` through FTPS and corrected the repository FTP_REMOTE_DIR variable to this path. Existing `/htdocs` application files were preserved.
+- Correct panel URL is `https://wallex.free.nf/public/` (root redirects to public/). HTTPS and PHP runtime checks still required.
