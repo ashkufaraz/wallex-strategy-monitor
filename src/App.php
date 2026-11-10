@@ -2,14 +2,19 @@
 declare(strict_types=1);
 require_once __DIR__.'/Engine.php';
 require_once __DIR__.'/Diagnostics.php';
+require_once __DIR__.'/IndicatorData.php';
 function db():PDO {static $db; if($db) return $db; $db=new PDO('sqlite:'.(defined('TEST_DATABASE') && PHP_SAPI==='cli' ? TEST_DATABASE : dirname(__DIR__).'/data/app.sqlite'),null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$db->exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS strategies(id TEXT PRIMARY KEY, version TEXT NOT NULL, config TEXT NOT NULL, state TEXT NOT NULL); CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY,v TEXT NOT NULL); CREATE TABLE IF NOT EXISTS check_logs(id INTEGER PRIMARY KEY AUTOINCREMENT,strategy_id TEXT NOT NULL,version TEXT NOT NULL,checked INTEGER NOT NULL,payload TEXT NOT NULL); CREATE INDEX IF NOT EXISTS check_logs_strategy ON check_logs(strategy_id,id); CREATE TABLE IF NOT EXISTS alerts(id INTEGER PRIMARY KEY AUTOINCREMENT, unique_key TEXT UNIQUE NOT NULL, created INTEGER NOT NULL, payload TEXT NOT NULL);');return $db;}
 function setting(string $key,string $default=''):string {$q=db()->prepare('SELECT v FROM settings WHERE k=?');$q->execute([$key]);$v=$q->fetchColumn();return $v===false?$default:$v;}
 function setSetting(string $key,string $value):void {db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute([$key,$value]);}
 function encode(mixed $x):string {return json_encode($x,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);}
-function recordAlert(array $s,string $version,string $event,int $at,float $price,?string $cancellationReason=null):void {$p=['strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>$event,'event_time'=>$at];if($cancellationReason!==null){$p['type']='cancelled';$p['reason']=$cancellationReason;}if($cancellationReason===null&&isset($s['trade'])) {$p['trade']=$s['trade'];$p['trade']['entry']['reference_price']=$s['trade']['entry']['price']??$price;}db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute([$s['id'].':'.$version.':'.$event.':'.$at,time(),encode($p)]);}
+function recordAlert(array $s,string $version,string $event,int $at,float $price,?string $cancellationReason=null,?array $indicators=null):void {$p=['strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>$event,'event_time'=>$at];if($cancellationReason!==null){$p['type']='cancelled';$p['reason']=$cancellationReason;}if($cancellationReason===null&&isset($s['trade'])) {$p['trade']=$s['trade'];$p['trade']['entry']['reference_price']=$s['trade']['entry']['price']??$price;}if($indicators!==null)$p['indicators']=$indicators;db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute([$s['id'].':'.$version.':'.$event.':'.$at,time(),encode($p)]);}
 class Wallex {
  private array $cache=[];
  function __construct(private ?float $deadline=null) {}
+ function withBudget(float $seconds,Closure $operation):mixed {
+  $previous=$this->deadline;$this->deadline=min($previous??INF,microtime(true)+$seconds);
+  try{return $operation();}finally{$this->deadline=$previous;}
+ }
  protected function fetchResponse(string $url,int $remaining):string {
   $ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>min(8,$remaining),CURLOPT_TIMEOUT=>min(20,$remaining),CURLOPT_FOLLOWLOCATION=>false,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_ENCODING=>'',CURLOPT_USERAGENT=>'WallexStrategyAlerts/1.0']);
   $raw=curl_exec($ch);$status=curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);
@@ -37,7 +42,7 @@ class Wallex {
  }
  static function aggregate(array $minutes,int $seconds):array {$groups=[];foreach($minutes as $t=>$bar) $groups[intdiv($t,$seconds)*$seconds][$t]=$bar;$result=[];foreach($groups as $start=>$bars) {if(count($bars)!==$seconds/60) continue;$valid=true;for($t=$start;$t<$start+$seconds;$t+=60) if(!isset($bars[$t])) {$valid=false;break;}if(!$valid) continue;ksort($bars);$first=reset($bars);$last=end($bars);$result[$start]=['open'=>$first['open'],'close'=>$last['close'],'high'=>max(array_column($bars,'high')),'low'=>min(array_column($bars,'low')),'volume'=>array_sum(array_column($bars,'volume'))];}return $result;}
 }
-function lookback(mixed $x):int {if(!is_array($x)) return 0;$n=0;if(isset($x['candle'])) $n=$x['candle']['offset']*Strategy::TIMEFRAMES[$x['candle']['timeframe']];foreach($x as $v) $n=max($n,lookback($v));return $n;}
+function lookback(mixed $x):int {if(!is_array($x)) return 0;$n=0;if(isset($x['candle'])&&is_array($x['candle'])) $n=$x['candle']['offset']*Strategy::TIMEFRAMES[$x['candle']['timeframe']];foreach($x as $v) $n=max($n,lookback($v));return $n;}
 function strategyTimeframes(array $s):array {
  $used=[];
  $rules=$s['cancellation']??[];
@@ -49,36 +54,58 @@ function initializeWorkerStates(int $now):void {
  foreach(db()->query('SELECT * FROM strategies')->fetchAll(PDO::FETCH_ASSOC) as $r) {
  if(isset(json_decode($r['state'],true)['cancelled_at'])) continue;
  $s=json_decode($r['config'],true);
+ if(Indicators::enabled($s))continue;
  db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?')->execute([encode(Strategy::fresh($s,$now)),$r['id'],$r['version'],$r['state']]);
  }
 }
 function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
+ $indicatorData=new IndicatorData($api);
  foreach(db()->query('SELECT * FROM strategies')->fetchAll(PDO::FETCH_ASSOC) as $row) {
  if($onlyId!==null&&$row['id']!==$onlyId)continue;
- $s=json_decode($row['config'],true);if(!$s['enabled']) continue;$original=json_decode($row['state'],true);$st=$original;if(isset($st['cancelled_at'])) continue;$events=[];$price=null;$bars=[];$trace=[];
+ $s=json_decode($row['config'],true);if(!$s['enabled']) continue;$original=json_decode($row['state'],true);$st=$original;if(isset($st['cancelled_at'])) continue;$events=[];$price=null;$bars=[];$trace=[];$indicatorReports=[];
+ $indicatorAsOf=null;$recoveringGap=false;
+ $withIndicators=Indicators::enabled($s);$retryPending=$withIndicators?($st['pending_signal']??null):null;
+ Strategy::$signalFilter=$withIndicators?function($config,$event,$at,$ctx)use($indicatorData,$now,&$indicatorReports,&$st,&$indicatorAsOf){
+  $snapshot=$indicatorData->evaluate($config,$indicatorAsOf??$at,$now);$indicatorReports[]=['event'=>$event,'event_time'=>$at,'snapshot'=>$snapshot];$st['indicators']=$snapshot;return $snapshot['passed'];
+ }:null;
  Strategy::$onCheck=function($kind,$event,$condition,$ctx,$meta)use(&$trace){if(count($trace)<100)$trace[]=array_merge(['kind'=>$kind,'event'=>$event,'candle_close'=>$ctx['close']??null,'condition'=>Diagnostics::inspect($condition,$ctx)],$meta);};
- try {$price=$api->price($s['symbol']);if($st['error']!==null || $now-$st['cursor']>max(180,3*(int)setting('interval','60'))) $st=Strategy::fresh($s,$now);$active=$st['setup']!==null;
+ try {$price=$api->price($s['symbol']);if(!$withIndicators){if($st['error']!==null || $now-$st['cursor']>max(180,3*(int)setting('interval','60'))) $st=Strategy::fresh($s,$now);}
+ elseif($now-$st['cursor']>max(180,3*(int)setting('interval','60'))){$st['cursor']=$now;$recoveringGap=true;}$active=$st['setup']!==null;
  $cancelReason=Strategy::cancellation($s,'price',['price'=>$price]);
  if($cancelReason!==null) {$st=Strategy::fresh($s,$now);$st['cancelled_at']=$now;$st['cancel_reason']=$cancelReason;$events[]=['event'=>'cancelled:price','time'=>$now,'reason'=>$cancelReason];}
  else {
  Strategy::trace('invalidation','price',$s['invalidation'],['price'=>$price]);
  $blocked=Strategy::check($s['invalidation'],['price'=>$price]) || ($active && $now-$st['setup']>$s['max_setup_seconds']);
- if($blocked){$st['stage']=$s['initial_stage'];$st['setup']=null;}
+ if($blocked){$st['stage']=$s['initial_stage'];$st['setup']=null;if($withIndicators)unset($st['pending_signal']);}
  $timeframes=strategyTimeframes($s);$alignment=$timeframes?max($timeframes):3600;
  $from=max(0,intdiv(min($st['cursor'],$now)-max(lookback($s),$alignment)-$alignment,$alignment)*$alignment);
  $minutes=$timeframes?$api->minutes($s['symbol'],$from,intdiv($now,60)*60):[];$bars=[];foreach($timeframes as $tf=>$seconds)$bars[$tf]=Wallex::aggregate($minutes,$seconds);
  // Only events after activation/cursor. Each expected closed candle must exist.
  $timeline=[];foreach($timeframes as $tf=>$sec) for($close=(intdiv($st['cursor'],$sec)+1)*$sec;$close<=$now;$close+=$sec) {$timeline[]=['time'=>$close,'tf'=>$tf,'seconds'=>$sec];}
  usort($timeline,fn($a,$b)=>($a['time']<=>$b['time'])?:($b['seconds']<=>$a['seconds']));
- foreach($timeline as $e) {if(!isset($bars[$e['tf']][$e['time']-$e['seconds']])) throw new RuntimeException('Incomplete '.$e['tf'].' candle; retry pending');if($st['setup']!==null && $e['time']-$st['setup']>$s['max_setup_seconds']) {$st['stage']=$s['initial_stage'];$st['setup']=null;}
+ foreach($timeline as $e) {if(!isset($bars[$e['tf']][$e['time']-$e['seconds']])) throw new RuntimeException('Incomplete '.$e['tf'].' candle; retry pending');if($st['setup']!==null && $e['time']-$st['setup']>$s['max_setup_seconds']) {$st['stage']=$s['initial_stage'];$st['setup']=null;if($withIndicators)unset($st['pending_signal']);}
+ if($withIndicators&&isset($st['pending_signal'])&&$st['pending_signal']['event']==='bar_close:'.$e['tf']&&$e['time']>$st['pending_signal']['time'])unset($st['pending_signal']);
  if(($reason=Strategy::cancellation($s,'bar_close:'.$e['tf'],['close'=>$e['time'],'seconds'=>$e['seconds'],'bars'=>$bars[$e['tf']]]))!==null){$st=Strategy::fresh($s,$now);$st['cancelled_at']=$e['time'];$st['cancel_reason']=$reason;$events=[['event'=>'cancelled:bar_close:'.$e['tf'],'time'=>$e['time'],'reason'=>$reason]];break;}
- if(!$blocked&&Strategy::event($s,$st,'bar_close:'.$e['tf'],$e['time'],['close'=>$e['time'],'seconds'=>$e['seconds'],'bars'=>$bars[$e['tf']]])) $events[]=['event'=>'bar_close:'.$e['tf'],'time'=>$e['time']];}
- if(!$blocked&&!isset($st['cancelled_at'])&&Strategy::event($s,$st,'price',$now,['price'=>$price])) $events[]=['event'=>'price','time'=>$now];$st['cursor']=$now;
+ if(!$blocked&&Strategy::event($s,$st,'bar_close:'.$e['tf'],$e['time'],['close'=>$e['time'],'seconds'=>$e['seconds'],'bars'=>$bars[$e['tf']]])) $events[]=['event'=>'bar_close:'.$e['tf'],'time'=>$e['time'],'indicators'=>$withIndicators?($st['indicators']??null):null];}
+ if($withIndicators&&$recoveringGap&&!isset($st['cancelled_at']))foreach($timeframes as $tf=>$sec){
+  $close=intdiv($now,$sec)*$sec;
+  if(($reason=Strategy::cancellation($s,'bar_close:'.$tf,['close'=>$close,'seconds'=>$sec,'bars'=>$bars[$tf]]))!==null){$st=Strategy::fresh($s,$now);$st['cancelled_at']=$close;$st['cancel_reason']=$reason;$events=[['event'=>'cancelled:bar_close:'.$tf,'time'=>$close,'reason'=>$reason]];break;}
+ }
+ if($withIndicators&&!$blocked&&!isset($st['cancelled_at'])&&$retryPending!==null&&($st['pending_signal']??null)===$retryPending){
+  $tf=substr($retryPending['event'],10);$sec=Strategy::TIMEFRAMES[$tf];
+  if($st['stage']===$retryPending['stage']&&intdiv($now,$sec)*$sec===$retryPending['time']){
+   $indicatorAsOf=$now;
+   if(Strategy::event($s,$st,$retryPending['event'],$retryPending['time'],['close'=>$retryPending['time'],'seconds'=>$sec,'bars'=>$bars[$tf]]))$events[]=['event'=>$retryPending['event'],'time'=>$retryPending['time'],'indicators'=>$st['indicators']??null];
+   $indicatorAsOf=null;
+  }else unset($st['pending_signal']);
+ }
+ if(!$blocked&&!isset($st['cancelled_at'])&&Strategy::event($s,$st,'price',$now,['price'=>$price])) $events[]=['event'=>'price','time'=>$now,'indicators'=>$withIndicators?($st['indicators']??null):null];$st['cursor']=$now;
  }
  $st['error']=null;$st['last_check']=$now;$st['last_price']=$price;$st['price_at']=$now;
  $report=['action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$st['stage'],'status'=>isset($st['cancelled_at'])?'cancelled':($events?'signal':($blocked??false?'blocked':'checked')),'trace'=>$trace,'waiting'=>Diagnostics::waiting($s,$st,$bars,$now,$price),'trade'=>$s['trade']??null,'events'=>$events];
+ if($withIndicators){$report['indicators']=$indicatorReports;$report['indicator_snapshot']=$st['indicators']??null;if(!$events&&$indicatorReports)$report['status']='indicator_blocked';}
  // Optimistic comparison prevents a concurrent edit from being overwritten.
- db()->beginTransaction();$q=db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?');$q->execute([encode($st),$s['id'],$row['version'],$row['state']]);if($q->rowCount()){foreach($events as $event) recordAlert($s,$row['version'],$event['event'],$event['time'],$price,$event['reason']??null);Diagnostics::save($s['id'],$row['version'],$report);}db()->commit();
- } catch(Throwable $e) {if(db()->inTransaction()) db()->rollBack();$original['error']=$e->getMessage();$original['last_check']=$now;db()->beginTransaction();$q=db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?');$q->execute([encode($original),$s['id'],$row['version'],$row['state']]);if($q->rowCount())Diagnostics::save($s['id'],$row['version'],['action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$original['stage'],'status'=>'error','error'=>$e->getMessage(),'trace'=>$trace,'waiting'=>[],'trade'=>$s['trade']??null]);db()->commit();}finally{Strategy::$onCheck=null;}
+ db()->beginTransaction();$q=db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?');$q->execute([encode($st),$s['id'],$row['version'],$row['state']]);if($q->rowCount()){foreach($events as $event) recordAlert($s,$row['version'],$event['event'],$event['time'],$price,$event['reason']??null,$event['indicators']??null);Diagnostics::save($s['id'],$row['version'],$report);}db()->commit();
+ } catch(Throwable $e) {if(db()->inTransaction()) db()->rollBack();$original['error']=$e->getMessage();$original['last_check']=$now;db()->beginTransaction();$q=db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?');$q->execute([encode($original),$s['id'],$row['version'],$row['state']]);if($q->rowCount())Diagnostics::save($s['id'],$row['version'],['action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$original['stage'],'status'=>'error','error'=>$e->getMessage(),'trace'=>$trace,'waiting'=>[],'trade'=>$s['trade']??null]);db()->commit();}finally{Strategy::$onCheck=null;Strategy::$signalFilter=null;}
  }
 }

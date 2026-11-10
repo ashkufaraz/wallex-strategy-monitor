@@ -24,6 +24,7 @@ jobs:
           node tests/trade.js
           node tests/details.js
           python3 tests/deployment.py
+          python3 tests/indicator-reference.py
   deploy:
     needs: test
     if: vars.FTP_DEPLOY_ENABLED == 'true'

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/Indicators.php';
 final class Strategy {
+ static ?Closure $signalFilter=null;
  static ?Closure $onCheck=null;
  static function trace(string $kind,string $event,array $condition,array $ctx,array $meta=[]):void {
  if(self::$onCheck!==null)(self::$onCheck)($kind,$event,$condition,$ctx,$meta);
@@ -8,9 +10,10 @@ final class Strategy {
  const TIMEFRAMES=['4h'=>14400,'1h'=>3600,'15m'=>900];
  static function keys(array $a,array $required,array $optional=[]):void {foreach($required as $k) if(!array_key_exists($k,$a)) throw new InvalidArgumentException("Missing: $k"); foreach($a as $k=>$v) if(!in_array($k,array_merge($required,$optional),true)) throw new InvalidArgumentException("Unknown field: $k");}
  static function validate(array $s):array {
- self::keys($s,['strategy_version','id','name','symbol','enabled','action','initial_stage','max_setup_seconds','invalidation','stages'],['trade','cancellation']);
+ self::keys($s,['strategy_version','id','name','symbol','enabled','action','initial_stage','max_setup_seconds','invalidation','stages'],['trade','cancellation','indicator_conditions']);
  if($s['strategy_version']!==1 || !is_string($s['id']) || !preg_match('/^[A-Za-z0-9_-]{1,64}$/D',$s['id']) || !is_string($s['symbol']) || !preg_match('/^[A-Z0-9]+USDT$/D',$s['symbol'])) throw new InvalidArgumentException('Invalid version, id or USDT symbol');
  if(!is_string($s['name']) || strlen($s['name'])<1 || strlen($s['name'])>300 || !is_bool($s['enabled']) || !in_array($s['action'],['LONG','SHORT'],true) || !is_int($s['max_setup_seconds']) || $s['max_setup_seconds']<1 || $s['max_setup_seconds']>2592000) throw new InvalidArgumentException('Invalid metadata or setup duration (1..2592000)');
+ if(array_key_exists('indicator_conditions',$s)) Indicators::validate($s['indicator_conditions']);
  if(array_key_exists('trade',$s)) self::trade($s['trade'],$s['action']);
  if(array_key_exists('cancellation',$s)) {
  if(!is_array($s['cancellation'])||!array_is_list($s['cancellation'])||count($s['cancellation'])<1||count($s['cancellation'])>30) throw new InvalidArgumentException('cancellation must contain 1..30 rules');
@@ -80,7 +83,15 @@ final class Strategy {
  foreach($s['stages'] as $stage) if($stage['id']===$state['stage']) foreach($stage['transitions'] as $i=>$t) if($t['event']===$event) {
  self::trace('transition',$event,$t['when'],$ctx,['stage'=>$stage['id'],'rule'=>$i+1,'to'=>$t['to']??'signal']);
  if(!self::check($t['when'],$ctx))continue;
- if(isset($t['signal'])) {$state['stage']=$s['initial_stage'];$state['setup']=null;return true;}
+ if(isset($t['signal'])) {
+ if(Indicators::enabled($s)){
+  if(self::$signalFilter===null||!(self::$signalFilter)($s,$event,$time,$ctx)){
+   if(str_starts_with($event,'bar_close:'))$state['pending_signal']=['stage'=>$state['stage'],'event'=>$event,'time'=>$time];
+   return false;
+  }
+  unset($state['pending_signal']);
+ }
+ $state['stage']=$s['initial_stage'];$state['setup']=null;return true;}
  $state['stage']=$t['to']; if($state['stage']===$s['initial_stage']) $state['setup']=null; elseif($state['setup']===null) $state['setup']=$time;return false;
  } return false;
  }

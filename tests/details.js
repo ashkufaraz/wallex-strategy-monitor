@@ -10,6 +10,11 @@ const context=vm.createContext({esc,time:n=>String(n||'—'),console,
 });
 vm.runInContext(fs.readFileSync('public/trade.js','utf8')+'\n'+fs.readFileSync('public/details.js','utf8')+'\nthis.details=strategyDetails;',context);
 const details=context.details;
+const indicatorSnapshot={as_of:100,conditions:[{id:'ema<script>',indicator:'EMA',period:20,timeframe:'15m',status:'PASS',symbol:'BTCUSDT',metric:'value',observed:74000,operator:'gt',value:73000,candle_open:0,candle_close:100},{id:'rsi',indicator:'RSI',period:14,timeframe:'1h',status:'UNAVAILABLE',symbol:'BTCUSDT',metric:'value',observed:null,operator:'gte',value:50,error:'<img onerror=alert(1)>'}]};
+const indicatorsHtml=details.indicators(indicatorSnapshot);
+assert(indicatorsHtml.includes('PASS')&&indicatorsHtml.includes('UNAVAILABLE')&&indicatorsHtml.includes('74000'));
+assert(indicatorsHtml.includes('&lt;script&gt;')&&!indicatorsHtml.includes('<script>')&&!indicatorsHtml.includes('<img'));
+assert(details.indicators(null).length>0);
 const unsafe={left_source:{price:true},right_source:10,left:20,right:10,op:'gt',result:true,error:'<img onerror=alert(1)>'};
 assert(!details.condition(unsafe).includes('<img'));
 assert(details.condition(unsafe).includes('20'));

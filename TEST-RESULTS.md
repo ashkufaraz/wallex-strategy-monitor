@@ -58,3 +58,11 @@ Cancellation update: all 87 PHP checks passed, including 16 cancellation checks 
 - Local PHP server and CLI worker started on 127.0.0.1:5078; API returned five strategies with current prices and no errors. Local host allowlist and Windows launcher now support port 5078.
 - Hosting package enables sequential browser-driven checks, one due strategy per request, 15-second network budget, per-strategy interval, shared lock and visible errors. No permanent PHP process is started by HTTP.
 - All PHP suites (including 10 new browser-runner assertions), Node interface suites and four deployment tests passed.
+
+## Optional live indicators - 2026-11-10
+
+- All 13 PHP suites, three Node interface suites, four Python deployment tests and independent Decimal reference checks passed.
+- Optional RSI/EMA/ATR/VOLUME validation, closed-candle aggregation, caching, PASS/FAIL/UNAVAILABLE, pending recovery, cancellation priority and duplicate prevention tested in isolated SQLite databases.
+- BTCUSDT and ETHUSDT real captured OHLCV: 16 formula comparisons passed at absolute tolerance 1e-8; maximum error approximately 1.46e-11.
+- Fresh real API probe of the complete indicator example returned valid values for all four conditions: RSI 45.960844 (FAIL), EMA distance -0.151664% (FAIL), volume ratio 0.634714 (FAIL), ATR 0.525245% (PASS). Snapshot timestamp 1794305023; these are test observations, not current quotes. No live strategies or alerts changed by probe.
+- Legacy missing/disabled indicator blocks make zero additional history calls. Actual browser OS notification delivery was not retested for this feature; existing notification tests pass.

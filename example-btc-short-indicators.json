@@ -1,0 +1,206 @@
+{
+  "strategy_version": 1,
+  "id": "btc-short-optional-indicators",
+  "name": "BTC SHORT - optional indicators (schema example)",
+  "symbol": "BTCUSDT",
+  "enabled": true,
+  "action": "SHORT",
+  "initial_stage": "wait_break",
+  "max_setup_seconds": 86400,
+  "invalidation": {
+    "left": {
+      "price": true
+    },
+    "op": "gte",
+    "right": 75450
+  },
+  "stages": [
+    {
+      "id": "wait_break",
+      "transitions": [
+        {
+          "event": "bar_close:1h",
+          "when": {
+            "all": [
+              {
+                "left": {
+                  "candle": {
+                    "timeframe": "1h",
+                    "offset": 1,
+                    "field": "close"
+                  }
+                },
+                "op": "lt",
+                "right": 75050
+              },
+              {
+                "left": {
+                  "candle": {
+                    "timeframe": "1h",
+                    "offset": 2,
+                    "field": "close"
+                  }
+                },
+                "op": "gte",
+                "right": 75050
+              }
+            ]
+          },
+          "to": "wait_pullback"
+        }
+      ]
+    },
+    {
+      "id": "wait_pullback",
+      "transitions": [
+        {
+          "event": "bar_close:15m",
+          "when": {
+            "all": [
+              {
+                "left": {
+                  "candle": {
+                    "timeframe": "15m",
+                    "offset": 1,
+                    "field": "high"
+                  }
+                },
+                "op": "gte",
+                "right": 75050
+              },
+              {
+                "left": {
+                  "candle": {
+                    "timeframe": "15m",
+                    "offset": 1,
+                    "field": "low"
+                  }
+                },
+                "op": "lte",
+                "right": 75200
+              }
+            ]
+          },
+          "to": "wait_confirmation"
+        }
+      ]
+    },
+    {
+      "id": "wait_confirmation",
+      "transitions": [
+        {
+          "event": "bar_close:15m",
+          "when": {
+            "all": [
+              {
+                "left": {
+                  "candle": {
+                    "timeframe": "15m",
+                    "offset": 1,
+                    "field": "close"
+                  }
+                },
+                "op": "lt",
+                "right": {
+                  "candle": {
+                    "timeframe": "15m",
+                    "offset": 1,
+                    "field": "open"
+                  }
+                }
+              },
+              {
+                "left": {
+                  "candle": {
+                    "timeframe": "15m",
+                    "offset": 1,
+                    "field": "close"
+                  }
+                },
+                "op": "lt",
+                "right": 75050
+              }
+            ]
+          },
+          "signal": true
+        }
+      ]
+    }
+  ],
+  "trade": {
+    "entry": {
+      "type": "LIMIT",
+      "price": 75000
+    },
+    "stop_loss": 75450,
+    "take_profits": [
+      74500,
+      74000
+    ],
+    "quantity": 0.001,
+    "leverage": 1,
+    "notes": ""
+  },
+  "cancellation": [
+    {
+      "event": "price",
+      "when": {
+        "left": {
+          "price": true
+        },
+        "op": "gte",
+        "right": 76000
+      },
+      "reason": "Scenario cancelled: price reached 76000 USDT (example)"
+    }
+  ],
+  "indicator_conditions": {
+    "enabled": true,
+    "logic": "all",
+    "conditions": [
+      {
+        "id": "rsi_entry",
+        "indicator": "RSI",
+        "timeframe": "15m",
+        "period": 14,
+        "candle": "last_closed",
+        "metric": "value",
+        "operator": "between",
+        "value": [
+          50,
+          68
+        ]
+      },
+      {
+        "id": "ema_trend",
+        "indicator": "EMA",
+        "timeframe": "15m",
+        "period": 20,
+        "candle": "last_closed",
+        "metric": "close_minus_ema_pct",
+        "operator": "gt",
+        "value": 0
+      },
+      {
+        "id": "volume_confirm",
+        "indicator": "VOLUME",
+        "timeframe": "15m",
+        "period": 20,
+        "candle": "last_closed",
+        "metric": "ratio_to_previous_avg",
+        "operator": "gte",
+        "value": 1.5
+      },
+      {
+        "id": "atr_filter",
+        "indicator": "ATR",
+        "timeframe": "1h",
+        "period": 14,
+        "candle": "last_closed",
+        "metric": "atr_pct",
+        "operator": "lte",
+        "value": 2.5
+      }
+    ]
+  }
+}
