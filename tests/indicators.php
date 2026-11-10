@@ -77,3 +77,16 @@ unset($minute[420]);checkIndicator(IndicatorData::aggregate($minute,60,900)===[]
 $hour=[];for($t=0;$t<14400;$t+=3600)$hour[$t]=['open'=>10+$t/3600,'close'=>11+$t/3600,'high'=>12+$t/3600,'low'=>9+$t/3600,'volume'=>3];
 $h=IndicatorData::aggregate($hour,3600,14400)[0];checkIndicator($h['open']===10&&$h['close']===14&&$h['volume']===12&&$h['duration']===14400,'4h aggregates four consecutive UTC hours');
 unset($hour[3600]);checkIndicator(IndicatorData::aggregate($hour,3600,14400)===[],'missing hour prevents 4h candle');
+
+foreach([1,2,3,5,14,20,50,200] as $period){
+ $flat=bars(array_fill(0,5*$period+1,123.5));
+ near(Indicators::value('EMA',$period,'value',$flat),123.5,'EMA constant series period '.$period);
+ $linear=range(10,10+5*$period);$seed=array_sum(array_slice($linear,0,$period))/$period;$alpha=2/($period+1);$tail=array_slice($linear,$period);$expected=$seed*(1-$alpha)**count($tail);
+ foreach($tail as $i=>$v)$expected+=$alpha*$v*(1-$alpha)**(count($tail)-$i-1);
+ near(Indicators::value('EMA',$period,'value',bars($linear)),$expected,'EMA weighted-sum reference period '.$period);
+}
+$spike=bars([100,100,100,100,100]);$spike[4]['high']=1000.;$spike[4]['low']=1.;
+near(Indicators::value('ATR',3,'value',$spike),(2*2+999)/3,'ATR severe volatility spike uses true range and Wilder smoothing');
+near(Indicators::value('ATR',3,'atr_pct',$spike),100*((2*2+999)/3)/100,'ATR spike percentage normalized to close');
+$jump=bars([100,100,100,100,1000]);
+near(Indicators::value('ATR',3,'value',$jump),(2*2+901)/3,'ATR gap accounts for previous close');

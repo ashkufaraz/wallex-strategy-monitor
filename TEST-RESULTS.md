@@ -66,3 +66,14 @@ Cancellation update: all 87 PHP checks passed, including 16 cancellation checks 
 - BTCUSDT and ETHUSDT real captured OHLCV: 16 formula comparisons passed at absolute tolerance 1e-8; maximum error approximately 1.46e-11.
 - Fresh real API probe of the complete indicator example returned valid values for all four conditions: RSI 45.960844 (FAIL), EMA distance -0.151664% (FAIL), volume ratio 0.634714 (FAIL), ATR 0.525245% (PASS). Snapshot timestamp 1794305023; these are test observations, not current quotes. No live strategies or alerts changed by probe.
 - Legacy missing/disabled indicator blocks make zero additional history calls. Actual browser OS notification delivery was not retested for this feature; existing notification tests pass.
+
+## Live indicators final source audit - 2026-11-10 (supersedes earlier pending retry semantics)
+
+- Found and removed old candle + new indicator snapshot mixing. A FAIL/UNAVAILABLE candle event is consumed; only a new closed entry event can retry the final rule. Historical final events cannot emit entry alerts. event_time, snapshot as_of and unique event key identify the new close.
+- Old release pending_signal candidates are discarded. Enabled-only error recovery preserves stage while advancing cursor to avoid replaying consumed events. Legacy recovery remains unchanged.
+- Validated complete raw history BEFORE caching. Missing closed tail, malformed/gapped response and network errors receive at most two fetch attempts, 200ms apart, within existing deadlines. Missing entry candles use the same enabled-only bounded retry. No old-candle fallback. Raw cache namespace bumped to v2 to bypass earlier incomplete entries.
+- Executed all 13 PHP suites: 276 PASS assertions; three Node suites; four Python deployment tests; 16 real-fixture Decimal comparisons at tolerance 1e-8. Maximum formula error remains about 1.46e-11.
+- Added separate coverage: RSI rising/falling/flat, EMA periods 1/2/3/5/14/20/50/200, ATR severe spike and gap, volume/reference exclusion, missing data, delayed publication, disconnect/reconnect, FAIL-to-PASS new event, event identity, deduplication, old pending migration, legacy candle request counts.
+- Decimal sensitivity measured on identical captured BTC/ETH OHLCV with 71 versus 80 bars, first-value versus SMA initialization, and one-minute shifted close; detailed measured deltas documented in docs/live-indicators.md.
+- Fresh real Wallex read-only probe at epoch 1794306008 produced four valid metrics: RSI 43.871249 (FAIL), EMA distance -0.258693% (FAIL), volume ratio 0.0185085 (FAIL), ATR 0.525245% (PASS). No live strategy/alert changes.
+- Delay/outage tests are deterministic simulations. Actual publication delay distribution across market boundaries, external chart parity, and browser OS notification delivery were not measured in this audit. A delay exceeding the bounded retry fails closed and may miss an entry rather than replay it later.

@@ -33,6 +33,7 @@ class Wallex {
   }
   throw new RuntimeException('Invalid API response');
  }
+ function invalidateMinuteCache():void {foreach(array_keys($this->cache) as $key)if($key!=='markets')unset($this->cache[$key]);}
  function markets():array {return $this->cache['markets']??=$this->get('/v1/markets')['result']['symbols']??throw new RuntimeException('Markets missing');}
  function price(string $symbol):float {$m=$this->markets()[$symbol]??throw new RuntimeException('Market not found: '.$symbol);if(($m['quoteAsset']??null)!=='USDT') throw new RuntimeException('Market must be USDT');$v=$m['stats']['lastPrice']??null;if(!is_numeric($v)||!is_finite((float)$v)||(float)$v<=0) throw new RuntimeException('Invalid market price');return (float)$v;}
  function minutes(string $symbol,int $from,int $to):array {$key="$symbol:$from:$to";if(isset($this->cache[$key])) return $this->cache[$key];$out=[];
@@ -63,10 +64,14 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
  foreach(db()->query('SELECT * FROM strategies')->fetchAll(PDO::FETCH_ASSOC) as $row) {
  if($onlyId!==null&&$row['id']!==$onlyId)continue;
  $s=json_decode($row['config'],true);if(!$s['enabled']) continue;$original=json_decode($row['state'],true);$st=$original;if(isset($st['cancelled_at'])) continue;$events=[];$price=null;$bars=[];$trace=[];$indicatorReports=[];
- $indicatorAsOf=null;$recoveringGap=false;
- $withIndicators=Indicators::enabled($s);$retryPending=$withIndicators?($st['pending_signal']??null):null;
- Strategy::$signalFilter=$withIndicators?function($config,$event,$at,$ctx)use($indicatorData,$now,&$indicatorReports,&$st,&$indicatorAsOf){
-  $snapshot=$indicatorData->evaluate($config,$indicatorAsOf??$at,$now);$indicatorReports[]=['event'=>$event,'event_time'=>$at,'snapshot'=>$snapshot];$st['indicators']=$snapshot;return $snapshot['passed'];
+ $recoveringGap=false;
+ $withIndicators=Indicators::enabled($s);if($withIndicators)unset($st['pending_signal']);
+ Strategy::$signalFilter=$withIndicators?function($config,$event,$at,$ctx)use($indicatorData,$now,&$indicatorReports,&$st){
+  if(str_starts_with($event,'bar_close:')){
+   $sec=Strategy::TIMEFRAMES[substr($event,10)];
+   if($at!==intdiv($now,$sec)*$sec)return false;
+  }
+  $snapshot=$indicatorData->evaluate($config,$at,$now);$indicatorReports[]=['event'=>$event,'event_time'=>$at,'snapshot'=>$snapshot];$st['indicators']=$snapshot;return $snapshot['passed'];
  }:null;
  Strategy::$onCheck=function($kind,$event,$condition,$ctx,$meta)use(&$trace){if(count($trace)<100)$trace[]=array_merge(['kind'=>$kind,'event'=>$event,'candle_close'=>$ctx['close']??null,'condition'=>Diagnostics::inspect($condition,$ctx)],$meta);};
  try {$price=$api->price($s['symbol']);if(!$withIndicators){if($st['error']!==null || $now-$st['cursor']>max(180,3*(int)setting('interval','60'))) $st=Strategy::fresh($s,$now);}
@@ -79,7 +84,20 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
  if($blocked){$st['stage']=$s['initial_stage'];$st['setup']=null;if($withIndicators)unset($st['pending_signal']);}
  $timeframes=strategyTimeframes($s);$alignment=$timeframes?max($timeframes):3600;
  $from=max(0,intdiv(min($st['cursor'],$now)-max(lookback($s),$alignment)-$alignment,$alignment)*$alignment);
- $minutes=$timeframes?$api->minutes($s['symbol'],$from,intdiv($now,60)*60):[];$bars=[];foreach($timeframes as $tf=>$seconds)$bars[$tf]=Wallex::aggregate($minutes,$seconds);
+ $minutes=[];
+ if($timeframes){
+  if(!$withIndicators)$minutes=$api->minutes($s['symbol'],$from,intdiv($now,60)*60);
+  else $minutes=$api->withBudget(12,function()use($api,$s,$from,$now,$timeframes){
+   for($attempt=0;$attempt<2;$attempt++)try{
+    $data=$api->minutes($s['symbol'],$from,intdiv($now,60)*60);
+    foreach($timeframes as $tf=>$sec){$end=intdiv($now,$sec)*$sec;
+     for($t=$end-$sec;$t<$end;$t+=60)if(!isset($data[$t]))throw new RuntimeException('Delayed or missing entry candle '.$tf.' at '.$t);
+    }
+    return $data;
+   }catch(Throwable $e){if($attempt===1)throw $e;$api->invalidateMinuteCache();usleep(200000);}
+   throw new RuntimeException('Entry history unavailable');
+  });
+ }$bars=[];foreach($timeframes as $tf=>$seconds)$bars[$tf]=Wallex::aggregate($minutes,$seconds);
  // Only events after activation/cursor. Each expected closed candle must exist.
  $timeline=[];foreach($timeframes as $tf=>$sec) for($close=(intdiv($st['cursor'],$sec)+1)*$sec;$close<=$now;$close+=$sec) {$timeline[]=['time'=>$close,'tf'=>$tf,'seconds'=>$sec];}
  usort($timeline,fn($a,$b)=>($a['time']<=>$b['time'])?:($b['seconds']<=>$a['seconds']));
@@ -91,14 +109,6 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
   $close=intdiv($now,$sec)*$sec;
   if(($reason=Strategy::cancellation($s,'bar_close:'.$tf,['close'=>$close,'seconds'=>$sec,'bars'=>$bars[$tf]]))!==null){$st=Strategy::fresh($s,$now);$st['cancelled_at']=$close;$st['cancel_reason']=$reason;$events=[['event'=>'cancelled:bar_close:'.$tf,'time'=>$close,'reason'=>$reason]];break;}
  }
- if($withIndicators&&!$blocked&&!isset($st['cancelled_at'])&&$retryPending!==null&&($st['pending_signal']??null)===$retryPending){
-  $tf=substr($retryPending['event'],10);$sec=Strategy::TIMEFRAMES[$tf];
-  if($st['stage']===$retryPending['stage']&&intdiv($now,$sec)*$sec===$retryPending['time']){
-   $indicatorAsOf=$now;
-   if(Strategy::event($s,$st,$retryPending['event'],$retryPending['time'],['close'=>$retryPending['time'],'seconds'=>$sec,'bars'=>$bars[$tf]]))$events[]=['event'=>$retryPending['event'],'time'=>$retryPending['time'],'indicators'=>$st['indicators']??null];
-   $indicatorAsOf=null;
-  }else unset($st['pending_signal']);
- }
  if(!$blocked&&!isset($st['cancelled_at'])&&Strategy::event($s,$st,'price',$now,['price'=>$price])) $events[]=['event'=>'price','time'=>$now,'indicators'=>$withIndicators?($st['indicators']??null):null];$st['cursor']=$now;
  }
  $st['error']=null;$st['last_check']=$now;$st['last_price']=$price;$st['price_at']=$now;
@@ -106,6 +116,6 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
  if($withIndicators){$report['indicators']=$indicatorReports;$report['indicator_snapshot']=$st['indicators']??null;if(!$events&&$indicatorReports)$report['status']='indicator_blocked';}
  // Optimistic comparison prevents a concurrent edit from being overwritten.
  db()->beginTransaction();$q=db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?');$q->execute([encode($st),$s['id'],$row['version'],$row['state']]);if($q->rowCount()){foreach($events as $event) recordAlert($s,$row['version'],$event['event'],$event['time'],$price,$event['reason']??null,$event['indicators']??null);Diagnostics::save($s['id'],$row['version'],$report);}db()->commit();
- } catch(Throwable $e) {if(db()->inTransaction()) db()->rollBack();$original['error']=$e->getMessage();$original['last_check']=$now;db()->beginTransaction();$q=db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?');$q->execute([encode($original),$s['id'],$row['version'],$row['state']]);if($q->rowCount())Diagnostics::save($s['id'],$row['version'],['action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$original['stage'],'status'=>'error','error'=>$e->getMessage(),'trace'=>$trace,'waiting'=>[],'trade'=>$s['trade']??null]);db()->commit();}finally{Strategy::$onCheck=null;Strategy::$signalFilter=null;}
+ } catch(Throwable $e) {if(db()->inTransaction()) db()->rollBack();$original['error']=$e->getMessage();if($withIndicators){$original['cursor']=$now;unset($original['pending_signal']);}$original['last_check']=$now;db()->beginTransaction();$q=db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?');$q->execute([encode($original),$s['id'],$row['version'],$row['state']]);if($q->rowCount())Diagnostics::save($s['id'],$row['version'],['action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$original['stage'],'status'=>'error','error'=>$e->getMessage(),'trace'=>$trace,'waiting'=>[],'trade'=>$s['trade']??null]);db()->commit();}finally{Strategy::$onCheck=null;Strategy::$signalFilter=null;}
  }
 }

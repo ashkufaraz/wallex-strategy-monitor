@@ -86,7 +86,6 @@ final class Strategy {
  if(isset($t['signal'])) {
  if(Indicators::enabled($s)){
   if(self::$signalFilter===null||!(self::$signalFilter)($s,$event,$time,$ctx)){
-   if(str_starts_with($event,'bar_close:'))$state['pending_signal']=['stage'=>$state['stage'],'event'=>$event,'time'=>$time];
    return false;
   }
   unset($state['pending_signal']);

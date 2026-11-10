@@ -6,9 +6,16 @@ require_once __DIR__.'/Indicators.php';
 final class IndicatorData {
  private array $memory=[];
  function __construct(private Wallex $api){}
- private function fetch(array $params):array {
-  try{return $this->api->get('/v1/udf/history',$params);}
-  catch(Throwable $first){usleep(100000);return $this->api->get('/v1/udf/history',$params);}
+ // Validate completeness BEFORE caching: a delayed tail must never poison the cache.
+ private function fetchPart(array $params,string $symbol,int $base,int $start,int $until):array {
+  for($attempt=0;$attempt<2;$attempt++){
+   try{
+    $bars=self::parse($this->api->get('/v1/udf/history',$params),$symbol,$base,$start,$until);
+    for($t=$start;$t<$until;$t+=$base)if(!isset($bars[$t]))throw new RuntimeException('Delayed or missing closed candle at '.$t);
+    return $bars;
+   }catch(Throwable $e){if($attempt===1)throw $e;usleep(200000);}
+  }
+  throw new RuntimeException('Indicator history unavailable');
  }
  private function cached(string $key,int $now,Closure $compute):mixed {
   if(isset($this->memory[$key]))return $this->memory[$key];
@@ -59,7 +66,7 @@ final class IndicatorData {
   return $this->cached("h:v1:$symbol:$tf:$end:$count",$now,function()use($symbol,$base,$seconds,$from,$end,$now){
    $source=[];
    for($start=$from;$start<$end;$start+=$base*300){$until=min($end,$start+$base*300);
-    $part=$this->cached("raw:v1:$symbol:$base:$start:$until",$now,fn()=>self::parse($this->fetch(['symbol'=>$symbol,'resolution'=>$base===60?'1':'60','from'=>$start,'to'=>$until]),$symbol,$base,$start,$until));
+    $part=$this->cached("raw:v2:$symbol:$base:$start:$until",$now,fn()=>$this->fetchPart(['symbol'=>$symbol,'resolution'=>$base===60?'1':'60','from'=>$start,'to'=>$until],$symbol,$base,$start,$until));
     $source+=$part;
    }
    $bars=self::aggregate($source,$base,$seconds);
