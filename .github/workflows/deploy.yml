@@ -25,6 +25,8 @@ jobs:
           node tests/details.js
           python3 tests/deployment.py
           python3 tests/indicator-reference.py
+          python3 tests/candle-reference.py
+          python3 tests/admin-diagnostics.py
   deploy:
     needs: test
     if: vars.FTP_DEPLOY_ENABLED == 'true'

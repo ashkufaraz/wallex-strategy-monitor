@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/Indicators.php';
+require_once __DIR__.'/CandleAggregation.php';
 
 // Dedicated validated history for optional indicators; legacy candle fetching stays unchanged.
 final class IndicatorData {
@@ -42,35 +43,31 @@ final class IndicatorData {
   return $out;
  }
  static function aggregate(array $source,int $base,int $seconds):array {
-  $out=[];$groups=[];
-  foreach($source as $t=>$bar)$groups[intdiv($t,$seconds)*$seconds][$t]=$bar;
-  foreach($groups as $start=>$bars){if(count($bars)!==intdiv($seconds,$base))continue;
-   for($t=$start;$t<$start+$seconds;$t+=$base)if(!isset($bars[$t]))continue 2;
-   ksort($bars);$first=reset($bars);$last=end($bars);
-   $out[$start]=['open'=>$first['open'],'high'=>max(array_column($bars,'high')),'low'=>min(array_column($bars,'low')),'close'=>$last['close'],'volume'=>array_sum(array_column($bars,'volume')),'open_time'=>$start,'duration'=>$seconds];
-  }
+  $out=CandleAggregation::aggregate($source,$base,$seconds);
+  foreach($out as $t=>&$bar)$bar+=['open_time'=>$t,'duration'=>$seconds];unset($bar);
   return $out;
  }
+
  function history(string $symbol,string $tf,int $count,int $asOf,int $now):array {
   $seconds=Indicators::TIMEFRAMES[$tf];$end=intdiv($asOf,$seconds)*$seconds;$from=$end-$count*$seconds;
   if($from<0)throw new RuntimeException('Insufficient history before Unix epoch');
   $base=$seconds>=3600?3600:60;
   // Reuse a larger history fetched by another strategy with a different period.
-  $prefix="h:v1:$symbol:$tf:$end:";
+  $prefix="h:v2:$symbol:$tf:$end:";
   db()->exec('CREATE TABLE IF NOT EXISTS indicator_cache(k TEXT PRIMARY KEY, expires INTEGER NOT NULL, payload TEXT NOT NULL)');
   $q=db()->prepare('SELECT payload FROM indicator_cache WHERE k LIKE ? AND expires>?');$q->execute([$prefix.'%',$now]);
   foreach($q->fetchAll(PDO::FETCH_COLUMN) as $raw){$candidate=json_decode($raw,true,512,JSON_THROW_ON_ERROR);$valid=true;
    for($t=$from;$t<$end;$t+=$seconds)if(!isset($candidate[$t])){$valid=false;break;}
    if($valid)return array_filter($candidate,fn($t)=>$t>=$from&&$t<$end,ARRAY_FILTER_USE_KEY);
   }
-  return $this->cached("h:v1:$symbol:$tf:$end:$count",$now,function()use($symbol,$base,$seconds,$from,$end,$now){
+  return $this->cached("h:v2:$symbol:$tf:$end:$count",$now,function()use($symbol,$base,$seconds,$from,$end,$now){
    $source=[];
    for($start=$from;$start<$end;$start+=$base*300){$until=min($end,$start+$base*300);
     $part=$this->cached("raw:v2:$symbol:$base:$start:$until",$now,fn()=>$this->fetchPart(['symbol'=>$symbol,'resolution'=>$base===60?'1':'60','from'=>$start,'to'=>$until],$symbol,$base,$start,$until));
     $source+=$part;
    }
    $bars=self::aggregate($source,$base,$seconds);
-   for($t=$from;$t<$end;$t+=$seconds)if(!isset($bars[$t]))throw new RuntimeException('Missing complete '.$seconds.'s candle at '.$t);
+   for($t=$from;$t<$end;$t+=$seconds)if(!isset($bars[$t]))throw new RuntimeException(CandleAggregation::inspect($source,$base,$seconds)['unavailable'][$t]??('Missing complete '.$seconds.'s candle at '.$t));
    ksort($bars);return $bars;
   });
  }
@@ -87,7 +84,7 @@ final class IndicatorData {
    try{
     if(isset($errors[$c['timeframe']]))throw new RuntimeException($errors[$c['timeframe']]);
     $bars=array_slice(array_values($histories[$c['timeframe']]),-Indicators::needed($c));
-    $key=implode(':',['v1',$s['symbol'],$c['timeframe'],$c['indicator'],$c['period'],$c['metric'],$end]);
+    $key=implode(':',['v2',$s['symbol'],$c['timeframe'],$c['indicator'],$c['period'],$c['metric'],$end]);
     $v=$this->cached($key,$now,fn()=>Indicators::value($c['indicator'],$c['period'],$c['metric'],$bars));
     $row['observed']=$v;$row['status']=Indicators::passes($v,$c)?'PASS':'FAIL';
    }catch(Throwable $e){$row['error']=$e->getMessage();}

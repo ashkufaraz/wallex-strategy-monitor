@@ -1,0 +1,272 @@
+[
+  {
+    "symbol": "BTCUSDT",
+    "open_time": 1794283200,
+    "close_time": 1794297600,
+    "zero_minutes": 189,
+    "minute_4h": {
+      "open": 74479.5,
+      "close": 74812.07,
+      "high": 74839.02,
+      "low": 74479.5,
+      "volume": 0.3299043
+    },
+    "hour_4h": {
+      "open": 74479.5,
+      "close": 74812.07,
+      "high": 74839.02,
+      "low": 74479.5,
+      "volume": 0.32990430000000004
+    },
+    "delta": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": -5.551115123125783e-17
+    }
+  },
+  {
+    "symbol": "BTCUSDT",
+    "open_time": 1794283200,
+    "close_time": 1794297600,
+    "zero_minutes": 189,
+    "minute_4h": {
+      "open": 74479.5,
+      "close": 74812.07,
+      "high": 74839.02,
+      "low": 74479.5,
+      "volume": 0.3299043
+    },
+    "hour_4h": {
+      "open": 74479.5,
+      "close": 74812.07,
+      "high": 74839.02,
+      "low": 74479.5,
+      "volume": 0.32990430000000004
+    },
+    "delta": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": -5.551115123125783e-17
+    }
+  },
+  {
+    "symbol": "BTCUSDT",
+    "open_time": 1794268800,
+    "close_time": 1794283200,
+    "zero_minutes": 231,
+    "minute_4h": {
+      "open": 75029.95,
+      "close": 74417.46,
+      "high": 75029.96,
+      "low": 74417.46,
+      "volume": 0.01504964
+    },
+    "hour_4h": {
+      "open": 75029.95,
+      "close": 74417.46,
+      "high": 75029.96,
+      "low": 74417.46,
+      "volume": 0.01504964
+    },
+    "delta": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": 0
+    }
+  },
+  {
+    "symbol": "BTCUSDT",
+    "open_time": 1794254400,
+    "close_time": 1794268800,
+    "zero_minutes": 212,
+    "minute_4h": {
+      "open": 74818.71,
+      "close": 75137.53,
+      "high": 75188.64,
+      "low": 74000,
+      "volume": 0.33645771999999996
+    },
+    "hour_4h": {
+      "open": 74818.71,
+      "close": 75137.53,
+      "high": 75188.64,
+      "low": 74000,
+      "volume": 0.33645772
+    },
+    "delta": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": -5.551115123125783e-17
+    }
+  },
+  {
+    "symbol": "ETHUSDT",
+    "open_time": 1794283200,
+    "close_time": 1794297600,
+    "zero_minutes": 219,
+    "minute_4h": {
+      "open": 2128.86,
+      "close": 2118.65,
+      "high": 2128.87,
+      "low": 2116.5,
+      "volume": 117.71565258000001
+    },
+    "hour_4h": {
+      "open": 2128.86,
+      "close": 2118.65,
+      "high": 2128.87,
+      "low": 2116.5,
+      "volume": 117.71565258
+    },
+    "delta": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": 1.4210854715202004e-14
+    }
+  },
+  {
+    "symbol": "ETHUSDT",
+    "open_time": 1794268800,
+    "close_time": 1794283200,
+    "zero_minutes": 226,
+    "minute_4h": {
+      "open": 2130.67,
+      "close": 2109.8,
+      "high": 2130.67,
+      "low": 2109.8,
+      "volume": 4.71768
+    },
+    "hour_4h": {
+      "open": 2130.67,
+      "close": 2109.8,
+      "high": 2130.67,
+      "low": 2109.8,
+      "volume": 4.71768
+    },
+    "delta": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": 0
+    }
+  },
+  {
+    "symbol": "ETHUSDT",
+    "open_time": 1794254400,
+    "close_time": 1794268800,
+    "zero_minutes": 218,
+    "minute_4h": {
+      "open": 2133.41,
+      "close": 2132.4,
+      "high": 2137.45,
+      "low": 2125,
+      "volume": 15.31089556
+    },
+    "hour_4h": {
+      "open": 2133.41,
+      "close": 2132.4,
+      "high": 2137.45,
+      "low": 2125,
+      "volume": 15.31089556
+    },
+    "delta": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": 0
+    }
+  },
+  {
+    "symbol": "SOLUSDT",
+    "open_time": 1794283200,
+    "close_time": 1794297600,
+    "zero_minutes": 213,
+    "minute_4h": {
+      "open": 85.87,
+      "close": 86.41,
+      "high": 86.85,
+      "low": 85.87,
+      "volume": 96.65294000000002
+    },
+    "hour_4h": {
+      "open": 85.87,
+      "close": 86.41,
+      "high": 86.85,
+      "low": 85.87,
+      "volume": 96.65294
+    },
+    "delta": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": 1.4210854715202004e-14
+    }
+  },
+  {
+    "symbol": "SOLUSDT",
+    "open_time": 1794268800,
+    "close_time": 1794283200,
+    "zero_minutes": 219,
+    "minute_4h": {
+      "open": 86.53,
+      "close": 85.7,
+      "high": 86.61,
+      "low": 85.7,
+      "volume": 47.11877999999999
+    },
+    "hour_4h": {
+      "open": 86.53,
+      "close": 85.7,
+      "high": 86.61,
+      "low": 85.7,
+      "volume": 47.11878
+    },
+    "delta": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": -1.4210854715202004e-14
+    }
+  },
+  {
+    "symbol": "SOLUSDT",
+    "open_time": 1794254400,
+    "close_time": 1794268800,
+    "zero_minutes": 219,
+    "minute_4h": {
+      "open": 86.8,
+      "close": 86.64,
+      "high": 87.16,
+      "low": 86.36,
+      "volume": 56.26744
+    },
+    "hour_4h": {
+      "open": 86.8,
+      "close": 86.64,
+      "high": 87.16,
+      "low": 86.36,
+      "volume": 56.26744
+    },
+    "delta": {
+      "open": 0,
+      "high": 0,
+      "low": 0,
+      "close": 0,
+      "volume": 0
+    }
+  }
+]

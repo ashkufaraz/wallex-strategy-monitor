@@ -142,3 +142,12 @@ foreach([null,['enabled'=>false]] as $legacyBlock){
  $api=new DelayedIndicatorMarket();$api->omitMinutes=1;$put($legacy,1440899);runCycle($api,1440900);
  expectIndicator($api->minuteCalls===1&&$api->historyCalls===0&&$count()===0,'legacy or disabled candle strategy keeps previous no-retry/no-indicator-request behavior');
 }
+
+class NoTradeMarket extends IndicatorMarket {
+ function get(string $path,array $params=[]):array{$d=parent::get($path,$params);$d['v']=array_fill(0,count($d['t']),0.);return $d;}
+ function minutes(string $symbol,int $from,int $to):array{$a=parent::minutes($symbol,$from,$to);foreach($a as &$b)$b['volume']=0.;unset($b);return $a;}
+}
+$reset();$s=$template;$s['indicator_conditions']=$block;$put($s,1440000);runCycle(new NoTradeMarket(),1440001);
+expectIndicator($count()===0&&$latest()['indicator_snapshot']['conditions'][0]['status']==='UNAVAILABLE'&&str_contains($latest()['indicator_snapshot']['conditions'][0]['error'],'no trades'),'complete no-trade indicator history is UNAVAILABLE and cannot alert');
+$reset();$s['stages'][0]['transitions'][0]=['event'=>'bar_close:4h','when'=>['left'=>['candle'=>['timeframe'=>'4h','offset'=>1,'field'=>'close']],'op'=>'gt','right'=>1],'signal'=>true];$put($s,1439999);runCycle(new NoTradeMarket(),1440000);
+expectIndicator($count()===0&&str_contains($state()['error'],'UNAVAILABLE: no trades'),'strategy engine records explicit no-trade unavailability without alert');

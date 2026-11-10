@@ -77,3 +77,15 @@ Cancellation update: all 87 PHP checks passed, including 16 cancellation checks 
 - Decimal sensitivity measured on identical captured BTC/ETH OHLCV with 71 versus 80 bars, first-value versus SMA initialization, and one-minute shifted close; detailed measured deltas documented in docs/live-indicators.md.
 - Fresh real Wallex read-only probe at epoch 1794306008 produced four valid metrics: RSI 43.871249 (FAIL), EMA distance -0.258693% (FAIL), volume ratio 0.0185085 (FAIL), ATR 0.525245% (PASS). No live strategy/alert changes.
 - Delay/outage tests are deterministic simulations. Actual publication delay distribution across market boundaries, external chart parity, and browser OS notification delivery were not measured in this audit. A delay exceeding the bounded retry fails closed and may miss an entry rather than replay it later.
+
+
+## Zero-volume aggregation and hosting network audit - 2026-11-10
+
+- Candidate CandleAggregation tested separately before wiring runtime wrappers. Zero-volume source bars count for timestamp completeness, not OHLC. Volume sums all source bars. All-zero intervals produce explicit UNAVAILABLE and no alert.
+- Actual original BTC fixture: 189 of 240 minute bars have no trades. Ignoring their carried prices changes Open/Low from 74417.46 to 74479.50, matching hourly aggregation.
+- Captured BTCUSDT/ETHUSDT/SOLUSDT at UTC starts 2026-11-09 20:00, 2026-11-10 00:00 and 04:00, plus original capture: 10 comparisons / 9 distinct market-windows. All UTC boundaries and OHLC equal. Exact Decimal volume equals; PHP maximum volume rounding difference 1.4210854715202004e-14, tolerance 1e-9.
+- All 15 PHP suites passed (423 assertions), three Node suites, four deployment tests, four admin HTTP tests, 16 formula reference comparisons and 10 exact Decimal candle comparisons passed.
+- Chrome console observed api.php requests failing with net::ERR_SSL_PROTOCOL_ERROR before HTTP. Read-only browser-to-PHP ping also succeeded (200, 196.9ms), proving intermittent transport failure. TLS issue's deeper network/server origin remains unproven.
+- Independent PHP-on-host test at epoch 1794309447: markets 200/502.48ms; minute history 200/1350.19ms/60 closed bars; hourly history 200/281.68ms/4 closed bars. All cURL errno 0, TLS verified, JSON/schema valid. Last data closes 1794309420 and 1794308400.
+- Isolated expiring admin diagnostics endpoint installed without loading App.php, touching SQLite, executing a tick, changing strategy configurations or submitting any orders. Authentication configuration and raw private diagnostic report are excluded from Git.
+- Full Persian findings: docs/four-hour-host-audit.md. TLS transport instability remains; aggregation fix does not claim to repair it.
