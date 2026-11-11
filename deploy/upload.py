@@ -29,7 +29,10 @@ def inventory(source):
 
 def upload(source):
     files = inventory(source)
-    remote = os.environ.get('FTP_REMOTE_DIR', '/htdocs').rstrip('/')
+    configured_remote = os.environ.get('FTP_REMOTE_DIR', '/htdocs')
+    remote = configured_remote.rstrip('/')
+    if configured_remote == '/' and os.environ.get('FTP_ALLOW_ACCOUNT_ROOT') == 'true':
+        remote = '/'
     if not remote.startswith('/') or '..' in remote.split('/') or not remote:
         raise ValueError('FTP_REMOTE_DIR must be an absolute non-root directory')
     ftp = ftplib.FTP_TLS(context=ssl.create_default_context(), timeout=30)

@@ -54,4 +54,5 @@ jobs:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/htdocs' }}
+          FTP_ALLOW_ACCOUNT_ROOT: ${{ vars.FTP_ALLOW_ACCOUNT_ROOT || 'false' }}
         run: python3 deploy/upload.py --source build-hosting
