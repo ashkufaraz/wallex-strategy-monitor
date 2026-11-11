@@ -23,10 +23,15 @@ jobs:
           node tests/notifications.js
           node tests/trade.js
           node tests/details.js
+          node tests/execution-gate.js
+          node tests/manual-advisory.js
+          node tests/order-flow.js
           python3 tests/deployment.py
           python3 tests/indicator-reference.py
           python3 tests/candle-reference.py
           python3 tests/admin-diagnostics.py
+          python3 tests/binance-live-reference.py
+          python3 tests/order-flow-reference.py
   deploy:
     needs: test
     if: vars.FTP_DEPLOY_ENABLED == 'true'
@@ -39,7 +44,8 @@ jobs:
           sudo apt-get install -y php-cli
       - name: Build protected hosting package
         env:
-          SITE_HOSTS: ${{ vars.SITE_HOSTS }}
+          SITE_HOSTS: ${{ vars.SITE_HOSTS || 'ashkufaraz.ir,www.ashkufaraz.ir' }}
+          REQUIRE_HTTPS: ${{ vars.REQUIRE_HTTPS || 'false' }}
           PUBLIC_ACCESS: 'true'
         run: python3 deploy/build.py --output build-hosting
       - name: Upload through FTPS

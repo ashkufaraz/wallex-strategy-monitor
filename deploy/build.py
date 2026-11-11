@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def build(destination, hosts, username, password, public_access=False):
+def build(destination, hosts, username, password, public_access=False, require_https=True):
     destination = Path(destination)
     if destination.exists() and any(destination.iterdir()):
         raise ValueError('Build destination must be empty')
@@ -31,13 +31,13 @@ def build(destination, hosts, username, password, public_access=False):
         (path / '.htaccess').write_text('Require all denied\n', encoding='utf-8')
     shutil.copy2(ROOT / 'deploy' / 'HostingAccess.php', destination / 'src' / 'HostingAccess.php')
     # JSON is read as data; secrets never become executable PHP source.
-    config = {'public_access': public_access, 'hosts': hosts, 'username': username, 'password_hash': hashed}
+    config = {'public_access': public_access, 'hosts': hosts, 'username': username, 'password_hash': hashed, 'require_https': require_https}
     (destination / 'config' / 'hosting.php').write_text(
         '<?php return json_decode(' + php_string(json.dumps(config)) + ', true, 512, JSON_THROW_ON_ERROR);\n', encoding='utf-8')
     api = (destination / 'public' / 'api.php').read_text(encoding='utf-8')
     start = api.index("$host=$_SERVER['HTTP_HOST']")
     end = api.index('try {', start)
-    api = api[:start] + "require dirname(__DIR__).'/src/HostingAccess.php';\nrequireHostingAccess();\ndefine('HOSTING_BROWSER_CHECKS',true);\nsession_start(['cookie_httponly'=>true,'cookie_secure'=>true,'cookie_samesite'=>'Strict','use_strict_mode'=>true]);$_SESSION['csrf']??=bin2hex(random_bytes(24));\n" + api[end:]
+    api = api[:start] + "require dirname(__DIR__).'/src/HostingAccess.php';\nrequireHostingAccess();\ndefine('HOSTING_BROWSER_CHECKS',true);\nsession_start(['cookie_httponly'=>true,'cookie_secure'=>" + ("true" if require_https else "false") + ",'cookie_samesite'=>'Strict','use_strict_mode'=>true]);$_SESSION['csrf']??=bin2hex(random_bytes(24));\n" + api[end:]
     (destination / 'public' / 'api.php').write_text(api, encoding='utf-8')
     (destination / 'public' / 'index.php').write_text(
         "<?php require dirname(__DIR__).'/src/HostingAccess.php'; requireHostingAccess(); header('Cache-Control: no-store'); readfile(__DIR__.'/index.html');\n", encoding='utf-8')
@@ -58,5 +58,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
     args = parser.parse_args()
-    build(args.output, os.environ.get('SITE_HOSTS', ''), os.environ.get('PANEL_USERNAME', 'admin'), os.environ.get('PANEL_PASSWORD', ''), os.environ.get('PUBLIC_ACCESS', 'false').lower() == 'true')
+    build(args.output, os.environ.get('SITE_HOSTS', ''), os.environ.get('PANEL_USERNAME', 'admin'), os.environ.get('PANEL_PASSWORD', ''), os.environ.get('PUBLIC_ACCESS', 'false').lower() == 'true', os.environ.get('REQUIRE_HTTPS', 'true').lower() == 'true')
     print('Hosting package built; runtime databases and logs excluded.')

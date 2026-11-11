@@ -1,0 +1,20 @@
+{
+  "analysis_enabled": false,
+  "enabled": false,
+  "approved_strategy_versions": {},
+  "max_wait_seconds": 900,
+  "basis_window_seconds": 3600,
+  "calibration_history_days": 7,
+  "basis_sample_interval_seconds": 10,
+  "confirmation_samples": 3,
+  "min_samples_60m": 30,
+  "min_samples_7d": 100,
+  "min_remaining_rr": null,
+  "max_quote_age_seconds": 10,
+  "mad_multiplier": 3,
+  "historical_percentile": 95,
+  "fees_pct": null,
+  "slippage_pct": null,
+  "instrument": null,
+  "orderbook": null
+}

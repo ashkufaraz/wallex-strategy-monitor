@@ -17,7 +17,7 @@ function requireHostingAccess():void {
  $config=require $file;
  $host=strtolower($_SERVER['HTTP_HOST']??'');
  if(!in_array($host,$config['hosts'],true)){http_response_code(403);exit('Host not allowed.');}
- if(($_SERVER['HTTPS']??'')!=='on'&&($_SERVER['HTTPS']??'')!=='1'){
+ if(($config['require_https']??true)&&($_SERVER['HTTPS']??'')!=='on'&&($_SERVER['HTTPS']??'')!=='1'){
   header('Location: https://'.$host.($_SERVER['REQUEST_URI']??'/'),true,308);exit;
  }
  if(($config['public_access']??false)===true)return;

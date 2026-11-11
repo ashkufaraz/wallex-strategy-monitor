@@ -1,0 +1,1020 @@
+{
+  "audit_date_utc": "2026-11-10",
+  "scope": "Public unauthenticated GET and verified TLS only; no application database opened, no source/settings changes, no order requests.",
+  "official_docs_home": "https://developers.wallex.ir/docs/",
+  "official_discovery_page": "https://wallex.ir/api-document",
+  "requests": [
+    {
+      "name": "markets-v1",
+      "method": "GET",
+      "url": "https://api.wallex.ir/v1/markets",
+      "authenticated": false,
+      "request_at_utc": "2026-11-10T13:24:04.100337+00:00",
+      "tls_verification": true,
+      "status": 200,
+      "duration_ms": 186.41,
+      "headers": {
+        "date": "Tue, 10 Nov 2026 13:24:03 GMT",
+        "content-type": "application/json",
+        "x-authenticated": "false",
+        "cache-control": "max-age=1",
+        "x-cache-status": "MISS"
+      },
+      "body_sha256": "769df5cf921d845a4ab418240c691e15455db0551d0b5db282a206481b290b09",
+      "response_sample": {
+        "result": {
+          "symbols": {
+            "BTCUSDT": {
+              "symbol": "BTCUSDT",
+              "baseAsset": "BTC",
+              "baseAssetPrecision": 8,
+              "quoteAsset": "USDT",
+              "quotePrecision": 8,
+              "faName": "بیت کوین - تتر",
+              "enName": "Bitcoin - Tether",
+              "faBaseAsset": "بیت کوین",
+              "enBaseAsset": "Bitcoin",
+              "faQuoteAsset": "تتر",
+              "enQuoteAsset": "Tether",
+              "stepSize": 8,
+              "tickSize": 2,
+              "minQty": 1e-08,
+              "minNotional": 1,
+              "stats": {
+                "bidPrice": "74289.2700000000000000",
+                "askPrice": "74345.2100000000000000",
+                "lastPrice": "74341.3200000000000000",
+                "lastQty": "74341.3200000000000000",
+                "lastTradeSide": "BUY",
+                "bidVolume": "1.09314221",
+                "askVolume": "1.38372952",
+                "bidCount": 50,
+                "askCount": 50,
+                "direction": {
+                  "SELL": 26,
+                  "BUY": 74
+                },
+                "24h_ch": -0.38,
+                "7d_ch": -3.63,
+                "24h_volume": "1.4353017700000000",
+                "7d_volume": "26.1069095100000000",
+                "24h_quoteVolume": "107220.1370728705000000",
+                "24h_highPrice": "75350.4500000000000000",
+                "24h_lowPrice": "73929.6500000000000000",
+                "24h_tmnVolume": "28019838421.25324776500000000000000000000000"
+              },
+              "createdAt": "2020-04-01T00:00:00Z",
+              "isNew": false,
+              "isZeroFee": false,
+              "isMarketTypeEnable": true,
+              "baseAsset_png_icon": "https://api.wallex.ir/coins/BTC.png",
+              "baseAsset_svg_icon": "https://api.wallex.ir/coins/BTC.svg",
+              "quoteAsset_png_icon": "https://api.wallex.ir/coins/USDT.png",
+              "quoteAsset_svg_icon": "https://api.wallex.ir/coins/USDT.svg"
+            }
+          }
+        },
+        "excerpt": true
+      }
+    },
+    {
+      "name": "markets-hector",
+      "method": "GET",
+      "url": "https://api.wallex.ir/hector/web/v1/markets",
+      "authenticated": false,
+      "request_at_utc": "2026-11-10T13:24:04.101335+00:00",
+      "tls_verification": true,
+      "status": 200,
+      "duration_ms": 95.2,
+      "headers": {
+        "date": "Tue, 10 Nov 2026 13:23:34 GMT",
+        "content-type": "application/json",
+        "x-authenticated": "false",
+        "cache-control": "max-age=30",
+        "x-cache-status": "HIT"
+      },
+      "body_sha256": "8155f0351169d05e39c565fbf61d5b005fefc92c1bcd95c0b18fd732cf07fde1",
+      "response_sample": {
+        "result": {
+          "markets": [
+            {
+              "symbol": "BTCUSDT",
+              "base_asset": "BTC",
+              "quote_asset": "USDT",
+              "fa_base_asset": "بیت کوین",
+              "fa_quote_asset": "تتر",
+              "en_base_asset": "Bitcoin",
+              "en_quote_asset": "Tether",
+              "categories": [
+                44
+              ],
+              "price": "74341.32",
+              "is_new": false,
+              "is_spot": true,
+              "is_otc": true,
+              "is_margin": true,
+              "is_tmn_based": false,
+              "is_usdt_based": true,
+              "is_zero_fee": false,
+              "leverage_step": 0.5,
+              "max_leverage": 10,
+              "created_at": "2020-04-01T00:00:00Z",
+              "amount_precision": 8,
+              "price_precision": 2,
+              "flags": [],
+              "is_market_type_enable": true,
+              "otc_min_notional": 2,
+              "otc_max_notional": 2000,
+              "otc_buy_enabled": true,
+              "otc_sell_enabled": true,
+              "fair_price": {
+                "ask": "74333.16044116843841",
+                "bid": "74333.16044116843841",
+                "spot": {
+                  "threshold": "4.00",
+                  "max_acceptable_buy": "8.00",
+                  "max_acceptable_sell": "8.00"
+                },
+                "margin_market": {
+                  "threshold": null,
+                  "max_acceptable_buy": null,
+                  "max_acceptable_sell": null
+                },
+                "margin_limit": {
+                  "threshold": "5.00",
+                  "max_acceptable_buy": null,
+                  "max_acceptable_sell": null
+                },
+                "sakoo": {
+                  "threshold": "4.00",
+                  "max_acceptable_buy": "8.00",
+                  "max_acceptable_sell": "8.00"
+                },
+                "market_maker": {
+                  "threshold": "5.00",
+                  "max_acceptable_buy": "10.00",
+                  "max_acceptable_sell": "10.00"
+                }
+              },
+              "change_24h": -0.38,
+              "volume_24h": 1.43530177,
+              "change_7D": -3.63,
+              "quote_volume_24h": 107220.1370728705,
+              "spot_is_new": false,
+              "otc_is_new": false,
+              "highest_24h_price": "75350.45",
+              "lowest_24h_price": "73929.65"
+            }
+          ]
+        },
+        "excerpt": true
+      }
+    },
+    {
+      "name": "margin-markets",
+      "method": "GET",
+      "url": "https://api.wallex.ir/margin-trade/v1/public/markets",
+      "authenticated": false,
+      "request_at_utc": "2026-11-10T13:24:04.188968+00:00",
+      "tls_verification": true,
+      "status": 200,
+      "duration_ms": 136.03,
+      "headers": {
+        "date": "Tue, 10 Nov 2026 13:24:03 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "x-authenticated": "true",
+        "x-cache-status": "BYPASS"
+      },
+      "body_sha256": "0aa8eef1f8e6eb51ca18028066c857d6abbef4897e801180fbda080caf9ae2dc",
+      "response_sample": {
+        "result": [
+          {
+            "symbol": "BTCUSDT",
+            "base": "BTC",
+            "quote": "USDT",
+            "min_risk_coef": "1",
+            "max_risk_coef": "10",
+            "risk_coef_step": "0.5",
+            "liquidity_margin": "0.15",
+            "max_age": 1814400
+          }
+        ],
+        "success": true,
+        "excerpt": true
+      }
+    },
+    {
+      "name": "margin-ratio",
+      "method": "GET",
+      "url": "https://api.wallex.ir/margin-trade/v1/public/ratio/BTCUSDT",
+      "authenticated": false,
+      "request_at_utc": "2026-11-10T13:24:04.283286+00:00",
+      "tls_verification": true,
+      "status": 200,
+      "duration_ms": 71.84,
+      "headers": {
+        "date": "Tue, 10 Nov 2026 13:24:03 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "x-authenticated": "true",
+        "x-cache-status": "BYPASS"
+      },
+      "body_sha256": "8b7b30e905dc4c222c47441d6e05fe5fce403022ba209e7138b5e854cd56f6f8",
+      "response_sample": {
+        "result": {
+          "long_percents": 15,
+          "short_percents": 85
+        },
+        "success": true
+      }
+    },
+    {
+      "name": "depth-btcusdt",
+      "method": "GET",
+      "url": "https://api.wallex.ir/v1/depth?symbol=BTCUSDT",
+      "authenticated": false,
+      "request_at_utc": "2026-11-10T13:24:04.103329+00:00",
+      "tls_verification": true,
+      "status": 200,
+      "duration_ms": 167.73,
+      "headers": {
+        "date": "Tue, 10 Nov 2026 13:24:03 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "x-authenticated": "false",
+        "cache-control": "max-age=1",
+        "x-cache-status": "MISS"
+      },
+      "body_sha256": "9faab582f05b6fd65257995ee78f790b593cf18dc12768fbab95a6e2e0215a91",
+      "response_sample": {
+        "result": {
+          "ask": [
+            {
+              "price": 74328.45,
+              "quantity": 0.00594542,
+              "sum": "441.913853199"
+            },
+            {
+              "price": 74328.46,
+              "quantity": 0.00015639,
+              "sum": "11.6242278594"
+            },
+            {
+              "price": 74331.4,
+              "quantity": 0.38165588,
+              "sum": "28369.015878632"
+            },
+            {
+              "price": 74332,
+              "quantity": 0.38165588,
+              "sum": "28369.24487216"
+            },
+            {
+              "price": 74335.52,
+              "quantity": 0.00029935,
+              "sum": "22.252337912"
+            },
+            {
+              "price": 74340.1,
+              "quantity": 0.38165588,
+              "sum": "28372.336284788"
+            },
+            {
+              "price": 74359.4,
+              "quantity": 0.00044,
+              "sum": "32.718136"
+            },
+            {
+              "price": 74374.28,
+              "quantity": 0.00146,
+              "sum": "108.5864488"
+            },
+            {
+              "price": 74412.74,
+              "quantity": 0.00280731,
+              "sum": "208.8996291294"
+            },
+            {
+              "price": 74436.28,
+              "quantity": 0.00151,
+              "sum": "112.3987828"
+            },
+            {
+              "price": 74437.06,
+              "quantity": 0.002686,
+              "sum": "199.93794316"
+            },
+            {
+              "price": 74448.65,
+              "quantity": 0.00171,
+              "sum": "127.3071915"
+            },
+            {
+              "price": 74453.69,
+              "quantity": 0.00185,
+              "sum": "137.7393265"
+            },
+            {
+              "price": 74454.17,
+              "quantity": 0.002686,
+              "sum": "199.98390062"
+            },
+            {
+              "price": 74458.26,
+              "quantity": 0.002686,
+              "sum": "199.99488636"
+            },
+            {
+              "price": 74493.52,
+              "quantity": 0.008399,
+              "sum": "625.67107448"
+            },
+            {
+              "price": 74503.65,
+              "quantity": 0.00012507,
+              "sum": "9.3181715055"
+            },
+            {
+              "price": 74515.11,
+              "quantity": 9.537e-05,
+              "sum": "7.1065060407"
+            },
+            {
+              "price": 74895,
+              "quantity": 7.193e-05,
+              "sum": "5.38719735"
+            },
+            {
+              "price": 74900.28,
+              "quantity": 0.00639881,
+              "sum": "479.2726606668"
+            },
+            {
+              "price": 74910.98,
+              "quantity": 0.01040968,
+              "sum": "779.7993302864"
+            },
+            {
+              "price": 74910.99,
+              "quantity": 0.00136731,
+              "sum": "102.4265457369"
+            },
+            {
+              "price": 75012.11,
+              "quantity": 0.00683656,
+              "sum": "512.8247907416"
+            },
+            {
+              "price": 75246.44,
+              "quantity": 1.383e-05,
+              "sum": "1.0406582652"
+            },
+            {
+              "price": 75300.93,
+              "quantity": 0.00034528,
+              "sum": "25.9999051104"
+            },
+            {
+              "price": 75500,
+              "quantity": 0.04029175,
+              "sum": "3042.027125"
+            },
+            {
+              "price": 75600,
+              "quantity": 0.002994,
+              "sum": "226.3464"
+            },
+            {
+              "price": 75720,
+              "quantity": 0.00810437,
+              "sum": "613.6628964"
+            },
+            {
+              "price": 75900,
+              "quantity": 0.01346334,
+              "sum": "1021.867506"
+            },
+            {
+              "price": 76000,
+              "quantity": 0.00179969,
+              "sum": "136.77644"
+            },
+            {
+              "price": 76031.47,
+              "quantity": 0.00951342,
+              "sum": "723.3193073274"
+            },
+            {
+              "price": 76068.23,
+              "quantity": 0.00014753,
+              "sum": "11.2223459719"
+            },
+            {
+              "price": 76091.79,
+              "quantity": 4.9e-05,
+              "sum": "3.72849771"
+            },
+            {
+              "price": 76099.12,
+              "quantity": 0.01771713,
+              "sum": "1348.2580019256"
+            },
+            {
+              "price": 76127.74,
+              "quantity": 0.00065679,
+              "sum": "49.9999383546"
+            },
+            {
+              "price": 76222.33,
+              "quantity": 4.9e-05,
+              "sum": "3.73489417"
+            },
+            {
+              "price": 76300,
+              "quantity": 0.0025731,
+              "sum": "196.32753"
+            },
+            {
+              "price": 76489.7,
+              "quantity": 0.00026012,
+              "sum": "19.896500764"
+            },
+            {
+              "price": 76500,
+              "quantity": 0.29615808,
+              "sum": "22656.09312"
+            },
+            {
+              "price": 76543.21,
+              "quantity": 3.812e-05,
+              "sum": "2.9178271652"
+            },
+            {
+              "price": 76623.62,
+              "quantity": 4.8e-05,
+              "sum": "3.67793376"
+            },
+            {
+              "price": 76702.33,
+              "quantity": 0.00058066,
+              "sum": "44.5379749378"
+            },
+            {
+              "price": 76800,
+              "quantity": 8.634e-05,
+              "sum": "6.630912"
+            },
+            {
+              "price": 76985,
+              "quantity": 0.01455383,
+              "sum": "1120.42660255"
+            },
+            {
+              "price": 77000,
+              "quantity": 0.00263947,
+              "sum": "203.23919"
+            },
+            {
+              "price": 77012.24,
+              "quantity": 0.00389393,
+              "sum": "299.8802717032"
+            },
+            {
+              "price": 77200,
+              "quantity": 0.00014681,
+              "sum": "11.333732"
+            },
+            {
+              "price": 77297.6,
+              "quantity": 3.996e-05,
+              "sum": "3.088812096"
+            },
+            {
+              "price": 77600,
+              "quantity": 0.00565992,
+              "sum": "439.209792"
+            },
+            {
+              "price": 77702.33,
+              "quantity": 0.00461513,
+              "sum": "358.6063542529"
+            }
+          ],
+          "bid": [
+            {
+              "price": 74182.38,
+              "quantity": 0.00014738,
+              "sum": "10.9329991644"
+            },
+            {
+              "price": 74023.21,
+              "quantity": 0.00050564,
+              "sum": "37.4290959044"
+            },
+            {
+              "price": 74023.2,
+              "quantity": 0.00074301,
+              "sum": "54.999977832"
+            },
+            {
+              "price": 74023.19,
+              "quantity": 2.026e-05,
+              "sum": "1.4997098294"
+            },
+            {
+              "price": 73900.04,
+              "quantity": 0.00017263,
+              "sum": "12.7573639052"
+            },
+            {
+              "price": 73900.03,
+              "quantity": 9.212e-05,
+              "sum": "6.8076707636"
+            },
+            {
+              "price": 73900.01,
+              "quantity": 6.78e-05,
+              "sum": "5.010420678"
+            },
+            {
+              "price": 73722.03,
+              "quantity": 0.01356446,
+              "sum": "999.9995270538"
+            },
+            {
+              "price": 73700.01,
+              "quantity": 0.0202247,
+              "sum": "1490.560592247"
+            },
+            {
+              "price": 73700,
+              "quantity": 0.0038875,
+              "sum": "286.50875"
+            },
+            {
+              "price": 73650,
+              "quantity": 0.00017651,
+              "sum": "12.9999615"
+            },
+            {
+              "price": 73601,
+              "quantity": 0.00048923,
+              "sum": "36.00781723"
+            },
+            {
+              "price": 73574.98,
+              "quantity": 0.00108932,
+              "sum": "80.1466972136"
+            },
+            {
+              "price": 73573,
+              "quantity": 0.00598996,
+              "sum": "440.69932708"
+            },
+            {
+              "price": 73568.09,
+              "quantity": 0.0009,
+              "sum": "66.211281"
+            },
+            {
+              "price": 73536,
+              "quantity": 1.4e-05,
+              "sum": "1.029504"
+            },
+            {
+              "price": 73532.5,
+              "quantity": 0.00212791,
+              "sum": "156.470542075"
+            },
+            {
+              "price": 73511,
+              "quantity": 0.0127872,
+              "sum": "939.9998592"
+            },
+            {
+              "price": 73510,
+              "quantity": 0.01814719,
+              "sum": "1333.9999369"
+            },
+            {
+              "price": 73501,
+              "quantity": 0.0138866,
+              "sum": "1020.6789866"
+            },
+            {
+              "price": 73500,
+              "quantity": 0.01427382,
+              "sum": "1049.12577"
+            },
+            {
+              "price": 73493.75,
+              "quantity": 0.01360659,
+              "sum": "999.9993238125"
+            },
+            {
+              "price": 73446.49,
+              "quantity": 0.005429,
+              "sum": "398.74099421"
+            },
+            {
+              "price": 73420.12,
+              "quantity": 0.00408607,
+              "sum": "299.9997497284"
+            },
+            {
+              "price": 73400,
+              "quantity": 0.00138178,
+              "sum": "101.422652"
+            },
+            {
+              "price": 73300,
+              "quantity": 0.00821253,
+              "sum": "601.978449"
+            },
+            {
+              "price": 73250,
+              "quantity": 0.00040955,
+              "sum": "29.9995375"
+            },
+            {
+              "price": 73210,
+              "quantity": 0.0040978,
+              "sum": "299.999938"
+            },
+            {
+              "price": 73201,
+              "quantity": 0.00157721,
+              "sum": "115.45334921"
+            },
+            {
+              "price": 73200,
+              "quantity": 0.13829889,
+              "sum": "10123.478748"
+            },
+            {
+              "price": 73110,
+              "quantity": 2.7e-05,
+              "sum": "1.97397"
+            },
+            {
+              "price": 73100,
+              "quantity": 0.00455861,
+              "sum": "333.234391"
+            },
+            {
+              "price": 73081,
+              "quantity": 0.45639033,
+              "sum": "33353.46170673"
+            },
+            {
+              "price": 73002,
+              "quantity": 0.00178077,
+              "sum": "129.99977154"
+            },
+            {
+              "price": 73000.2,
+              "quantity": 0.00136985,
+              "sum": "99.99932397"
+            },
+            {
+              "price": 73000,
+              "quantity": 0.03369176,
+              "sum": "2459.49848"
+            },
+            {
+              "price": 72980.02,
+              "quantity": 0.00070363,
+              "sum": "51.3509314726"
+            },
+            {
+              "price": 72920.03,
+              "quantity": 0.00492331,
+              "sum": "359.0079128993"
+            },
+            {
+              "price": 72801,
+              "quantity": 0.00065246,
+              "sum": "47.49974046"
+            },
+            {
+              "price": 72800,
+              "quantity": 0.00443155,
+              "sum": "322.61684"
+            },
+            {
+              "price": 72700,
+              "quantity": 0.00026134,
+              "sum": "18.999418"
+            },
+            {
+              "price": 72663.44,
+              "quantity": 0.00034405,
+              "sum": "24.999856532"
+            },
+            {
+              "price": 72662.15,
+              "quantity": 6.881e-05,
+              "sum": "4.9998825415"
+            },
+            {
+              "price": 72568.09,
+              "quantity": 0.0009,
+              "sum": "65.311281"
+            },
+            {
+              "price": 72560,
+              "quantity": 0.00026791,
+              "sum": "19.4395496"
+            },
+            {
+              "price": 72555,
+              "quantity": 2.7e-05,
+              "sum": "1.958985"
+            },
+            {
+              "price": 72501,
+              "quantity": 0.00013792,
+              "sum": "9.99933792"
+            },
+            {
+              "price": 72500.01,
+              "quantity": 0.00103447,
+              "sum": "74.9990853447"
+            },
+            {
+              "price": 72500,
+              "quantity": 0.00817505,
+              "sum": "592.691125"
+            },
+            {
+              "price": 72430.66,
+              "quantity": 0.0006627,
+              "sum": "47.999798382"
+            }
+          ]
+        },
+        "message": "عملیات موفقیت‌آمیز بود.",
+        "success": true
+      }
+    },
+    {
+      "name": "depth-all",
+      "method": "GET",
+      "url": "https://api.wallex.ir/depth/all",
+      "authenticated": false,
+      "request_at_utc": "2026-11-10T13:24:04.104325+00:00",
+      "tls_verification": true,
+      "status": 503,
+      "duration_ms": 74.74,
+      "headers": {
+        "date": "Tue, 10 Nov 2026 13:24:03 GMT",
+        "content-type": "text/html",
+        "x-cache-status": "BYPASS"
+      },
+      "body_sha256": "b429e25e7813a9e2b90dcec11d9cb5287751246128dd6c76a7349774829c5554",
+      "response_sample": "<html>\r\n<head><title>503 Service Temporarily Unavailable</title></head>\r\n<body>\r\n<center><h1>503 Service Temporarily Unavailable</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+    },
+    {
+      "name": "fair-price",
+      "method": "GET",
+      "url": "https://api.wallex.ir/v1/all-fairPrice",
+      "authenticated": false,
+      "request_at_utc": "2026-11-10T13:24:04.285284+00:00",
+      "tls_verification": true,
+      "status": 200,
+      "duration_ms": 112.04,
+      "headers": {
+        "date": "Tue, 10 Nov 2026 13:24:03 GMT",
+        "content-type": "application/json",
+        "x-authenticated": "false",
+        "x-cache-status": "BYPASS"
+      },
+      "body_sha256": "2985011ce60ce885ddd83f248155bbc5331ef358bb57b794ef05e931b0191232",
+      "response_sample": {
+        "result": {
+          "BTCUSDT": 74327.75679946
+        },
+        "success": true,
+        "excerpt": true
+      }
+    }
+  ],
+  "tls": [
+    {
+      "hostname": "developers.wallex.ir",
+      "verification": "required",
+      "hostname_check": true,
+      "verified": true,
+      "tls_version": "TLSv1.3",
+      "cipher": "TLS_AES_256_GCM_SHA384",
+      "subject": [
+        [
+          [
+            "commonName",
+            "*.wallex.ir"
+          ]
+        ]
+      ],
+      "issuer": [
+        [
+          [
+            "countryName",
+            "CN"
+          ]
+        ],
+        [
+          [
+            "organizationName",
+            "TrustAsia Technologies, Inc."
+          ]
+        ],
+        [
+          [
+            "commonName",
+            "LiteSSL Pro RSA CA 2025"
+          ]
+        ]
+      ],
+      "subject_alt_names": [
+        [
+          "DNS",
+          "*.wallex.ir"
+        ],
+        [
+          "DNS",
+          "wallex.ir"
+        ]
+      ],
+      "not_before": "Sep  7 16:00:00 2026 GMT",
+      "not_after": "Mar 25 15:59:59 2027 GMT"
+    },
+    {
+      "hostname": "api.wallex.ir",
+      "verification": "required",
+      "hostname_check": true,
+      "verified": true,
+      "tls_version": "TLSv1.3",
+      "cipher": "TLS_AES_256_GCM_SHA384",
+      "subject": [
+        [
+          [
+            "commonName",
+            "*.wallex.ir"
+          ]
+        ]
+      ],
+      "issuer": [
+        [
+          [
+            "countryName",
+            "CN"
+          ]
+        ],
+        [
+          [
+            "organizationName",
+            "TrustAsia Technologies, Inc."
+          ]
+        ],
+        [
+          [
+            "commonName",
+            "LiteSSL Pro RSA CA 2025"
+          ]
+        ]
+      ],
+      "subject_alt_names": [
+        [
+          "DNS",
+          "*.wallex.ir"
+        ],
+        [
+          "DNS",
+          "wallex.ir"
+        ]
+      ],
+      "not_before": "Sep  7 16:00:00 2026 GMT",
+      "not_after": "Mar 25 15:59:59 2027 GMT"
+    },
+    {
+      "hostname": "api-docs.wallex.ir",
+      "verification": "required",
+      "hostname_check": true,
+      "verified": false,
+      "error": "SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'api-docs.wallex.ir'. (_ssl.c:1010)"
+    }
+  ],
+  "repeated_depth": [
+    {
+      "requested_at": "2026-11-10T13:26:02.062383+00:00",
+      "status": 200,
+      "duration_ms": 78.66,
+      "top_level_keys": [
+        "result",
+        "message",
+        "success"
+      ],
+      "result_keys": [
+        "ask",
+        "bid"
+      ],
+      "best_bid": 74182.38,
+      "best_ask": 74271.34,
+      "bid_levels": 50,
+      "ask_levels": 50,
+      "date_header": "Tue, 10 Nov 2026 13:26:01 GMT",
+      "cache_control": "max-age=1",
+      "cache_status": "MISS",
+      "tls_verified": true
+    },
+    {
+      "requested_at": "2026-11-10T13:26:04.165311+00:00",
+      "status": 200,
+      "duration_ms": 102.62,
+      "top_level_keys": [
+        "result",
+        "message",
+        "success"
+      ],
+      "result_keys": [
+        "ask",
+        "bid"
+      ],
+      "best_bid": 74182.38,
+      "best_ask": 74271.33,
+      "bid_levels": 50,
+      "ask_levels": 50,
+      "date_header": "Tue, 10 Nov 2026 13:26:03 GMT",
+      "cache_control": "max-age=1",
+      "cache_status": "MISS",
+      "tls_verified": true
+    },
+    {
+      "requested_at": "2026-11-10T13:26:06.243407+00:00",
+      "status": 200,
+      "duration_ms": 76.74,
+      "top_level_keys": [
+        "result",
+        "message",
+        "success"
+      ],
+      "result_keys": [
+        "ask",
+        "bid"
+      ],
+      "best_bid": 74182.38,
+      "best_ask": 74271.32,
+      "bid_levels": 50,
+      "ask_levels": 50,
+      "date_header": "Tue, 10 Nov 2026 13:26:05 GMT",
+      "cache_control": "max-age=1",
+      "cache_status": "MISS",
+      "tls_verified": true
+    }
+  ],
+  "binance_exchange_info_probe": {
+    "url": "https://data-api.binance.vision/api/v3/exchangeInfo?symbol=BTCUSDT",
+    "status": 451,
+    "tls_verified": true,
+    "symbol": []
+  },
+  "swagger_sources": [
+    {
+      "url": "https://developers.wallex.ir/assets/files/basic-services-0ff3bee03ca00b31f254d76fff33a631.json",
+      "sha256": "c4b005cc317569b4172f2619f3eece2248a253ab77f9e212640b1d48f8bdaa10",
+      "host": "api.wallex.com",
+      "routes": {
+        "/hector/web/v1/markets": [
+          "get"
+        ],
+        "/v1/depth": [
+          "get"
+        ]
+      }
+    },
+    {
+      "url": "https://developers.wallex.ir/assets/files/spot-b9d06896d1009adc9ebc69b9a5495e7e.json",
+      "sha256": "d8c2f006687c8bcaedd95c26554702be06052a2116f0d2ba503d76f857367abf",
+      "host": "api.wallex.com",
+      "routes": {
+        "/hector/web/v1/markets": [
+          "get"
+        ],
+        "/depth/all": [
+          "get"
+        ]
+      }
+    },
+    {
+      "url": "https://developers.wallex.ir/assets/files/margin-c709e1f52cb44387a2e35ffd678c6dfa.json",
+      "sha256": "a65793e07373e49d9a59d0ce4a5f86d1b18fda23e9825b31391daa2501c45cc1",
+      "host": "api.wallex.ir",
+      "routes": {
+        "/margin-trade/v1/public/markets": [
+          "get"
+        ],
+        "/margin-trade/v1/public/ratio/{market}": [
+          "get"
+        ]
+      }
+    }
+  ]
+}

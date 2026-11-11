@@ -3,13 +3,22 @@ const strategyDetails = {
   id: null, loading: false,
   indicators(snapshot) {
     if(!snapshot)return '<div class="detail-notice">اندیکاتورها هنوز بررسی نشده‌اند؛ فقط هنگام تأیید نهایی ورود محاسبه می‌شوند.</div>';
-    return `<div class="detail-section"><h3>فیلتر اندیکاتورها در ${time(snapshot.as_of)}</h3><p class="detail-hint">این مقادیر متعلق به کندل‌های بسته‌شده در زمان ارزیابی‌اند؛ سبز شدن شروط قیمت به‌تنهایی تأیید ورود نیست.</p>${snapshot.conditions.map(c=>`<article class="detail-rule ${c.status==='PASS'?'yes':c.status==='FAIL'?'no':'unknown'}"><b>${esc(c.id)} · ${esc(c.indicator)}(${esc(c.period)}) · ${esc(c.timeframe)} · ${esc(c.status)}</b><div>${esc(c.symbol)} · ${esc(c.metric)}: <b dir="ltr">${esc(c.observed??'—')}</b> · ${esc(c.operator)} ${esc(JSON.stringify(c.value))}</div><div class="detail-hint">بسته‌شدن کندل: ${time(c.candle_close)} · شروع: ${time(c.candle_open)}</div>${c.error?`<div class="error">${esc(c.error)}</div>`:''}</article>`).join('')}</div>`;
+    const tf={'1m':'یک‌دقیقه‌ای','5m':'پنج‌دقیقه‌ای','15m':'پانزده‌دقیقه‌ای','30m':'سی‌دقیقه‌ای','1h':'یک‌ساعته','4h':'چهارساعته','1d':'روزانه'};
+    return `<div class="detail-section"><h3>اندیکاتورهای تعریف‌شده</h3><p class="detail-hint">ارزیابی در ${time(snapshot.as_of)} روی کندل‌های بسته‌شده؛ تأیید شرط قیمت به‌تنهایی تأیید ورود نیست.</p>${snapshot.conditions.map(c=>`<article data-status="${esc(c.status)}" class="detail-rule ${c.status==='PASS'?'yes':c.status==='FAIL'?'no':'unknown'}"><b>${esc(c.indicator)} · دوره ${esc(c.period)} · ${esc(tf[c.timeframe]||c.timeframe)}</b><p>${esc({PASS:'تأیید شد',FAIL:'برقرار نیست',UNAVAILABLE:'داده در دسترس نیست'}[c.status]||c.status)}</p><div>مقدار محاسبه‌شده: <b dir="ltr">${esc(c.observed??'—')}</b> · شرط: ${esc({lt:'کمتر از',lte:'حداکثر',gt:'بیشتر از',gte:'حداقل',eq:'برابر با',between:'در بازه'}[c.operator]||c.operator)} ${esc(Array.isArray(c.value)?c.value.join(' تا '):c.value)}</div><details><summary>زمان کندل و جزئیات فنی اندیکاتور</summary>${esc(c.id)} · ${esc(c.symbol)} · ${esc(c.metric)}<div>بسته‌شدن: ${time(c.candle_close)} · شروع: ${time(c.candle_open)}</div>${c.error?`<div class="error">${esc(c.error)}</div>`:''}</details></article>`).join('')}</div>`;
   },
   init() {
     const dialog = document.createElement('dialog');
     dialog.id = 'strategyDetails';
     dialog.innerHTML = '<div class="row"><h2>جزئیات بررسی استراتژی</h2><button type="button" id="closeDetails">بستن</button></div><div id="detailsContent"></div>';
     document.body.append(dialog);
+    dialog.addEventListener('click',async event=>{
+      const visibility=event.target.closest('[data-order-flow-visibility]');
+      if(visibility){visibility.disabled=true;try{await request({action:'order_flow_visibility',strategy_id:visibility.dataset.orderFlowVisibility,visible:visibility.dataset.visible==='true'});await this.refresh();}catch(error){visibility.disabled=false;msg(error.message,true);}return;}
+      const button=event.target.closest('[data-manual-signal]');if(!button)return;
+      if(!confirm('فقط انجام دستی معامله ثبت شود؟ این دکمه سفارشی ارسال نمی‌کند.'))return;
+      button.disabled=true;
+      try{await request({action:'acknowledge_execution',signal_id:button.dataset.manualSignal});await this.refresh();}catch(error){button.disabled=false;msg(error.message,true);}
+    });
     document.getElementById('closeDetails').onclick = () => dialog.close();
     dialog.addEventListener('close', () => { this.id = null; });
   },
@@ -25,9 +34,18 @@ const strategyDetails = {
     if (source.price) return 'قیمت مشاهده‌شده';
     const c = source.candle;
     const fields={open:'قیمت بازشدن',close:'قیمت بسته‌شدن',high:'بیشترین قیمت',low:'کمترین قیمت',volume:'حجم'};
-    return `${fields[c.field] || c.field} کندل ${c.timeframe}، ${c.offset === 1 ? 'آخرین کندل بسته‌شده' : `${c.offset} کندل قبل`}`;
+    const tf={'1m':'یک‌دقیقه‌ای','5m':'پنج‌دقیقه‌ای','15m':'پانزده‌دقیقه‌ای','30m':'سی‌دقیقه‌ای','1h':'یک‌ساعته','4h':'چهارساعته','1d':'روزانه'}[c.timeframe]||c.timeframe;
+    return `${fields[c.field] || c.field} کندل ${tf}، ${c.offset === 1 ? 'آخرین کندل بسته‌شده' : `${c.offset} کندل قبل`}`;
   },
   number(value) { return value == null ? '—' : Number(value).toLocaleString('en-US',{maximumFractionDigits:8}); },
+  candleSnapshot(node) {
+    return ['left','right'].map(side=>{
+      const c=node[`${side}_candle`];
+      if(!c)return '';
+      const utc=n=>new Date(n*1000).toISOString();
+      return `<details class="detail-hint"><summary>OHLCV و بازه دقیق کندل ارزیابی</summary><div>کندل مبنای ارزیابی · ${esc(c.provider??'wallex')} · ${esc(c.timeframe)} · field=${esc(c.field)}<div dir="ltr">${esc(utc(c.open_time))} → ${esc(utc(c.close_time))}</div><div dir="ltr">${['open','high','low','close','volume'].map(k=>`${k}: ${esc(c.ohlcv[k]??'—')}`).join(' · ')}</div>${c.provider==='binance_spot'?'OHLCV کندل مستقیم Binance Spot؛ بدون تجمیع والکس.':'OHLCV ورودی موتور؛ قیمت‌های دقیقه‌های صفرحجم در OHLC لحاظ نمی‌شوند.'}</div></details>`;
+    }).join('');
+  },
   metric(label,value,tone='',hint='') {
     return `<div class="detail-metric ${tone}"><span>${esc(label)}</span><strong dir="ltr">${esc(this.number(value))} <small>USDT</small></strong>${hint?`<div class="detail-hint">${esc(hint)}</div>`:''}</div>`;
   },
@@ -54,7 +72,7 @@ const strategyDetails = {
         const key=node.result===true?'yes':node.result===false?'no':'unknown';
         const sentence=node.left_source?`${node.negated?'نقیض: ':''}${this.source(node.left_source)} ${labels[node.op]} ${this.source(node.right_source)}`:'این قانون هنوز ارزیابی نشده است';
         const whole=found?.condition.result===true?'برقرار':found?.condition.result===false?'برقرار نیست':'نامعلوم';
-        groups[key].push(`<article class="detail-rule ${key}"><div class="detail-rule-title"><span>${key==='yes'?'✓':key==='no'?'×':'…'}</span><b>مرحله ${stageIndex+1} · شرط ${i+1}${leaves.length>1?` / بند ${j+1}`:''}</b></div><p>${esc(sentence)}</p>${node.left_source?`<div class="detail-values"><span>مقدار مشاهده‌شده <b dir="ltr">${esc(this.number(node.left))}</b></span><span>مقدار مقایسه <b dir="ltr">${esc(this.number(node.right))}</b></span></div>`:''}<div class="detail-hint">${esc(rule.event)} · ${esc(stage.id)}</div><div class="detail-hint">${at?`${preview?'پیش‌نمایش آخرین کندل / قیمت':'آخرین ارزیابی واقعی'}: ${time(at)}`:'در انتظار رسیدن موتور به این شرط'}</div>${leaves.length>1?`<div class="detail-hint">رابطهٔ بندها: ${esc(node.path.join(' ← '))} · نتیجهٔ کل قانون: ${whole}</div>`:''}</article>`);
+        groups[key].push(`<article data-status="${key==='yes'?'PASS':key==='no'?'FAIL':'UNAVAILABLE'}" class="detail-rule ${key}"><div class="detail-rule-title"><span>${key==='yes'?'✓':key==='no'?'×':'…'}</span><b>مرحله ${stageIndex+1} · شرط ${i+1}${leaves.length>1?` / بند ${j+1}`:''}</b></div><p>${esc(sentence)}</p><p>${key==='yes'?'مقدار مشاهده‌شده شرط مقایسه را برآورده می‌کند.':key==='no'?'مقدار مشاهده‌شده شرط مقایسه را برآورده نمی‌کند.':'داده کافی نیست یا موتور هنوز این شرط را بررسی نکرده است.'}</p>${node.left_source?`<div class="detail-values"><span>مقدار مشاهده‌شده <b dir="ltr">${esc(this.number(node.left))}</b></span><span>مقدار مقایسه <b dir="ltr">${esc(this.number(node.right))}</b></span></div>`:''}${this.candleSnapshot(node)}<details><summary>شناسه مرحله و رویداد شرط</summary>${esc(rule.event)} · ${esc(stage.id)}</details><div class="detail-hint">${at?`${preview?'پیش‌نمایش آخرین کندل / قیمت':'آخرین ارزیابی واقعی'}: ${time(at)}`:'در انتظار رسیدن موتور به این شرط'}</div>${leaves.length>1?`<div class="detail-hint">رابطهٔ بندها: ${esc(node.path.join(' ← '))} · نتیجهٔ کل قانون: ${whole}</div>`:''}</article>`);
       });
     }));
     return `<div class="detail-section"><div class="detail-heading"><h3>۳. وضعیت شرط‌های ورود</h3></div><p class="detail-hint">سبز یعنی خودِ شرط برقرار است، نه تأیید نهایی ورود. شرط‌های مراحل قبلی با زمان آخرین ارزیابی نمایش داده می‌شوند؛ مقادیر آن‌ها الزاماً مربوط به قیمت فعلی نیست.</p><div class="detail-condition-columns">${[['yes','شرط‌های برقرار','✓'],['no','شرط‌های برقرارنشده','×'],['unknown','هنوز بررسی نشده / داده ناموجود','…']].map(([key,title,icon])=>`<div class="detail-column ${key}"><h4>${icon} ${title}<span>${groups[key].length}</span></h4>${groups[key].join('')||'<div class="detail-empty">موردی وجود ندارد</div>'}</div>`).join('')}</div></div>`;
@@ -73,7 +91,7 @@ const strategyDetails = {
     if (node.group) return `<div class="condition"><b>${esc(node.group)}: <span class="${color}">${label}</span></b>${node.children.map(c => this.condition(c)).join('')}</div>`;
     if (!node.left_source) return `<div class="muted">${label} · ${esc(node.error || '')}</div>`;
     const op = {gt:'>',gte:'≥',lt:'<',lte:'≤',eq:'=',neq:'≠'}[node.op];
-    return `<div class="condition"><span class="${color}">${label}</span> · ${esc(this.source(node.left_source))} <b dir="ltr">${esc(node.left ?? '—')} ${esc(op)} ${esc(node.right ?? '—')}</b> · ${esc(this.source(node.right_source))}${node.error ? `<div class="error small">${esc(node.error)}</div>` : ''}</div>`;
+    return `<div class="condition"><span class="${color}">${label}</span> · ${esc(this.source(node.left_source))} <b dir="ltr">${esc(node.left ?? '—')} ${esc(op)} ${esc(node.right ?? '—')}</b> · ${esc(this.source(node.right_source))}${this.candleSnapshot(node)}${node.error ? `<div class="error small">${esc(node.error)}</div>` : ''}</div>`;
   },
   rules(rules, executed) {
     if (!rules?.length) return '<div class="muted">شرطی در این بخش بررسی نشده است.</div>';
@@ -114,11 +132,14 @@ const strategyDetails = {
       const expanded = new Set([...content.querySelectorAll('details[open]')].map(d => d.dataset.log));
       const statuses = {indicator_blocked:'ورود در انتظار تأیید اندیکاتورها',checked:'بررسی شد',blocked:'ابطال ستاپ یا انقضا',signal:'ورود تأیید شد',cancelled:'لغو شد',error:'خطای بررسی'};
       const latest = result.logs.find(x => x.version === item.version)?.report;
-      content.innerHTML = this.dashboard(item,result.logs,latest) + '<h3 class="detail-history-heading">????????? ???? ? ?????? ???</h3>' + (result.logs.length ? result.logs.map((entry, i) => {
+      content.innerHTML = (result.architecture?.analysis_enabled ? this.conditionOverview(item,result.logs,latest)+(item.config.indicator_conditions?.enabled?this.indicators(latest?.indicator_snapshot??item.state.indicators):'')+'<details class="detail-safety"><summary>ابطال و لغو استراتژی</summary>'+this.rules((latest?.trace||[]).filter(x=>x.kind!=='transition'),true)+'</details>' : this.dashboard(item,result.logs,latest)) + '<h3 class="detail-history-heading">سوابق ارزیابی واقعی و پیش‌نمایش شرط‌ها</h3>' + (result.logs.length ? result.logs.map((entry, i) => {
         const r = entry.report;
         return `<details data-log="${entry.id}" ${expanded.has(String(entry.id)) ? 'open' : ''}><summary>${time(r.checked)} · ${esc(statuses[r.status] || r.status)} · ${esc(r.from_stage)} → ${esc(r.stage)}${entry.version !== item.version ? ' · نسخهٔ قبلی' : ''}</summary><div>قیمت این بررسی: ${esc(r.price ?? 'دریافت نشد')} USDT</div>${r.error ? `<div class="error">${esc(r.error)} · نتیجهٔ این چرخه ثبت عملیاتی نشده است.</div>` : ''}<h4>شرط‌هایی که موتور واقعاً به آن‌ها رسید</h4>${this.rules(r.trace,true)}${(r.indicators||[]).map(x=>this.indicators(x.snapshot)).join('')}<h4>پیش‌نمایش شرط‌های مرحلهٔ پایان بررسی</h4><div class="small muted">این بخش فقط نتیجهٔ شرط‌ها روی آخرین کندل بسته‌شده است؛ به معنی اجرای انتقال نیست. شرط کندلی تا رویداد بسته‌شدن جدید منتظر می‌ماند. نتیجهٔ شرط‌های داخلی برای توضیح کامل نمایش داده می‌شود، حتی اگر موتور به‌علت نتیجهٔ شرط قبلی به آن‌ها نیاز نداشته باشد.</div>${this.rules(r.waiting,false)}${r.trade ? `<h4>برنامهٔ معامله در زمان این بررسی</h4>${this.trade(r.trade,r.action || item.config.action,r.price)}` : ''}</details>`;
       }).join('') : '<p>هنوز گزارشی ثبت نشده است. پردازشگر باید با کد جدید اجرا شود؛ پس از اولین بررسی این بخش پر می‌شود.</p>');
       content.dataset.loaded = 'true';
+      const signals=(result.execution_signals||[]).filter(p=>p.version===item.version);
+      const flow=typeof orderFlowView!=='undefined'?orderFlowView.safeRender(result.order_flow,item,signals[0]?.id):'';
+      if(typeof executionGateView!=='undefined')content.insertAdjacentHTML('afterbegin',executionGateView.render(signals,result.architecture,item)+flow);
       dialog.scrollTop = scrollTop;
     } catch (error) {
       if (this.id === id) document.getElementById('detailsContent').textContent = error.message;

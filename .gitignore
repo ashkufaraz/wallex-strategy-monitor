@@ -21,3 +21,4 @@ __pycache__/
 # Expiring administrator-only network diagnostics.
 /config/diagnostics-admin.php
 /config/diagnostics-last.json
+/config/execution-gate.json

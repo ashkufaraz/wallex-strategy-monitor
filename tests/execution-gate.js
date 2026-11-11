@@ -1,0 +1,18 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ctx=vm.createContext({esc,Date});
+vm.runInContext(fs.readFileSync('public/execution-gate.js','utf8')+'\nthis.view=executionGateView',ctx);
+const now=Math.floor(Date.now()/1000),config={analysis_enabled:true,max_quote_age_seconds:10};
+const p={id:'a'.repeat(64),status:'READY_FOR_MANUAL_ENTRY',reason:'<img src=x>',signal_time:now-30,checked_at:now,deadline:now+870,confirmations:[{at:now-20},{at:now-10},{at:now}],rr:{entry:100,gross_rr:2},signal_price:99};
+const html=ctx.view.render([p],config);
+assert(html.includes('Signal confirmed. Manual execution on Wallex is required.'));
+assert(html.includes('data-manual-signal=')&&html.includes('Gross RR')&&html.includes('Net RR'));
+assert(!html.includes('<img')&&html.includes('&lt;img'));
+assert(html.includes(new Date(now*1000).toISOString()));
+const stale=ctx.view.render([{...p,checked_at:now-20}],config);
+assert(!stale.includes('data-manual-signal=')&&stale.includes('دادهٔ قبلی'));
+const revoked=ctx.view.render([{...p,status:'WAITING_BASIS',revoked_at:now}],config);
+assert(revoked.includes('READY_REVOKED')&&!revoked.includes('data-manual-signal='));
+assert(ctx.view.render([],config).includes('هنوز سیگنالی'));
+assert(ctx.view.render([],{}).includes('خاموش'));
+console.log('Execution Gate UI: 8 assertion groups passed.');

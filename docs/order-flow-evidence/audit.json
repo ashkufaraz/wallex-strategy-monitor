@@ -1,0 +1,161 @@
+{
+  "date": "2026-11-11",
+  "enabled": false,
+  "browser_processing_enabled": false,
+  "order_requests": 0,
+  "deployment_performed": false,
+  "live_api": {
+    "url": "https://data-api.binance.vision/api/v3/time",
+    "http_status": 451,
+    "tls_verified": true,
+    "body": "{\n  \"code\": 0,\n  \"msg\": \"Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you believe you received this message in error.\"\n}"
+  },
+  "official_documentation": [
+    {
+      "url": "https://raw.githubusercontent.com/binance/binance-spot-api-docs/master/rest-api.md",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "4bc4693f7bed86fe36da20f673b1f6dc8839ab8129030f1dead44e5134dbd029"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/binance/binance-spot-api-docs/master/web-socket-streams.md",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "9d2ba84d1b8a006a832a06de8786374666c0f5eb9ec82326ade8fc180b2ce8c1"
+    }
+  ],
+  "historical_sources": [
+    {
+      "url": "https://data.binance.vision/data/spot/daily/aggTrades/XRPUSDT/XRPUSDT-aggTrades-2024-01-01.zip",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "650e50387cce39f98cc652f7fc2e5e828e288f7aba62378b2be9070fdb6d3df4",
+      "checksum_verified": true,
+      "bytes": 990373
+    },
+    {
+      "url": "https://data.binance.vision/data/spot/daily/klines/XRPUSDT/1m/XRPUSDT-1m-2024-01-01.zip",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "8c1bb6abc9d650a3342f266d4a738b0876ae497566c041c098a7492d498f5075",
+      "checksum_verified": true,
+      "bytes": 50977
+    }
+  ],
+  "historical_symbol": "XRPUSDT",
+  "historical_trade_count": 185,
+  "historical_candles": 15,
+  "historical_book_available": false,
+  "historical_decimal_comparisons": 12,
+  "php_suites": 26,
+  "new_php_assertions": 65,
+  "pipeline_integration_passed": true,
+  "other_regression": [
+    {
+      "command": [
+        "node",
+        "tests/notifications.js"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "tests/trade.js"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "tests/details.js"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "tests/execution-gate.js"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "tests/manual-advisory.js"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "tests/order-flow.js"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python",
+        "tests/deployment.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python",
+        "tests/indicator-reference.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python",
+        "tests/candle-reference.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python",
+        "tests/admin-diagnostics.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python",
+        "tests/binance-live-reference.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python",
+        "tests/order-flow-reference.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python",
+        "tests/manual-advisory-ui.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python",
+        "tests/order-flow-ui.py"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "protected_source_sha256": {
+    "src/Engine.php": "456db787405c575fed6b301a0ae7620ffd0d1dc69a8fd89b2f45a248b96bf5aa",
+    "src/BinanceMarketDataProvider.php": "c3131d8885c2f87c503e79c5d2d1cb833de1b26a563c9ed5f0d55d3aee6e95f5",
+    "src/IndicatorData.php": "e6f9775862ab7337cfec55503132379f906674ee05a6497a3d86e4cc5d6fa0eb",
+    "src/ExecutionGate.php": "39b8afe8bb84429996c595599e901cedf06abc5c752c62112cf902ac7f83a1e4",
+    "src/ExecutionMonitor.php": "2e3777dc87255d5322dfba3975d90c8abda73e7f4468d74f04f948d6c64b4edd"
+  },
+  "final_php_run_passed": true
+}

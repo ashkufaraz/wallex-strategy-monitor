@@ -1,0 +1,26 @@
+{
+  "isolated": true,
+  "real_exchange_calls": 0,
+  "mutation_requests": 0,
+  "notification_constructor_calls": 2,
+  "browser_errors": [],
+  "viewports": [
+    1440,
+    390
+  ],
+  "screenshots": [
+    "desktop.png",
+    "mobile.png",
+    "desktop-conditions.png",
+    "mobile-conditions.png"
+  ],
+  "passed": true,
+  "regression": {
+    "php_suites": 23,
+    "manual_advisory_assertions": 36,
+    "node_suites": 5,
+    "python_reference_and_support_programs": 5,
+    "browser_ui_program": 1,
+    "all_passed": true
+  }
+}

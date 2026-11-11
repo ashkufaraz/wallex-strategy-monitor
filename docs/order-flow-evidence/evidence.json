@@ -1,0 +1,31 @@
+{
+  "fixture_only": true,
+  "real_exchange_calls": 0,
+  "order_requests": 0,
+  "viewports": [
+    1440,
+    390
+  ],
+  "states": [
+    "SUPPORTIVE",
+    "CONTRADICTORY",
+    "MIXED",
+    "UNAVAILABLE"
+  ],
+  "screenshots": [
+    "desktop-supportive.png",
+    "desktop-contradictory.png",
+    "desktop-mixed.png",
+    "desktop-unavailable.png",
+    "mobile-supportive.png",
+    "mobile-contradictory.png",
+    "mobile-mixed.png",
+    "mobile-unavailable.png"
+  ],
+  "javascript_errors": [],
+  "historical_latest_separation": true,
+  "stale_positive_masked": true,
+  "visibility_toggle": true,
+  "main_status_unchanged": true,
+  "passed": true
+}

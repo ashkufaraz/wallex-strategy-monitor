@@ -8,6 +8,9 @@ dialog{font:inherit;color:inherit;background:#151f32;border:1px solid #3a4c68;bo
 <div class="grid"><section><h2>افزودن یا ویرایش استراتژی</h2><div class="row"><input id="file" type="file" accept=".json,application/json"><button id="example">بارگذاری نمونه</button></div><p class="small muted">ذخیره یا فعال‌سازی دوباره، ستاپ را از زمان فعلی آغاز می‌کند.</p><textarea id="json" spellcheck="false" placeholder="JSON استراتژی را اینجا قرار دهید"></textarea><p><button class="primary" id="preview">بررسی و پیش‌نمایش</button> <button id="cancel">استراتژی جدید</button></p><div id="previewBox"></div></section><div><section><h2>استراتژی‌ها</h2><div id="strategies">هنوز استراتژی‌ای ثبت نشده است.</div></section><section><h2>سوابق هشدار</h2><div class="small muted">۱۰۰ هشدار آخر؛ زمان‌ها مطابق تنظیمات مرورگر شما هستند.</div><button id="clearAlerts" type="button" disabled></button><div id="alerts"></div></section></div></div></main>
 <script src="notifications.js"></script>
 <script src="trade.js"></script>
+<script src="execution-gate.js"></script>
+<script src="order-flow.js"></script>
+<script src="order-flow-runner.js"></script>
 <script src="details.js"></script>
 <script src="browser-runner.js"></script>
 <script>
@@ -30,6 +33,7 @@ updateHistoryButtons();
 for(const b of $('strategies').querySelectorAll('[data-do=details]'))b.textContent=strategyDetails.buttonLabel;
 strategyDetails.refresh();
 if(lastAlert!==null)for(const a of [...data.alerts].reverse())if(a.id>lastAlert)notify(`${a.payload.symbol} · ${tradeDetails.title(a.payload)}`,tradeDetails.notification(a.payload),`signal-${a.id}`);lastAlert=Math.max(lastAlert||0,...data.alerts.map(a=>a.id));
+if(typeof orderFlowRunner!=='undefined')orderFlowRunner.schedule(data,csrf);
 }catch(e){msg(e.message,true)}finally{busy=false}}
 $('permission').onclick=async()=>{await panelNotifications.enable(msg);permission()};
 $('test').onclick=()=>{if(notify('آزمایش اعلان','اعلان مرورگر فعال است.',`test-${Date.now()}`))msg('درخواست اعلان به مرورگر ارسال شد. اگر نمایش داده نشد، تنظیمات اعلان مرورگر در ویندوز و حالت مزاحم نشوید / Focus Assist را بررسی کنید.');permission()};

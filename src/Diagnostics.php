@@ -2,6 +2,15 @@
 declare(strict_types=1);
 
 final class Diagnostics {
+ // Snapshot exactly the bar used by Strategy::value; never substitute market price.
+ static function candle(mixed $operand,array $ctx):?array {
+  if(!is_array($operand)||!isset($operand['candle'],$ctx['close'],$ctx['seconds']))return null;
+  $c=$operand['candle'];$start=$ctx['close']-$c['offset']*$ctx['seconds'];
+  if(!isset($ctx['bars'][$start]))return null;
+  return ['field'=>$c['field'],'timeframe'=>$c['timeframe'],'offset'=>$c['offset'],
+   'open_time'=>$start,'close_time'=>$start+$ctx['seconds'],'provider'=>$ctx['bars'][$start]['provider']??'wallex',
+   'ohlcv'=>array_intersect_key($ctx['bars'][$start],array_flip(['open','high','low','close','volume']))];
+ }
  static function inspect(array $condition,array $ctx):array {
   foreach(['all','any','not'] as $group) if(isset($condition[$group])) {
    $children=array_map(fn($c)=>self::inspect($c,$ctx),$group==='not'?[$condition[$group]]:$condition[$group]);
@@ -11,6 +20,7 @@ final class Diagnostics {
    return ['group'=>$group,'result'=>$result,'children'=>$children];
   }
   $out=['left_source'=>$condition['left'],'op'=>$condition['op'],'right_source'=>$condition['right']];
+  foreach(['left','right'] as $side){$snapshot=self::candle($condition[$side],$ctx);if($snapshot!==null)$out[$side.'_candle']=$snapshot;}
   try{$out['left']=Strategy::value($condition['left'],$ctx);$out['right']=Strategy::value($condition['right'],$ctx);$out['result']=Strategy::check($condition,$ctx);}
   catch(Throwable $e){$out['result']=null;$out['error']=$e->getMessage();}
   return $out;

@@ -4,6 +4,14 @@ require_once __DIR__.'/Engine.php';
 require_once __DIR__.'/Diagnostics.php';
 require_once __DIR__.'/IndicatorData.php';
 require_once __DIR__.'/CandleAggregation.php';
+require_once __DIR__.'/MarketArchitecture.php';
+require_once __DIR__.'/BinanceMarketDataProvider.php';
+require_once __DIR__.'/WallexExecutionMarketProvider.php';
+require_once __DIR__.'/ExecutionGate.php';
+require_once __DIR__.'/ExecutionMonitor.php';
+require_once __DIR__.'/OrderFlowConfig.php';
+require_once __DIR__.'/OrderFlowMarketData.php';
+require_once __DIR__.'/OrderFlowAdvisory.php';
 function db():PDO {static $db; if($db) return $db; $db=new PDO('sqlite:'.(defined('TEST_DATABASE') && PHP_SAPI==='cli' ? TEST_DATABASE : dirname(__DIR__).'/data/app.sqlite'),null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$db->exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS strategies(id TEXT PRIMARY KEY, version TEXT NOT NULL, config TEXT NOT NULL, state TEXT NOT NULL); CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY,v TEXT NOT NULL); CREATE TABLE IF NOT EXISTS check_logs(id INTEGER PRIMARY KEY AUTOINCREMENT,strategy_id TEXT NOT NULL,version TEXT NOT NULL,checked INTEGER NOT NULL,payload TEXT NOT NULL); CREATE INDEX IF NOT EXISTS check_logs_strategy ON check_logs(strategy_id,id); CREATE TABLE IF NOT EXISTS alerts(id INTEGER PRIMARY KEY AUTOINCREMENT, unique_key TEXT UNIQUE NOT NULL, created INTEGER NOT NULL, payload TEXT NOT NULL);');return $db;}
 function setting(string $key,string $default=''):string {$q=db()->prepare('SELECT v FROM settings WHERE k=?');$q->execute([$key]);$v=$q->fetchColumn();return $v===false?$default:$v;}
 function setSetting(string $key,string $value):void {db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute([$key,$value]);}
@@ -60,11 +68,33 @@ function initializeWorkerStates(int $now):void {
  db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?')->execute([encode(Strategy::fresh($s,$now)),$r['id'],$r['version'],$r['state']]);
  }
 }
+function persistCycleState(array $row,array $state,bool $binance):bool {
+ if($binance){$q=db()->prepare("UPDATE analysis_states SET state=? WHERE strategy_id=? AND version=? AND provider='binance_spot' AND state=? AND EXISTS(SELECT 1 FROM strategies WHERE id=? AND version=?)");$q->execute([encode($state),$row['id'],$row['version'],$row['state'],$row['id'],$row['version']]);}
+ else{$q=db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?');$q->execute([encode($state),$row['id'],$row['version'],$row['state']]);}
+ return $q->rowCount()>0;
+}
+function displayedState(array $row,array $architecture):array {
+ if(!$architecture['analysis_enabled']||!MarketArchitecture::approved($architecture,$row['id'],$row['version']))return json_decode($row['state'],true);
+ if(!db()->query("SELECT name FROM sqlite_master WHERE type='table' AND name='analysis_states'")->fetchColumn())return Strategy::fresh(json_decode($row['config'],true),time());
+ $q=db()->prepare("SELECT state FROM analysis_states WHERE strategy_id=? AND version=? AND provider='binance_spot'");$q->execute([$row['id'],$row['version']]);$state=$q->fetchColumn();return $state===false?Strategy::fresh(json_decode($row['config'],true),time()):json_decode($state,true);
+}
 function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
+ $architecture=MarketArchitecture::config();
+ if($architecture['analysis_enabled']){
+  if(!$api instanceof BinanceMarketDataProvider)$api=new BinanceMarketDataProvider(null,null,microtime(true)+($onlyId===null?30:15));
+  ExecutionGate::migrate(db());
+ }
  $indicatorData=new IndicatorData($api);
  foreach(db()->query('SELECT * FROM strategies')->fetchAll(PDO::FETCH_ASSOC) as $row) {
  if($onlyId!==null&&$row['id']!==$onlyId)continue;
  $s=json_decode($row['config'],true);if(!$s['enabled']) continue;$original=json_decode($row['state'],true);$st=$original;if(isset($st['cancelled_at'])) continue;$events=[];$price=null;$bars=[];$trace=[];$indicatorReports=[];
+ if($architecture['analysis_enabled']){
+  if(!MarketArchitecture::approved($architecture,$row['id'],$row['version']))continue;
+  db()->prepare("INSERT OR IGNORE INTO analysis_states VALUES(?,?,?,?)")->execute([$row['id'],$row['version'],'binance_spot',encode(Strategy::fresh($s,$now))]);
+  $q=db()->prepare("SELECT state FROM analysis_states WHERE strategy_id=? AND version=? AND provider='binance_spot'");$q->execute([$row['id'],$row['version']]);$row['state']=$q->fetchColumn();$original=json_decode($row['state'],true);$st=$original;
+  if(isset($st['cancelled_at']))continue;
+  if(ExecutionMonitor::pending(db(),$row['id'],$row['version'])){$st['last_check']=$now;$st['cursor']=$now;persistCycleState($row,$st,true);continue;}
+ }
  $recoveringGap=false;
  $withIndicators=Indicators::enabled($s);if($withIndicators)unset($st['pending_signal']);
  Strategy::$signalFilter=$withIndicators?function($config,$event,$at,$ctx)use($indicatorData,$now,&$indicatorReports,&$st){
@@ -75,7 +105,7 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
   $snapshot=$indicatorData->evaluate($config,$at,$now);$indicatorReports[]=['event'=>$event,'event_time'=>$at,'snapshot'=>$snapshot];$st['indicators']=$snapshot;return $snapshot['passed'];
  }:null;
  Strategy::$onCheck=function($kind,$event,$condition,$ctx,$meta)use(&$trace){if(count($trace)<100)$trace[]=array_merge(['kind'=>$kind,'event'=>$event,'candle_close'=>$ctx['close']??null,'condition'=>Diagnostics::inspect($condition,$ctx)],$meta);};
- try {$price=$api->price($s['symbol']);if(!$withIndicators){if($st['error']!==null || $now-$st['cursor']>max(180,3*(int)setting('interval','60'))) $st=Strategy::fresh($s,$now);}
+ try {$price=$api->price($s['symbol']);if($api instanceof BinanceMarketDataProvider)$now=max($now,$api->now());if(!$withIndicators){if($st['error']!==null || $now-$st['cursor']>max(180,3*(int)setting('interval','60'))) $st=Strategy::fresh($s,$now);}
  elseif($now-$st['cursor']>max(180,3*(int)setting('interval','60'))){$st['cursor']=$now;$recoveringGap=true;}$active=$st['setup']!==null;
  $cancelReason=Strategy::cancellation($s,'price',['price'=>$price]);
  if($cancelReason!==null) {$st=Strategy::fresh($s,$now);$st['cancelled_at']=$now;$st['cancel_reason']=$cancelReason;$events[]=['event'=>'cancelled:price','time'=>$now,'reason'=>$cancelReason];}
@@ -98,7 +128,7 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
    }catch(Throwable $e){if($attempt===1)throw $e;$api->invalidateMinuteCache();usleep(200000);}
    throw new RuntimeException('Entry history unavailable');
   });
- }$bars=[];foreach($timeframes as $tf=>$seconds)$bars[$tf]=Wallex::aggregate($minutes,$seconds);
+ }$bars=[];foreach($timeframes as $tf=>$seconds)$bars[$tf]=$api instanceof BinanceMarketDataProvider?$api->candles($s['symbol'],$tf,intdiv($from,$seconds)*$seconds,intdiv($now,$seconds)*$seconds):Wallex::aggregate($minutes,$seconds);
  // Only events after activation/cursor. Each expected closed candle must exist.
  $timeline=[];foreach($timeframes as $tf=>$sec) for($close=(intdiv($st['cursor'],$sec)+1)*$sec;$close<=$now;$close+=$sec) {$timeline[]=['time'=>$close,'tf'=>$tf,'seconds'=>$sec];}
  usort($timeline,fn($a,$b)=>($a['time']<=>$b['time'])?:($b['seconds']<=>$a['seconds']));
@@ -113,10 +143,11 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
  if(!$blocked&&!isset($st['cancelled_at'])&&Strategy::event($s,$st,'price',$now,['price'=>$price])) $events[]=['event'=>'price','time'=>$now,'indicators'=>$withIndicators?($st['indicators']??null):null];$st['cursor']=$now;
  }
  $st['error']=null;$st['last_check']=$now;$st['last_price']=$price;$st['price_at']=$now;
- $report=['action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$st['stage'],'status'=>isset($st['cancelled_at'])?'cancelled':($events?'signal':($blocked??false?'blocked':'checked')),'trace'=>$trace,'waiting'=>Diagnostics::waiting($s,$st,$bars,$now,$price),'trade'=>$s['trade']??null,'events'=>$events];
+ $report=['analysis_provider'=>$api instanceof BinanceMarketDataProvider?'binance_spot':'wallex','action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$st['stage'],'status'=>isset($st['cancelled_at'])?'cancelled':($events?'signal':($blocked??false?'blocked':'checked')),'trace'=>$trace,'waiting'=>Diagnostics::waiting($s,$st,$bars,$now,$price),'trade'=>$s['trade']??null,'events'=>$events];
  if($withIndicators){$report['indicators']=$indicatorReports;$report['indicator_snapshot']=$st['indicators']??null;if(!$events&&$indicatorReports)$report['status']='indicator_blocked';}
  // Optimistic comparison prevents a concurrent edit from being overwritten.
- db()->beginTransaction();$q=db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?');$q->execute([encode($st),$s['id'],$row['version'],$row['state']]);if($q->rowCount()){foreach($events as $event) recordAlert($s,$row['version'],$event['event'],$event['time'],$price,$event['reason']??null,$event['indicators']??null);Diagnostics::save($s['id'],$row['version'],$report);}db()->commit();
- } catch(Throwable $e) {if(db()->inTransaction()) db()->rollBack();$original['error']=$e->getMessage();if($withIndicators){$original['cursor']=$now;unset($original['pending_signal']);}$original['last_check']=$now;db()->beginTransaction();$q=db()->prepare('UPDATE strategies SET state=? WHERE id=? AND version=? AND state=?');$q->execute([encode($original),$s['id'],$row['version'],$row['state']]);if($q->rowCount())Diagnostics::save($s['id'],$row['version'],['action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$original['stage'],'status'=>'error','error'=>$e->getMessage(),'trace'=>$trace,'waiting'=>[],'trade'=>$s['trade']??null]);db()->commit();}finally{Strategy::$onCheck=null;Strategy::$signalFilter=null;}
+ db()->beginTransaction();if(persistCycleState($row,$st,$architecture['analysis_enabled'])){foreach($events as $event){if($architecture['analysis_enabled']&&!isset($event['reason']))ExecutionGate::create(db(),$s,$row['version'],$event['event'],$event['time'],str_starts_with($event['event'],'bar_close:')?$bars[substr($event['event'],10)][$event['time']-Strategy::TIMEFRAMES[substr($event['event'],10)]]['close']:$price,$event['indicators']??null,$architecture,$now);else recordAlert($s,$row['version'],$event['event'],$event['time'],$price,$event['reason']??null,$event['indicators']??null);}Diagnostics::save($s['id'],$row['version'],$report);}db()->commit();if($architecture['analysis_enabled']&&$events)OrderFlowAdvisory::afterSignals(db(),$now);
+ } catch(Throwable $e) {if(db()->inTransaction()) db()->rollBack();$original['error']=$e->getMessage();if($withIndicators){$original['cursor']=$now;unset($original['pending_signal']);}$original['last_check']=$now;db()->beginTransaction();if(persistCycleState($row,$original,$architecture['analysis_enabled']))Diagnostics::save($s['id'],$row['version'],['analysis_provider'=>$api instanceof BinanceMarketDataProvider?'binance_spot':'wallex','action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$original['stage'],'status'=>'error','error'=>$e->getMessage(),'trace'=>$trace,'waiting'=>[],'trade'=>$s['trade']??null]);db()->commit();}finally{Strategy::$onCheck=null;Strategy::$signalFilter=null;}
  }
+ if($architecture['analysis_enabled'])ExecutionMonitor::run($api,$now,$architecture);
 }

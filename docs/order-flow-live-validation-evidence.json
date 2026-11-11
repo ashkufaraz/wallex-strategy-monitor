@@ -1,0 +1,161 @@
+{
+  "kind": "LIVE_DIAGNOSTIC",
+  "vantage": "CLI environment executing this file; not proof of remote hosting",
+  "started_at": "2026-11-11T05:43:11+00:00",
+  "symbol": "BTCUSDT",
+  "persistent_database": false,
+  "signal_snapshot_modified": false,
+  "production_enabled": false,
+  "result": {
+    "symbol": "BTCUSDT",
+    "provider": "binance_spot",
+    "signal_id": "isolated-live-diagnostic",
+    "strategy_id": "diagnostic",
+    "version": "diagnostic",
+    "kind": "LATEST",
+    "signal_time": 1794375791,
+    "calculated_at": 1794375792,
+    "trade_window_start": 1794375480,
+    "trade_window_end": 1794375780,
+    "trade_count": 0,
+    "data_completeness": "UNVERIFIED",
+    "indicator_values": [],
+    "advisory_status": "UNAVAILABLE",
+    "explanation": "Diagnostic transport failure: SSL connection timeout",
+    "policy": {
+      "enabled": true,
+      "browser_processing_enabled": false,
+      "windows": [
+        60,
+        300
+      ],
+      "baseline_windows": 10,
+      "book_band_bps": 5,
+      "depth_limit": 1000,
+      "max_pages": 12,
+      "max_age_seconds": 90,
+      "max_signal_book_lag_seconds": 15,
+      "refresh_seconds": 60,
+      "request_timeout_ms": 1500,
+      "step_interval_seconds": 3,
+      "max_weight_per_minute": 120,
+      "taker_threshold": 0.15,
+      "book_threshold": 0.15,
+      "relative_volume_high": 1.5,
+      "relative_volume_low": 0.7,
+      "strategy_enabled": []
+    },
+    "depth_received_at": null,
+    "book_event_timestamp": null
+  },
+  "windows": {
+    "60": {
+      "start": 1794375720,
+      "end": 1794375780,
+      "metrics": null,
+      "status": "UNAVAILABLE"
+    },
+    "300": {
+      "start": 1794375480,
+      "end": 1794375780,
+      "metrics": null,
+      "status": "UNAVAILABLE"
+    }
+  },
+  "probe_errors": {
+    "/api/v3/aggTrades": "Diagnostic transport failure: SSL connection timeout",
+    "/api/v3/depth": "Diagnostic transport failure: SSL connection timeout"
+  },
+  "disabled_step_benchmark": {
+    "iterations": 10000,
+    "total_ms": 1.3877,
+    "network_requests": 0,
+    "scope": "isolated disabled auxiliary calls; not hosted main-loop latency"
+  },
+  "resources": {
+    "wall_ms": 3048.03,
+    "cpu_ms": 656.25,
+    "peak_memory_bytes": 2097152,
+    "request_count": 3
+  },
+  "requests": [
+    {
+      "url": "https://data-api.binance.vision/api/v3/time",
+      "received_at": 1794375792.254027,
+      "http_status": 0,
+      "duration_ms": 1011.18,
+      "curl_errno": 28,
+      "curl_error": "SSL connection timeout",
+      "tls_verification_enabled": true,
+      "tls_verify_result": 1,
+      "tls_verified": false,
+      "json_valid": false,
+      "bytes": 0,
+      "used_weight_1m": null,
+      "retry_after": null
+    },
+    {
+      "url": "https://data-api.binance.vision/api/v3/aggTrades?symbol=BTCUSDT&limit=1",
+      "received_at": 1794375793.270565,
+      "http_status": 0,
+      "duration_ms": 1015.063,
+      "curl_errno": 28,
+      "curl_error": "SSL connection timeout",
+      "tls_verification_enabled": true,
+      "tls_verify_result": 1,
+      "tls_verified": false,
+      "json_valid": false,
+      "bytes": 0,
+      "used_weight_1m": null,
+      "retry_after": null
+    },
+    {
+      "url": "https://data-api.binance.vision/api/v3/depth?symbol=BTCUSDT&limit=1000",
+      "received_at": 1794375794.287382,
+      "http_status": 0,
+      "duration_ms": 1012.576,
+      "curl_errno": 28,
+      "curl_error": "SSL connection timeout",
+      "tls_verification_enabled": true,
+      "tls_verify_result": 1,
+      "tls_verified": false,
+      "json_valid": false,
+      "bytes": 0,
+      "used_weight_1m": null,
+      "retry_after": null
+    }
+  ],
+  "steps": [
+    {
+      "status": "completed",
+      "job_id": "1203659c7273860101f23f04c645144b86cd729873c155813ea4ec225c5aeeb9",
+      "advisory_status": "UNAVAILABLE"
+    }
+  ],
+  "book_source_event_timestamp": null,
+  "host_reachability": [
+    {
+      "url": "https://wallex.free.nf/",
+      "error": "ReadTimeout",
+      "tls_verification_enabled": true,
+      "binance_outbound_test": false
+    },
+    {
+      "url": "https://wallex.free.nf/admin-diagnostics.php?ping=1",
+      "error": "ReadTimeout",
+      "tls_verification_enabled": true,
+      "binance_outbound_test": false
+    }
+  ],
+  "independent_local_probe": {
+    "url": "https://data-api.binance.vision/api/v3/time",
+    "vantage": "local Python, direct connection",
+    "http_status": 451,
+    "tls_verified": true,
+    "duration_ms": 1339.77,
+    "body": {
+      "code": 0,
+      "msg": "Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you believe you received this message in error."
+    }
+  }
+}

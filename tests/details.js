@@ -10,6 +10,11 @@ const context=vm.createContext({esc,time:n=>String(n||'—'),console,
 });
 vm.runInContext(fs.readFileSync('public/trade.js','utf8')+'\n'+fs.readFileSync('public/details.js','utf8')+'\nthis.details=strategyDetails;',context);
 const details=context.details;
+const candle={field:'high',timeframe:'15m',open_time:1794310200,close_time:1794311100,ohlcv:{open:74000,high:74249,low:74000,close:74249,volume:1}};
+const candleHtml=details.condition({left_source:{candle:{timeframe:'15m',offset:1,field:'high'}},right_source:74300,left:74249,right:74300,op:'gte',result:false,left_candle:candle});
+assert(candleHtml.includes('high: 74249')&&candleHtml.includes('low: 74000')&&candleHtml.includes('field=high'));
+assert(candleHtml.includes('2026-11-10T11:45:00.000Z'));
+assert(!details.candleSnapshot({left_candle:{...candle,field:'<img>'}}).includes('<img>'));
 const indicatorSnapshot={as_of:100,conditions:[{id:'ema<script>',indicator:'EMA',period:20,timeframe:'15m',status:'PASS',symbol:'BTCUSDT',metric:'value',observed:74000,operator:'gt',value:73000,candle_open:0,candle_close:100},{id:'rsi',indicator:'RSI',period:14,timeframe:'1h',status:'UNAVAILABLE',symbol:'BTCUSDT',metric:'value',observed:null,operator:'gte',value:50,error:'<img onerror=alert(1)>'}]};
 const indicatorsHtml=details.indicators(indicatorSnapshot);
 assert(indicatorsHtml.includes('PASS')&&indicatorsHtml.includes('UNAVAILABLE')&&indicatorsHtml.includes('74000'));

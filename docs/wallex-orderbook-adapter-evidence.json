@@ -1,0 +1,579 @@
+{
+  "checked_on": "2026-11-11",
+  "scope": "public read-only order book and official documentation; no authenticated requests, orders, push or deployment",
+  "protected_files_unchanged": {
+    "src/Engine.php": true,
+    "src/BinanceMarketDataProvider.php": true,
+    "src/IndicatorData.php": true,
+    "src/App.php": true,
+    "config/execution-gate.json": true
+  },
+  "documentation_requests": [
+    {
+      "url": "https://developers.wallex.ir/docs/basic-services-depth",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:52.804790+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "93f197af3afbf2a1a3c577836db8dd773960c557703c0f7c3eedb6a434b52d21"
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/socket-buy-depth",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:52.805788+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "087f68115862d2ee24027c6a0f2424ca038377263c4b5fade820b0b8ff1c9d7e"
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/socket-sell-depth",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:52.805788+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "af082d79e985fb0af0591101542a66d9302e24e17794c6013fafb7877af5fa74"
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/socket-raw-protocol",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:52.806784+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "e0dd462c01e994f74018491011cdb8a142b6430f29acee605fa659e75bdf705c"
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/socket-connection",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:53.107536+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "8aa03bedc4f28c673b9e1bd414dd8e269155e9920f56fa9332d8e46603a122c3"
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/margin-dry-run",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:53.134460+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "b7094c5e283d157b51c301a9b84a3ce6ac9925dc4696336dbbc60ca13341a117"
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/margin-calculate-loan",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:53.135458+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "c6bcfcecb565c3a8bb9cb0669afa94df54fe01a6861b6a90ad02309a26c7b396"
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/margin-types",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:53.136455+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "c6872d1a86a78a02d3474f5a9fde13bad0aed9110b59668545cd8c6e5a5ddeaf"
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/margin-open-position",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:53.360023+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "44125b8c485762e8dfa6d773168e8494c0d4e68c46095852ccd64038ce70889a"
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/margin-close-position",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:53.361994+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "d69af0a0663c7c55342105abcf9986660372f23a2dc69ae91e39294d4c67db80"
+    },
+    {
+      "url": "https://developers.wallex.ir/assets/files/margin-c709e1f52cb44387a2e35ffd678c6dfa.json",
+      "method": "GET",
+      "authenticated": false,
+      "checked_at": "2026-11-11T04:18:53.362990+00:00",
+      "status": 200,
+      "tls_verified": true,
+      "sha256": "16c5f89381d9449456edb2e7c4b297f64139851b9795fc877add1823dd4e7ff4"
+    }
+  ],
+  "live_diagnostics": {
+    "read_only": true,
+    "persistent_database": false,
+    "checked_at_utc": "2026-11-11T04:21:49+00:00",
+    "snapshot": {
+      "bid": 73406.93,
+      "ask": 73524.15,
+      "mid": 73465.54,
+      "spread": 117.22000000000116,
+      "bids": [
+        [
+          73406.93,
+          0.04556172
+        ],
+        [
+          73351.88,
+          0.06429068
+        ],
+        [
+          73296.83,
+          0.06694115
+        ],
+        [
+          73241.78,
+          0.03180554
+        ],
+        [
+          73186.73,
+          0.05535387
+        ],
+        [
+          73099.05,
+          0.00056967
+        ],
+        [
+          73099.04,
+          0.000342
+        ],
+        [
+          73000.12,
+          4.117e-05
+        ],
+        [
+          73000.01,
+          0.0014292
+        ],
+        [
+          73000,
+          0.0009589
+        ],
+        [
+          72801.54,
+          0.00549438
+        ],
+        [
+          72800.73,
+          0.0006868
+        ],
+        [
+          72800,
+          2.163e-05
+        ],
+        [
+          72701.01,
+          0.00011455
+        ],
+        [
+          72701,
+          0.0002059
+        ],
+        [
+          72700.02,
+          0.00092896
+        ],
+        [
+          72700,
+          0.00017171
+        ],
+        [
+          72500,
+          0.02070462
+        ],
+        [
+          72400,
+          0.06082628
+        ],
+        [
+          72378.9,
+          0.00328548
+        ],
+        [
+          72350.01,
+          0.00156556
+        ],
+        [
+          72326,
+          2.765e-05
+        ],
+        [
+          72300,
+          0.00232845
+        ],
+        [
+          72200.1,
+          0.00272335
+        ],
+        [
+          72200,
+          0.00837533
+        ],
+        [
+          72192.57,
+          0.00250025
+        ],
+        [
+          72133.06,
+          0.00128927
+        ],
+        [
+          72120,
+          0.00022019
+        ],
+        [
+          72112.98,
+          0.00992574
+        ],
+        [
+          72100,
+          0.00175203
+        ],
+        [
+          72085.48,
+          0.00405977
+        ],
+        [
+          72070.79,
+          0.00017452
+        ],
+        [
+          72052.98,
+          6.238e-05
+        ],
+        [
+          72012.98,
+          0.00742921
+        ],
+        [
+          72010,
+          0.00421628
+        ],
+        [
+          72001,
+          0.002715
+        ],
+        [
+          72000.69,
+          0.00010277
+        ],
+        [
+          72000.42,
+          2.777e-05
+        ],
+        [
+          72000,
+          0.33043203
+        ],
+        [
+          71881.24,
+          0.00127893
+        ],
+        [
+          71835,
+          1.5e-05
+        ],
+        [
+          71810,
+          0.00083196
+        ],
+        [
+          71800,
+          0.00577994
+        ],
+        [
+          71751,
+          1.4e-05
+        ],
+        [
+          71701,
+          1.4e-05
+        ],
+        [
+          71700,
+          0.02203347
+        ],
+        [
+          71601,
+          0.00529236
+        ],
+        [
+          71550,
+          1.5e-05
+        ],
+        [
+          71501,
+          0.00015385
+        ],
+        [
+          71500,
+          0.00478179
+        ]
+      ],
+      "asks": [
+        [
+          73524.15,
+          0.00079
+        ],
+        [
+          73564.74,
+          0.38845644
+        ],
+        [
+          73564.75,
+          0.002647
+        ],
+        [
+          73595.32,
+          0.002717
+        ],
+        [
+          73605.97,
+          0.000999
+        ],
+        [
+          73606.21,
+          0.00202
+        ],
+        [
+          73608.86,
+          0.00202
+        ],
+        [
+          73622.2,
+          0.002716
+        ],
+        [
+          73623.14,
+          0.01128719
+        ],
+        [
+          73634.51,
+          0.002716
+        ],
+        [
+          73646.58,
+          0.00198
+        ],
+        [
+          73792.4,
+          0.06517407
+        ],
+        [
+          73814.07,
+          0.00075547
+        ],
+        [
+          73814.08,
+          0.00023711
+        ],
+        [
+          73847.45,
+          0.06170809
+        ],
+        [
+          73902.5,
+          0.07047499
+        ],
+        [
+          73950,
+          2.295e-05
+        ],
+        [
+          73957.55,
+          0.06996529
+        ],
+        [
+          73977.73,
+          0.00163427
+        ],
+        [
+          74000,
+          0.06893361
+        ],
+        [
+          74007,
+          0.00202683
+        ],
+        [
+          74250,
+          0.01182006
+        ],
+        [
+          74275,
+          0.00139951
+        ],
+        [
+          74300,
+          0.00139786
+        ],
+        [
+          74350,
+          0.00170105
+        ],
+        [
+          74700,
+          0.00147574
+        ],
+        [
+          74895,
+          7.193e-05
+        ],
+        [
+          74910.99,
+          0.00136731
+        ],
+        [
+          75000,
+          7.221e-05
+        ],
+        [
+          75012.11,
+          0.00683656
+        ],
+        [
+          75472.36,
+          0.00021462
+        ],
+        [
+          75500,
+          0.02533831
+        ],
+        [
+          75600,
+          0.002994
+        ],
+        [
+          75720,
+          0.00810437
+        ],
+        [
+          75900,
+          0.01346334
+        ],
+        [
+          76000,
+          0.00179969
+        ],
+        [
+          76031.47,
+          0.00951342
+        ],
+        [
+          76068.23,
+          0.00014753
+        ],
+        [
+          76091.79,
+          4.9e-05
+        ],
+        [
+          76099.12,
+          0.01771713
+        ],
+        [
+          76127.74,
+          0.00065679
+        ],
+        [
+          76222.33,
+          4.9e-05
+        ],
+        [
+          76292.83,
+          0.00183577
+        ],
+        [
+          76300,
+          0.0025731
+        ],
+        [
+          76500,
+          0.01876009
+        ],
+        [
+          76522.42,
+          0.00017637
+        ],
+        [
+          76623.62,
+          4.8e-05
+        ],
+        [
+          76800,
+          0.00517895
+        ],
+        [
+          77000,
+          0.00526657
+        ],
+        [
+          77012.24,
+          0.00389393
+        ]
+      ],
+      "visible_bid_quantity": 0.77987206,
+      "visible_ask_quantity": 0.9032035200000003,
+      "quantity_unit": "base_asset",
+      "provider": "wallex",
+      "symbol": "BTCUSDT",
+      "source_url": "https://api.wallex.ir/v1/depth?symbol=BTCUSDT",
+      "received_at": 1794370912,
+      "timestamp": null,
+      "source_timestamp": null,
+      "source_sequence": null,
+      "trust_status": "UNVERIFIED",
+      "trust_reason": "Official Wallex REST order book has no verified source timestamp or sequence; received_at is local receipt only",
+      "sample_id": "bd79c159b0aff06d29e41eb2bf578b50d91f807329f20e18ffa9ce86089f479f"
+    },
+    "estimate": {
+      "action": "LONG",
+      "side": "ask",
+      "requested_base_quantity": 0.001,
+      "visible_base_quantity": 0.9032035200000003,
+      "filled_base_quantity": 0.001,
+      "unfilled_base_quantity": 0,
+      "depth_sufficient": true,
+      "vwap": 73532.6739,
+      "partial_vwap": 73532.6739,
+      "estimated_quote_amount": 73.53267389999999,
+      "levels_used": [
+        {
+          "price": 73524.15,
+          "base_quantity": 0.00079
+        },
+        {
+          "price": 73564.74,
+          "base_quantity": 0.00021
+        }
+      ],
+      "status": "VISIBLE_DEPTH_SUFFICIENT",
+      "execution_confirmed": false,
+      "reason": "Indicative visible-book estimate only; quote freshness and instrument execution are not verified",
+      "fees_included": false,
+      "trust_status": "UNVERIFIED"
+    },
+    "ok": true
+  },
+  "websocket_validation": "Official documentation reviewed; no live subscription performed; depth source timestamp and sequence not verified",
+  "margin_mapping_verified": false,
+  "dry_run_invoked": false,
+  "execution_gate_enabled": false,
+  "tests": {
+    "php_suites": 21,
+    "new_orderbook_assertions": 50,
+    "javascript_suites": 4,
+    "python_programs": 5,
+    "all_passed": true
+  }
+}

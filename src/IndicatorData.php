@@ -50,6 +50,7 @@ final class IndicatorData {
 
  function history(string $symbol,string $tf,int $count,int $asOf,int $now):array {
   $seconds=Indicators::TIMEFRAMES[$tf];$end=intdiv($asOf,$seconds)*$seconds;$from=$end-$count*$seconds;
+  if($this->api instanceof BinanceMarketDataProvider)return $this->cached("binance_spot:native:v1:$symbol:$tf:$from:$end",$now,fn()=>$this->api->candles($symbol,$tf,$from,$end));
   if($from<0)throw new RuntimeException('Insufficient history before Unix epoch');
   $base=$seconds>=3600?3600:60;
   // Reuse a larger history fetched by another strategy with a different period.
@@ -84,7 +85,7 @@ final class IndicatorData {
    try{
     if(isset($errors[$c['timeframe']]))throw new RuntimeException($errors[$c['timeframe']]);
     $bars=array_slice(array_values($histories[$c['timeframe']]),-Indicators::needed($c));
-    $key=implode(':',['v2',$s['symbol'],$c['timeframe'],$c['indicator'],$c['period'],$c['metric'],$end]);
+    $key=implode(':',[$this->api instanceof BinanceMarketDataProvider?'binance_spot:v1':'v2',$s['symbol'],$c['timeframe'],$c['indicator'],$c['period'],$c['metric'],$end]);
     $v=$this->cached($key,$now,fn()=>Indicators::value($c['indicator'],$c['period'],$c['metric'],$bars));
     $row['observed']=$v;$row['status']=Indicators::passes($v,$c)?'PASS':'FAIL';
    }catch(Throwable $e){$row['error']=$e->getMessage();}

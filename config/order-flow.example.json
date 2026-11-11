@@ -1,0 +1,23 @@
+{
+    "enabled": false,
+    "browser_processing_enabled": false,
+    "windows": [
+        60,
+        300
+    ],
+    "baseline_windows": 10,
+    "book_band_bps": 5,
+    "depth_limit": 1000,
+    "max_pages": 12,
+    "max_age_seconds": 90,
+    "max_signal_book_lag_seconds": 15,
+    "refresh_seconds": 60,
+    "request_timeout_ms": 1500,
+    "step_interval_seconds": 3,
+    "max_weight_per_minute": 120,
+    "taker_threshold": 0.15,
+    "book_threshold": 0.15,
+    "relative_volume_high": 1.5,
+    "relative_volume_low": 0.7,
+    "strategy_enabled": []
+}

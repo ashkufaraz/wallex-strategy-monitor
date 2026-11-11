@@ -2,7 +2,7 @@
 
 فیلتر اختیاری RSI، EMA، ATR و حجم کندل: [راهنمای JSON و محاسبات](docs/live-indicators.md) · [نمونهٔ کامل](example-btc-short-indicators.json). استراتژی‌های قدیمی بدون تغییر کار می‌کنند؛ اندیکاتورها فقط در صورت تعریف و فعال‌سازی در JSON و هنگام تأیید نهایی ورود بررسی می‌شوند.
 
-[Online panel](https://wallex.free.nf/public/)
+[Online panel](http://ashkufaraz.ir/)
 
 
 

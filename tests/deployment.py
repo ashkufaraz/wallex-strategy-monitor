@@ -21,6 +21,16 @@ uploader = load('hosting_uploader', 'deploy/upload.py')
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_http_public_package_uses_working_session_cookies(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / 'site'
+            builder.build(output, 'ashkufaraz.ir', '', '', public_access=True, require_https=False)
+            source = '$_SERVER=["HTTP_HOST"=>"ashkufaraz.ir"];require $argv[1];requireHostingAccess();echo "AUTHORIZED";'
+            result = subprocess.check_output([os.environ.get('PHP_BINARY', 'php'), '-r', source,
+                str(output / 'src/HostingAccess.php')], text=True)
+            self.assertEqual(result, 'AUTHORIZED')
+            self.assertIn("'cookie_secure'=>false", (output / 'public/api.php').read_text())
+
     def test_protected_package_and_actual_authentication(self):
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder) / 'site'
