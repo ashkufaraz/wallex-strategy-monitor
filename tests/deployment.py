@@ -21,6 +21,21 @@ uploader = load('hosting_uploader', 'deploy/upload.py')
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_cron_package_runs_without_browser_and_respects_shared_lock(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / 'site'
+            builder.build(output, 'demo.example.com', '', '', public_access=True)
+            self.assertIn('cron.php', [n for n, _ in uploader.inventory(output)])
+            php = os.environ.get('PHP_BINARY', 'php')
+            result = json.loads(subprocess.check_output([php, str(output / 'cron.php')], text=True))
+            self.assertEqual(result['status'], 'idle')
+            source = ('$root=$argv[1];require $root."/src/App.php";'
+                      'if((int)setting("heartbeat","0")<time()-10)exit(2);'
+                      '$lock=fopen($root."/data/worker.lock","c");flock($lock,LOCK_EX);'
+                      'require $root."/cron.php";')
+            busy = json.loads(subprocess.check_output([php, '-r', source, str(output)], text=True))
+            self.assertEqual(busy['status'], 'busy')
+
     def test_http_public_package_uses_working_session_cookies(self):
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder) / 'site'

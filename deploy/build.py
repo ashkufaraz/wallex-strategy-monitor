@@ -30,6 +30,7 @@ def build(destination, hosts, username, password, public_access=False, require_h
         path.mkdir(exist_ok=True)
         (path / '.htaccess').write_text('Require all denied\n', encoding='utf-8')
     shutil.copy2(ROOT / 'deploy' / 'HostingAccess.php', destination / 'src' / 'HostingAccess.php')
+    shutil.copy2(ROOT / 'cron.php', destination / 'cron.php')
     # JSON is read as data; secrets never become executable PHP source.
     config = {'public_access': public_access, 'hosts': hosts, 'username': username, 'password_hash': hashed, 'require_https': require_https}
     (destination / 'config' / 'hosting.php').write_text(
@@ -44,7 +45,7 @@ def build(destination, hosts, username, password, public_access=False, require_h
     (destination / 'public' / '.htaccess').write_text(
         'DirectoryIndex index.php\nOptions -Indexes\nSetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1\n<Files "index.html">\nRequire all denied\n</Files>\n', encoding='utf-8')
     (destination / '.htaccess').write_text(
-        'Options -Indexes\nDirectoryIndex index.php\n<Files ".deploy-manifest.json">\nRequire all denied\n</Files>\n', encoding='utf-8')
+        'Options -Indexes\nDirectoryIndex index.php\n<FilesMatch "^(cron\\.php|\\.deploy-manifest\\.json)$">\nRequire all denied\n</FilesMatch>\n', encoding='utf-8')
     (destination / 'index.php').write_text("<?php header('Location: public/');\n", encoding='utf-8')
     return len(list(destination.rglob('*')))
 
