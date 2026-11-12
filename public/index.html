@@ -23,7 +23,7 @@ function notify(title,body,tag){return panelNotifications.send(title,body,tag,ms
 function permission(){ $('permissionState').textContent=panelNotifications.status();}
 async function refresh(){if(busy)return;busy=true;try{const r=await fetch('api.php',{cache:'no-store'});if(!r.ok)throw Error('ارتباط با PHP برقرار نشد');data=await r.json();csrf=data.csrf;if(document.activeElement!==$('interval'))$('interval').value=data.interval;const alive=Date.now()/1000-data.heartbeat<120;$('health').textContent=alive?'پردازشگر فعال':'پردازشگر متوقف یا در انتظار پاسخ';$('health').className='badge '+(alive?'ok':'error');
 $('strategies').innerHTML=data.strategies.length?data.strategies.map((x,i)=>`<div class="card"><b>${esc(x.config.name)}</b> <span class="badge">${esc(x.config.symbol)} · ${esc(x.config.action)}</span><div>${esc(tradeDetails.status(x))} · مرحله: <b>${esc(x.state.stage)}</b></div><div class="small muted">بررسی: ${time(x.state.last_check)}<br>شروع ستاپ: ${time(x.state.setup)}</div>${strategyDetails.signalNotice(x)}${x.state.error?`<div class="error small">${esc(x.state.error)}</div>`:''}<div class="row"><button data-index="${i}" data-do="details"></button><button data-index="${i}" data-do="edit">ویرایش</button><button data-index="${i}" data-do="toggle">${esc(tradeDetails.toggleLabel(x))}</button><button data-index="${i}" data-do="delete">حذف</button></div></div>`).join(''):'هنوز استراتژی‌ای ثبت نشده است.';
-$('alerts').innerHTML=data.alerts.map(a=>`<div class="alert"><b>${esc(a.payload.name)} · ${esc(tradeDetails.title(a.payload))}</b><div>${esc(a.payload.symbol)} · قیمت هنگام بررسی: ${esc(a.payload.price)}</div>${tradeDetails.alertHtml(a.payload)}${a.payload.indicators?strategyDetails.indicators(a.payload.indicators):''}<div class="small muted">زمان رویداد: ${time(a.payload.event_time)}<br>زمان ثبت: ${time(a.created)}</div><button type="button" data-delete-alert="${a.id}"></button></div>`).join('')||'هنوز هشداری ثبت نشده است.';
+$('alerts').innerHTML=data.alerts.map(a=>`<div class="alert"><b>${esc(a.payload.name)} · ${esc(tradeDetails.title(a.payload))}</b><div>${esc(a.payload.symbol)} · قیمت هنگام بررسی: ${esc(a.payload.price)}</div>${tradeDetails.alertHtml(a.payload)}${a.payload.indicators?strategyDetails.indicators(a.payload.indicators):''}<div class="small muted">زمان رویداد: ${time(a.payload.event_time)}<br>زمان ثبت: ${time(a.created)}</div><div class="row"><button type="button" data-alert-details="${esc(a.payload.strategy_id)}" ${data.strategies.some(x=>x.config.id===a.payload.strategy_id)?'':'disabled title="استراتژی این هشدار حذف شده است"'}>جزئیات استراتژی</button><button type="button" data-delete-alert="${a.id}"></button></div></div>`).join('')||'هنوز هشداری ثبت نشده است.';
 if(data.browser_checks){
  $('health').textContent=browserRunner.running?'در حال دریافت قیمت و بررسی استراتژی':(alive?'پایش با صفحهٔ باز فعال است':'در انتظار شروع بررسی از مرورگر');
  $('monitoringNote').textContent='روی این هاست، بررسی‌ها فقط تا زمانی انجام می‌شوند که این صفحه باز و متصل باشد. با بستن صفحه یا خواب دستگاه، پایش متوقف می‌شود. زمان و خطای هر بررسی در کارت استراتژی نمایش داده می‌شود.';
@@ -55,6 +55,13 @@ async function removeHistory(button,action,id){
  catch(e){msg(e.message,true)}finally{button.disabled=false;updateHistoryButtons()}
 }
 $('alerts').onclick=async e=>{
+ const detailsButton=e.target.closest('button[data-alert-details]');
+ if(detailsButton){
+  const item=data.strategies.find(x=>x.config.id===detailsButton.dataset.alertDetails);
+  if(!item){msg('استراتژی این هشدار حذف شده است و جزئیات فعلی در دسترس نیست.',true);return;}
+  await strategyDetails.open(item);return;
+ }
+
  const button=e.target.closest('button[data-delete-alert]');if(!button)return;
  if(!confirm('این هشدار از سوابق حذف شود؟ این کار قابل بازگشت نیست.'))return;
  await removeHistory(button,'delete_alert',Number(button.dataset.deleteAlert));
