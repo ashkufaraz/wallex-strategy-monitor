@@ -14,6 +14,6 @@ jobs:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_REMOTE_DIR: '/'
-          SITE_URL: http://ashkufaraz.ir/
+          FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/public_html' }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://ashkufaraz.ir/' }}
         run: python3 deploy/probe.py

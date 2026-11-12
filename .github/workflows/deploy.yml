@@ -45,7 +45,7 @@ jobs:
       - name: Build protected hosting package
         env:
           SITE_HOSTS: ${{ vars.SITE_HOSTS || 'ashkufaraz.ir,www.ashkufaraz.ir' }}
-          REQUIRE_HTTPS: ${{ vars.REQUIRE_HTTPS || 'false' }}
+          REQUIRE_HTTPS: ${{ vars.REQUIRE_HTTPS || 'true' }}
           PUBLIC_ACCESS: 'true'
         run: python3 deploy/build.py --output build-hosting
       - name: Upload through FTPS
@@ -53,6 +53,9 @@ jobs:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/htdocs' }}
+          FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/public_html' }}
           FTP_ALLOW_ACCOUNT_ROOT: ${{ vars.FTP_ALLOW_ACCOUNT_ROOT || 'false' }}
-        run: python3 deploy/upload.py --source build-hosting
+          SITE_URL: ${{ vars.SITE_URL || 'https://ashkufaraz.ir/' }}
+        run: |
+          python3 deploy/probe.py
+          python3 deploy/upload.py --source build-hosting
