@@ -111,7 +111,12 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
   }
   $snapshot=$indicatorData->evaluate($config,$at,$now);$indicatorReports[]=['event'=>$event,'event_time'=>$at,'snapshot'=>$snapshot];$st['indicators']=$snapshot;return $snapshot['passed'];
  }:null;
- Strategy::$onCheck=function($kind,$event,$condition,$ctx,$meta)use(&$trace){if(count($trace)<100)$trace[]=array_merge(['kind'=>$kind,'event'=>$event,'candle_close'=>$ctx['close']??null,'condition'=>Diagnostics::inspect($condition,$ctx)],$meta);};
+ Strategy::$onCheck=function($kind,$event,$condition,$ctx,$meta)use(&$trace,&$st,&$now){
+  $record=array_merge(['kind'=>$kind,'event'=>$event,'candle_close'=>$ctx['close']??null,'condition'=>Diagnostics::inspect($condition,$ctx)],$meta);
+  if(count($trace)<100)$trace[]=$record;
+  if($kind==='transition'&&($meta['to']??'signal')!=='signal'&&$record['condition']['result']===true)
+   $st['completed_rules'][$meta['stage'].':'.$meta['rule']]=$record+['checked'=>$now];
+ };
  try {$price=$api->price($s['symbol']);if($api instanceof BinanceMarketDataProvider)$now=max($now,$api->now());if(!$withIndicators){if($st['error']!==null || $now-$st['cursor']>max(180,3*(int)setting('interval','60'))) $st=Strategy::fresh($s,$now);}
  elseif($now-$st['cursor']>max(180,3*(int)setting('interval','60'))){$st['cursor']=$now;$recoveringGap=true;}$active=$st['setup']!==null;
  $cancelReason=Strategy::cancellation($s,'price',['price'=>$price]);
@@ -119,7 +124,7 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
  else {
  Strategy::trace('invalidation','price',$s['invalidation'],['price'=>$price]);
  $blocked=Strategy::check($s['invalidation'],['price'=>$price]) || ($active && $now-$st['setup']>$s['max_setup_seconds']);
- if($blocked){$st['stage']=$s['initial_stage'];$st['setup']=null;if($withIndicators)unset($st['pending_signal']);}
+ if($blocked){$st['stage']=$s['initial_stage'];$st['setup']=null;unset($st['completed_rules']);if($withIndicators)unset($st['pending_signal']);}
  $timeframes=strategyTimeframes($s);$alignment=$timeframes?max($timeframes):3600;
  $from=max(0,intdiv(min($st['cursor'],$now)-max(lookback($s),$alignment)-$alignment,$alignment)*$alignment);
  $minutes=[];
@@ -139,7 +144,7 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
  // Only events after activation/cursor. Each expected closed candle must exist.
  $timeline=[];foreach($timeframes as $tf=>$sec) for($close=(intdiv($st['cursor'],$sec)+1)*$sec;$close<=$now;$close+=$sec) {$timeline[]=['time'=>$close,'tf'=>$tf,'seconds'=>$sec];}
  usort($timeline,fn($a,$b)=>($a['time']<=>$b['time'])?:($b['seconds']<=>$a['seconds']));
- foreach($timeline as $e) {if(!isset($bars[$e['tf']][$e['time']-$e['seconds']])){$why=CandleAggregation::inspect($minutes,60,$e['seconds'])['unavailable'][$e['time']-$e['seconds']]??('Incomplete '.$e['tf'].' candle; retry pending');throw new RuntimeException($why);}if($st['setup']!==null && $e['time']-$st['setup']>$s['max_setup_seconds']) {$st['stage']=$s['initial_stage'];$st['setup']=null;if($withIndicators)unset($st['pending_signal']);}
+ foreach($timeline as $e) {if(!isset($bars[$e['tf']][$e['time']-$e['seconds']])){$why=CandleAggregation::inspect($minutes,60,$e['seconds'])['unavailable'][$e['time']-$e['seconds']]??('Incomplete '.$e['tf'].' candle; retry pending');throw new RuntimeException($why);}if($st['setup']!==null && $e['time']-$st['setup']>$s['max_setup_seconds']) {$st['stage']=$s['initial_stage'];$st['setup']=null;unset($st['completed_rules']);if($withIndicators)unset($st['pending_signal']);}
  if($withIndicators&&isset($st['pending_signal'])&&$st['pending_signal']['event']==='bar_close:'.$e['tf']&&$e['time']>$st['pending_signal']['time'])unset($st['pending_signal']);
  if(($reason=Strategy::cancellation($s,'bar_close:'.$e['tf'],['close'=>$e['time'],'seconds'=>$e['seconds'],'bars'=>$bars[$e['tf']]]))!==null){$st=Strategy::fresh($s,$now);$st['cancelled_at']=$e['time'];$st['cancel_reason']=$reason;$events=[['event'=>'cancelled:bar_close:'.$e['tf'],'time'=>$e['time'],'reason'=>$reason]];break;}
  if(!$blocked&&Strategy::event($s,$st,'bar_close:'.$e['tf'],$e['time'],['close'=>$e['time'],'seconds'=>$e['seconds'],'bars'=>$bars[$e['tf']]])) $events[]=['event'=>'bar_close:'.$e['tf'],'time'=>$e['time'],'indicators'=>$withIndicators?($st['indicators']??null):null];}

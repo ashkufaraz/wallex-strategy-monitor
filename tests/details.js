@@ -58,3 +58,10 @@ assert(issued.includes('data-signal-issued="1"')&&issued.includes('72,983.15'));
 assert.strictEqual(details.signalNotice({}), '');
 const unavailable=details.indicators({as_of:100,conditions:[{...indicatorSnapshot.conditions[0],status:'UNAVAILABLE',error:'UNAVAILABLE: no trades in complete interval'}]});
 assert(unavailable.includes('UNAVAILABLE: no trades in complete interval'));
+
+const linear={version:'v1',config:{initial_stage:'a',stages:[{id:'a',transitions:[{event:'price',when:{left:{price:true},op:'gt',right:10},to:'b'}]},{id:'b',transitions:[{event:'price',when:{left:{price:true},op:'gt',right:11},signal:true}]}]},state:{stage:'b',setup:100}};
+assert(details.conditionOverview(linear,[],null).includes('data-stage-completed="a"'));
+assert(!details.conditionOverview({...linear,state:{stage:'a',setup:null}},[],null).includes('data-stage-completed'));
+const savedRule={checked:101,condition:{left_source:{price:true},right_source:10,left:12,right:10,op:'gt',result:true}};
+const savedView=details.conditionOverview({...linear,state:{...linear.state,completed_rules:{'a:1':savedRule}}},[],null);
+assert(savedView.includes('12')&&!savedView.includes('data-stage-completed="a"'));

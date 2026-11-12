@@ -90,8 +90,8 @@ final class Strategy {
   }
   unset($state['pending_signal']);
  }
- $state['stage']=$s['initial_stage'];$state['setup']=null;return true;}
- $state['stage']=$t['to']; if($state['stage']===$s['initial_stage']) $state['setup']=null; elseif($state['setup']===null) $state['setup']=$time;return false;
+ $state['stage']=$s['initial_stage'];$state['setup']=null;unset($state['completed_rules']);return true;}
+ $state['stage']=$t['to']; if($state['stage']===$s['initial_stage']) {$state['setup']=null;unset($state['completed_rules']);} elseif($state['setup']===null) $state['setup']=$time;return false;
  } return false;
  }
 }

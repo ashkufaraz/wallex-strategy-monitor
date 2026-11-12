@@ -74,6 +74,18 @@ const strategyDetails = {
   },
   conditionOverview(item,logs,latest) {
     const groups={yes:[],no:[],unknown:[]};
+    // Legacy setups have no stored snapshots. Infer only a unique linear path,
+    // and never invent an observed value or a completion time.
+    const completedStages=new Set(),path=[];
+    if(item.state.setup!=null&&!item.state.cancelled_at){
+      let id=item.config.initial_stage;
+      while(id!==item.state.stage&&!path.includes(id)){
+        const stage=item.config.stages.find(x=>x.id===id);
+        if(!stage||stage.transitions.length!==1||!stage.transitions[0].to)break;
+        path.push(id);id=stage.transitions[0].to;
+      }
+      if(id===item.state.stage)path.forEach(x=>completedStages.add(x));
+    }
     const labels={gt:'بیشتر از',gte:'بیشتر یا مساوی',lt:'کمتر از',lte:'کمتر یا مساوی',eq:'برابر با',neq:'نابرابر با'};
     const flatten=(node,negated=false,path=[])=>{
       if(node.group)return node.children.flatMap(c=>flatten(c,node.group==='not'?!negated:negated,[...path,{all:'همه با هم',any:'حداقل یکی',not:'نقیض'}[node.group]]));
@@ -82,8 +94,13 @@ const strategyDetails = {
     item.config.stages.forEach((stage,stageIndex)=>stage.transitions.forEach((rule,i)=>{
       let found=latest?.status!=='error'?latest?.waiting?.find(r=>r.stage===stage.id&&r.rule===i+1):null;
       let at=found?latest.checked:null,preview=!!found;
-      if(!found)for(const entry of logs){if(entry.version!==item.version||entry.report.status==='error')continue;const match=[...(entry.report.trace||[])].reverse().find(r=>r.kind==='transition'&&r.stage===stage.id&&r.rule===i+1);if(match){found=match;at=entry.report.checked;break;}}
+      if(!found&&item.state.setup!=null){const saved=item.state.completed_rules?.[`${stage.id}:${i+1}`];if(saved){found=saved;at=saved.checked;}}
+      if(!found)for(const entry of logs){if(entry.version!==item.version||entry.report.status==='error'||item.state.setup==null||entry.report.checked<item.state.setup)continue;const match=[...(entry.report.trace||[])].reverse().find(r=>r.kind==='transition'&&r.stage===stage.id&&r.rule===i+1);if(match){found=match;at=entry.report.checked;break;}}
       const unknown=c=>c.all?{group:'all',result:null,children:c.all.map(unknown)}:c.any?{group:'any',result:null,children:c.any.map(unknown)}:c.not?{group:'not',result:null,children:[unknown(c.not)]}:{...c,left_source:c.left,right_source:c.right,left:null,right:null,result:null};
+      if(!found&&completedStages.has(stage.id)){
+        groups.yes.push(`<article data-status="PASS" data-stage-completed="${esc(stage.id)}" class="detail-rule yes"><div class="detail-rule-title"><span>✓</span><b>مرحله ${stageIndex+1} · شرط ${i+1}</b></div><p>این مرحله در ستاپ جاری طی شده و تأیید آن حفظ شده است.</p><p class="detail-hint">گزارش قدیمی از سوابق کوتاه‌مدت خارج شده است؛ مقدار و زمان دقیق ارزیابی ذخیره نشده‌اند.</p><details><summary>شناسه مرحله و رویداد</summary>${esc(stage.id)} · ${esc(rule.event)}</details></article>`);
+        return;
+      }
       const leaves=flatten(found?found.condition:unknown(rule.when));
       leaves.forEach((node,j)=>{
         const key=node.result===true?'yes':node.result===false?'no':'unknown';
@@ -92,7 +109,7 @@ const strategyDetails = {
         groups[key].push(`<article data-status="${key==='yes'?'PASS':key==='no'?'FAIL':'UNAVAILABLE'}" class="detail-rule ${key}"><div class="detail-rule-title"><span>${key==='yes'?'✓':key==='no'?'×':'…'}</span><b>مرحله ${stageIndex+1} · شرط ${i+1}${leaves.length>1?` / بند ${j+1}`:''}</b></div><p>${esc(sentence)}</p><p>${key==='yes'?'مقدار مشاهده‌شده شرط مقایسه را برآورده می‌کند.':key==='no'?'مقدار مشاهده‌شده شرط مقایسه را برآورده نمی‌کند.':'داده کافی نیست یا موتور هنوز این شرط را بررسی نکرده است.'}</p>${node.left_source?`<div class="detail-values"><span>مقدار مشاهده‌شده <b dir="ltr">${esc(this.number(node.left))}</b></span><span>مقدار مقایسه <b dir="ltr">${esc(this.number(node.right))}</b></span></div>`:''}${this.candleSnapshot(node)}<details><summary>شناسه مرحله و رویداد شرط</summary>${esc(rule.event)} · ${esc(stage.id)}</details><div class="detail-hint">${at?`${preview?'پیش‌نمایش آخرین کندل / قیمت':'آخرین ارزیابی واقعی'}: ${time(at)}`:'در انتظار رسیدن موتور به این شرط'}</div>${leaves.length>1?`<div class="detail-hint">رابطهٔ بندها: ${esc(node.path.join(' ← '))} · نتیجهٔ کل قانون: ${whole}</div>`:''}</article>`);
       });
     }));
-    return `<div class="detail-section"><div class="detail-heading"><h3>۳. وضعیت شرط‌های ورود</h3></div><p class="detail-hint">سبز یعنی خودِ شرط برقرار است، نه تأیید نهایی ورود. شرط‌های مراحل قبلی با زمان آخرین ارزیابی نمایش داده می‌شوند؛ مقادیر آن‌ها الزاماً مربوط به قیمت فعلی نیست.</p><div class="detail-condition-columns">${[['yes','شرط‌های برقرار','✓'],['no','شرط‌های برقرارنشده','×'],['unknown','هنوز بررسی نشده / داده ناموجود','…']].map(([key,title,icon])=>`<div class="detail-column ${key}"><h4>${icon} ${title}<span>${groups[key].length}</span></h4>${groups[key].join('')||'<div class="detail-empty">موردی وجود ندارد</div>'}</div>`).join('')}</div></div>`;
+    return `<div class="detail-section"><div class="detail-heading"><h3>۳. وضعیت شرط‌های ورود</h3></div><p class="detail-hint">سبز یعنی خودِ شرط برقرار است، نه تأیید نهایی ورود. تأیید مرحله‌های طی‌شده تا پایان همین ستاپ حفظ می‌شود؛ مقادیر قبلی مربوط به زمان عبور از مرحله هستند. شرط نهایی قیمت و اندیکاتورها باید در رویداد بسته‌شدن کندل جدید هم‌زمان برقرار باشند.</p><div class="detail-condition-columns">${[['yes','شرط‌های برقرار','✓'],['no','شرط‌های برقرارنشده','×'],['unknown','هنوز بررسی نشده / داده ناموجود','…']].map(([key,title,icon])=>`<div class="detail-column ${key}"><h4>${icon} ${title}<span>${groups[key].length}</span></h4>${groups[key].join('')||'<div class="detail-empty">موردی وجود ندارد</div>'}</div>`).join('')}</div></div>`;
   },
   dashboard(item,logs,latest) {
     const price=latest?.price??item.state.last_price;
