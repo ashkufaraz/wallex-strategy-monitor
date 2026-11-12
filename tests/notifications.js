@@ -26,3 +26,27 @@ function fixture(secure, permission, throws = false, supported = true) {
   new Function(fs.readFileSync('public/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1]);
   console.log('Notification checks and browser script syntax passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
+
+const tracker=fixture(true,'granted').api;
+const saved={};
+// The cursor survives reload and a failed send remains pending.
+tracker.cursor=10;
+let attempts=[];
+tracker.process([{id:11},{id:12}],a=>{attempts.push(a.id);return false;});
+assert.equal(tracker.cursor,10);
+assert.deepStrictEqual(attempts,[11]);
+tracker.process([{id:12},{id:11}],a=>{attempts.push(a.id);return true;});
+assert.equal(tracker.cursor,12);
+assert.deepStrictEqual(attempts,[11,11,12]);
+tracker.process([{id:12}],()=>assert.fail('duplicate notification'));
+
+const storage=new Map();
+function reloadTracker(){
+ const c=vm.createContext({window:{localStorage:{getItem:k=>storage.has(k)?storage.get(k):null,setItem:(k,v)=>storage.set(k,v)}}});
+ vm.runInContext(fs.readFileSync('public/notifications.js','utf8')+';this.api=panelNotifications;',c);return c.api;
+}
+reloadTracker().process([{id:20}],()=>assert.fail('first visit must not replay old alerts'));
+let delivered=[];
+reloadTracker().process([{id:20},{id:21}],a=>{delivered.push(a.id);return true;});
+assert.deepStrictEqual(delivered,[21]);
+reloadTracker().process([{id:21}],()=>assert.fail('reload must not duplicate alerts'));

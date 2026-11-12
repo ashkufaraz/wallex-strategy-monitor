@@ -18,3 +18,9 @@ historyCheck(db()->query('SELECT state FROM strategies')->fetchColumn()===$state
 deleteAlertHistory('clear_alerts',105);
 recordAlert($s,'v1','price',106,75000);
 historyCheck((int)db()->query('SELECT id FROM alerts')->fetchColumn()>105,'alert IDs remain increasing after clear');
+
+$row=['id'=>$s['id'],'version'=>'v1'];
+historyCheck(strategyLastSignal($row)['payload']['event_time']===106,'last entry signal survives later evaluation cycles');
+recordAlert($s,'v1','cancelled:price',107,76000,'cancelled');
+historyCheck(strategyLastSignal($row)['payload']['event_time']===106,'cancellation does not replace last entry signal');
+historyCheck(strategyLastSignal(['id'=>$s['id'],'version'=>'v2'])===null,'previous strategy version is not shown as a new entry');

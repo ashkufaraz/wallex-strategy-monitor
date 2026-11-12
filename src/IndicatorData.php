@@ -68,7 +68,7 @@ final class IndicatorData {
     $source+=$part;
    }
    $bars=self::aggregate($source,$base,$seconds);
-   for($t=$from;$t<$end;$t+=$seconds)if(!isset($bars[$t]))throw new RuntimeException(CandleAggregation::inspect($source,$base,$seconds)['unavailable'][$t]??('Missing complete '.$seconds.'s candle at '.$t));
+   for($t=$from;$t<$end;$t+=$seconds)if(!isset($bars[$t]))throw new RuntimeException((CandleAggregation::inspect($source,$base,$seconds)['unavailable'][$t]??('Missing complete '.$seconds.'s candle')).' ('.$symbol.', '.$seconds.'s interval, '.gmdate('Y-m-d H:i:s',$t).' UTC)');
    ksort($bars);return $bars;
   });
  }

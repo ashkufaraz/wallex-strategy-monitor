@@ -52,3 +52,9 @@ assert(details.trade(null,'SHORT',75000).length>0);
 const pending=details.indicators(null,{conditions:indicatorSnapshot.conditions.map(({status,observed,...c})=>c)});
 assert(pending.includes('data-status="PENDING"') && pending.includes('EMA') && pending.includes('RSI'));
 assert(!pending.includes('data-status="PASS"'));
+
+const issued=details.signalNotice({last_signal:{id:1,payload:{action:'SHORT',event_time:100,price:72983.15}}});
+assert(issued.includes('data-signal-issued="1"')&&issued.includes('72,983.15'));
+assert.strictEqual(details.signalNotice({}), '');
+const unavailable=details.indicators({as_of:100,conditions:[{...indicatorSnapshot.conditions[0],status:'UNAVAILABLE',error:'UNAVAILABLE: no trades in complete interval'}]});
+assert(unavailable.includes('UNAVAILABLE: no trades in complete interval'));

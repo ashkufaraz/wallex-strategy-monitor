@@ -17,6 +17,13 @@ function setting(string $key,string $default=''):string {$q=db()->prepare('SELEC
 function setSetting(string $key,string $value):void {db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute([$key,$value]);}
 function encode(mixed $x):string {return json_encode($x,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);}
 function recordAlert(array $s,string $version,string $event,int $at,float $price,?string $cancellationReason=null,?array $indicators=null):void {$p=['strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>$event,'event_time'=>$at];if($cancellationReason!==null){$p['type']='cancelled';$p['reason']=$cancellationReason;}if($cancellationReason===null&&isset($s['trade'])) {$p['trade']=$s['trade'];$p['trade']['entry']['reference_price']=$s['trade']['entry']['price']??$price;}if($indicators!==null)$p['indicators']=$indicators;db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute([$s['id'].':'.$version.':'.$event.':'.$at,time(),encode($p)]);}
+// Look up the current version only; cancellation is not an entry signal.
+function strategyLastSignal(array $row):?array {
+ $prefix=$row['id'].':'.$row['version'].':';
+ $q=db()->prepare('SELECT id,created,payload FROM alerts WHERE substr(unique_key,1,?)=? ORDER BY id DESC');$q->execute([strlen($prefix),$prefix]);
+ while($r=$q->fetch(PDO::FETCH_ASSOC)){$p=json_decode($r['payload'],true);if(($p['type']??'')==='cancelled')continue;return ['id'=>(int)$r['id'],'created'=>(int)$r['created'],'payload'=>$p];}
+ return null;
+}
 class Wallex {
  private array $cache=[];
  function __construct(private ?float $deadline=null) {}
