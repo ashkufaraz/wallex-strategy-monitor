@@ -2,6 +2,28 @@
 declare(strict_types=1);
 
 final class Diagnostics {
+ static function entryProgress(array $s,array $state,string $version):array {
+  $q=db()->prepare('SELECT payload FROM check_logs WHERE strategy_id=? AND version=? ORDER BY id DESC LIMIT 1');$q->execute([$s['id'],$version]);
+  $raw=$q->fetchColumn();$latest=$raw===false?null:json_decode($raw,true);
+  $counts=['passed'=>0,'total'=>0,'unknown'=>0,'checked'=>$latest['checked']??null];
+  $walk=function(array $definition,?array $snapshot,bool $negated=false)use(&$walk,&$counts):void {
+   foreach(['all','any','not'] as $group)if(isset($definition[$group])){
+    $children=$group==='not'?[$definition[$group]]:$definition[$group];
+    foreach($children as $i=>$child)$walk($child,$snapshot['children'][$i]??null,$group==='not'?!$negated:$negated);
+    return;
+   }
+   $counts['total']++;$result=$snapshot['result']??null;
+   if($result===null)$counts['unknown']++;
+   elseif($negated?!$result:$result)$counts['passed']++;
+  };
+  foreach($s['stages'] as $stage)foreach($stage['transitions'] as $i=>$rule){
+   $found=null;
+   if(($latest['status']??'error')!=='error')foreach($latest['waiting']??[] as $entry)if($entry['stage']===$stage['id']&&$entry['rule']===$i+1){$found=$entry;break;}
+   if($found===null&&isset($state['setup'])&&!isset($state['cancelled_at']))$found=$state['completed_rules'][$stage['id'].':'.($i+1)]??null;
+   $walk($rule['when'],$found['condition']??null);
+  }
+  return $counts;
+ }
  // Snapshot exactly the bar used by Strategy::value; never substitute market price.
  static function candle(mixed $operand,array $ctx):?array {
   if(!is_array($operand)||!isset($operand['candle'],$ctx['close'],$ctx['seconds']))return null;

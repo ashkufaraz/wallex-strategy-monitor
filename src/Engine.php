@@ -10,7 +10,12 @@ final class Strategy {
  const TIMEFRAMES=['4h'=>14400,'1h'=>3600,'15m'=>900];
  static function keys(array $a,array $required,array $optional=[]):void {foreach($required as $k) if(!array_key_exists($k,$a)) throw new InvalidArgumentException("Missing: $k"); foreach($a as $k=>$v) if(!in_array($k,array_merge($required,$optional),true)) throw new InvalidArgumentException("Unknown field: $k");}
  static function validate(array $s):array {
- self::keys($s,['strategy_version','id','name','symbol','enabled','action','initial_stage','max_setup_seconds','invalidation','stages'],['trade','cancellation','indicator_conditions']);
+ self::keys($s,['strategy_version','id','name','symbol','enabled','action','initial_stage','max_setup_seconds','invalidation','stages'],['trade','cancellation','indicator_conditions','analysis_sources']);
+ if(array_key_exists('analysis_sources',$s)) {
+  if(!is_array($s['analysis_sources'])||!array_is_list($s['analysis_sources'])||count($s['analysis_sources'])>4)throw new InvalidArgumentException('Invalid analysis_sources');
+  $seenSources=[];
+  foreach($s['analysis_sources'] as $source){if(!is_string($source)||!in_array($source,['chatgpt','grok','deep','gemini'],true)||isset($seenSources[$source]))throw new InvalidArgumentException('Invalid or duplicate analysis source');$seenSources[$source]=true;}
+ }
  if($s['strategy_version']!==1 || !is_string($s['id']) || !preg_match('/^[A-Za-z0-9_-]{1,64}$/D',$s['id']) || !is_string($s['symbol']) || !preg_match('/^[A-Z0-9]+USDT$/D',$s['symbol'])) throw new InvalidArgumentException('Invalid version, id or USDT symbol');
  if(!is_string($s['name']) || strlen($s['name'])<1 || strlen($s['name'])>300 || !is_bool($s['enabled']) || !in_array($s['action'],['LONG','SHORT'],true) || !is_int($s['max_setup_seconds']) || $s['max_setup_seconds']<1 || $s['max_setup_seconds']>2592000) throw new InvalidArgumentException('Invalid metadata or setup duration (1..2592000)');
  if(array_key_exists('indicator_conditions',$s)) Indicators::validate($s['indicator_conditions']);

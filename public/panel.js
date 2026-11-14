@@ -3,6 +3,21 @@
  const list=strategies.closest('section'), editor=document.getElementById('json').closest('section');
  const settings=document.getElementById('interval').closest('section'), history=document.getElementById('alerts').closest('section');
  const grid=document.querySelector('main>.grid');
+ const sourceNames={chatgpt:'ChatGPT',grok:'Grok',deep:'Deep',gemini:'Gemini'};
+ const sourceBox=document.createElement('fieldset');sourceBox.className='analysis-sources';
+ sourceBox.innerHTML='<legend>منبع تحلیل (امکان انتخاب چند مورد)</legend><div class="row">'+Object.entries(sourceNames).map(([value,label])=>`<label><input type="checkbox" name="analysisSource" value="${value}"> ${label}</label>`).join('')+'</div>';
+ editor.insertBefore(sourceBox,document.getElementById('json'));
+ window.strategySources={
+  load(config){for(const box of sourceBox.querySelectorAll('input'))box.checked=(config.analysis_sources||[]).includes(box.value);},
+  sync(){try{this.load(JSON.parse(document.getElementById('json').value));}catch(e){}},
+  apply(config){config.analysis_sources=Array.from(sourceBox.querySelectorAll('input:checked'),box=>box.value);},
+  card(item){
+   const sources=(item.config.analysis_sources||[]).filter(source=>sourceNames[source]).map(source=>sourceNames[source]);
+   const p=item.entry_progress;
+   return `<div class="strategy-meta"><span>منبع تحلیل: ${sources.length?sources.join('، '):'مشخص نشده'}</span>${p?`<span class="${p.passed===p.total&&p.total?'ok':'muted'}" title="شمارش بندهای شرط‌های ورود در آخرین ارزیابی و مرحله‌های طی‌شدهٔ ستاپ جاری؛ در گروه «حداقل یکی»، لازم نیست همه بندها برقرار باشند.">شرط‌های ورود (بدون اندیکاتور): <b>${p.passed} از ${p.total}</b> برقرار${p.unknown?` · ${p.unknown} بررسی‌نشده / نامعلوم`:''}</span>`:''}</div>`;
+  }
+ };
+ sourceBox.onchange=()=>{try{const config=JSON.parse(document.getElementById('json').value);strategySources.apply(config);document.getElementById('json').value=JSON.stringify(config,null,2);}catch(e){}document.getElementById('previewBox').replaceChildren();pending=null;};
  const tabs=document.createElement('div');tabs.className='row strategy-tabs';
  tabs.innerHTML='<button type="button" id="activeStrategies" aria-pressed="true">استراتژی‌های فعال</button><button type="button" id="archivedStrategies" aria-pressed="false">آرشیو غیرفعال‌ها</button>';
  list.insertBefore(tabs,strategies);main.append(list,editor,history);grid.remove();

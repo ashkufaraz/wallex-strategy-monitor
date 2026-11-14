@@ -7,6 +7,8 @@ root = Path(__file__).resolve().parent.parent
 config = json.loads((root/'example-btc-short.json').read_text(encoding='utf-8'))
 items = [dict(config=dict(config,id=str(i),enabled=i != 1),version=str(i),state=dict(stage=config['initial_stage'])) for i in range(5)]
 items[4]['state'].update(cancelled_at=123,cancel_reason='cancelled fixture')
+items[0]['config']['analysis_sources']=['chatgpt','gemini']
+items[0]['entry_progress']=dict(passed=2,total=5,unknown=1,checked=1)
 response = dict(csrf='test',interval=60,heartbeat=0,strategies=items,alerts=[],logs=[dict(created=1,level='error',event='test.error',message='offline',context={'strategy_id':'2'})])
 response['alerts']=[dict(id=1,created=1,payload=dict(type='entry_conditions_only',strategy_id='0',name='Partial entry',symbol='BTCUSDT',action='SHORT',price=100,event_time=1,reason='Entry conditions only; indicators failed'))]
 response['archived_alerts']=[]
@@ -20,6 +22,11 @@ with sync_playwright() as pw:
         if url=='api.php':
             if r.request.method=='POST':
                 action=r.request.post_data_json['action']
+                if action in ['validate','save']:
+                    saved=json.loads(r.request.post_data_json['json'])
+                    assert saved['analysis_sources']==['chatgpt','grok','gemini']
+                    if action=='save':items[0]['config']=saved
+                    r.fulfill(json={'ok':True});return
                 assert action in ['archive_alert','restore_alert']
                 source,target=('alerts','archived_alerts') if action=='archive_alert' else ('archived_alerts','alerts')
                 response[target].append(response[source].pop())
@@ -30,6 +37,18 @@ with sync_playwright() as pw:
     page.route('**/*',route)
     page.goto('http://127.0.0.1:5078/')
     page.wait_for_selector('#strategies .card')
+    assert 'ChatGPT' in page.locator('.strategy-meta').first.inner_text()
+    assert 'Gemini' in page.locator('.strategy-meta').first.inner_text()
+    assert '2 از 5' in page.locator('.strategy-meta').first.inner_text()
+    page.locator('#strategies [data-do=edit]').first.click()
+    assert page.locator('input[name=analysisSource][value=chatgpt]').is_checked()
+    assert page.locator('input[name=analysisSource][value=gemini]').is_checked()
+    page.locator('input[name=analysisSource][value=grok]').check()
+    assert json.loads(page.locator('#json').input_value())['analysis_sources']==['chatgpt','grok','gemini']
+    page.locator('#preview').click()
+    page.wait_for_selector('#previewBox button.primary')
+    page.locator('#previewBox button.primary').click()
+    page.wait_for_function("document.querySelector('#strategies .strategy-meta').textContent.includes('Grok')")
     page.locator('[data-archive-alert="1"]').click()
     page.wait_for_function("document.querySelectorAll('#alerts .alert').length===0")
     page.locator('#archivedAlerts').click()
