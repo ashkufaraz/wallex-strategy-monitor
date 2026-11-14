@@ -24,3 +24,12 @@ historyCheck(strategyLastSignal($row)['payload']['event_time']===106,'last entry
 recordAlert($s,'v1','cancelled:price',107,76000,'cancelled');
 historyCheck(strategyLastSignal($row)['payload']['event_time']===106,'cancellation does not replace last entry signal');
 historyCheck(strategyLastSignal(['id'=>$s['id'],'version'=>'v2'])===null,'previous strategy version is not shown as a new entry');
+
+$lastId=(int)db()->query('SELECT MAX(id) FROM alerts')->fetchColumn();
+archiveAlert($lastId,true);
+historyCheck(count(alertHistory(true))===1&&alertHistory(true)[0]['id']===$lastId,'archive moves alert into persistent archive');
+historyCheck(count(alertHistory(false))===1,'active history excludes archived alert');
+archiveAlert($lastId,true);
+historyCheck(count(alertHistory(true))===1,'repeated archive is idempotent');
+archiveAlert($lastId,false);
+historyCheck(count(alertHistory(true))===0&&count(alertHistory(false))===2,'restore returns alert to current history');

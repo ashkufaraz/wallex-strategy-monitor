@@ -7,8 +7,9 @@ const tradeDetails = {
   toggleLabel(item) {
     return item.state.cancelled_at ? 'شروع مجدد پس از لغو' : (item.config.enabled ? 'توقف' : 'فعال‌سازی');
   },
-  title(payload) { if(payload.type==='binance_signal')return 'سیگنال بایننس شناسایی شد'; if(payload.type==='manual_review')return 'آماده بررسی برای ورود دستی'; if(payload.type==='execution_ready')return 'آمادگی مسیر تأییدشده'; return payload.type === 'cancelled' ? 'استراتژی لغو شد' : payload.action; },
+  title(payload) { if(payload.type==='entry_conditions_only')return 'فقط شرط‌های ورود بدون اندیکاتور تأیید شده'; if(payload.type==='binance_signal')return 'سیگنال بایننس شناسایی شد'; if(payload.type==='manual_review')return 'آماده بررسی برای ورود دستی'; if(payload.type==='execution_ready')return 'آمادگی مسیر تأییدشده'; return payload.type === 'cancelled' ? 'استراتژی لغو شد' : payload.action; },
   alertHtml(payload) {
+    if(payload.type==='entry_conditions_only'){const div=document.createElement('div');div.className='summary entry-only-warning';div.textContent=payload.reason;return div.outerHTML;}
     if(['binance_signal','manual_review'].includes(payload.type)){const div=document.createElement('div');div.className='summary';div.textContent=this.notification(payload);return div.outerHTML;}
     if (payload.type !== 'cancelled') return this.html(payload.trade, payload.action);
     const div = document.createElement('div');
@@ -42,6 +43,7 @@ const tradeDetails = {
     return '<div class="summary">' + this.lines(trade, action).map(line => `<div>${escape(line)}</div>`).join('') + '</div>';
   },
   notification(payload) {
+    if(payload.type==='entry_conditions_only')return `${payload.name}\n${payload.reason}`;
     if(payload.type==='binance_signal')return `${payload.symbol} — سیگنال ${payload.action} شناسایی شد. قیمت بایننس ${payload.price}. بررسی شرایط ورود در والکس آغاز شد. این پیام دستور معامله نیست.`;
     if(payload.type==='manual_review')return `${payload.symbol} — شرایط تخمینی برای بررسی ورود ${payload.action} فراهم است. قیمت، کارمزد و امکان اجرا را در والکس بررسی کنید. تازگی دفتر تأیید نشده (UNVERIFIED)؛ این پیام دستور معامله نیست.`;
     if(payload.type==='execution_ready')return `${payload.name}\nSignal confirmed. Manual execution on Wallex is required.\n${this.lines(payload.trade,payload.action).join('\n')}`;

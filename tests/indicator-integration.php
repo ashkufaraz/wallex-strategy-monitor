@@ -22,7 +22,7 @@ $condition=['id'=>'ema','indicator'=>'EMA','timeframe'=>'1m','period'=>2,'candle
 $block=['enabled'=>true,'logic'=>'all','conditions'=>[$condition]];
 $reset=function() {db()->exec('DELETE FROM strategies; DELETE FROM alerts; DELETE FROM check_logs; DROP TABLE IF EXISTS indicator_cache;');setSetting('interval','60');};
 $put=function(array $s,int $at){Strategy::validate($s);db()->prepare('INSERT INTO strategies VALUES(?,?,?,?)')->execute([$s['id'],'v1',encode($s),encode(Strategy::fresh($s,$at))]);};
-$count=fn()=>(int)db()->query('SELECT COUNT(*) FROM alerts')->fetchColumn();
+$count=fn()=>(int)db()->query("SELECT COUNT(*) FROM alerts WHERE COALESCE(json_extract(payload,'$.type'),'')!='entry_conditions_only'")->fetchColumn();
 $state=fn()=>json_decode(db()->query('SELECT state FROM strategies LIMIT 1')->fetchColumn(),true);
 $latest=fn()=>json_decode(db()->query('SELECT payload FROM check_logs ORDER BY id DESC LIMIT 1')->fetchColumn(),true);
 $reset();$api=new IndicatorMarket();$put($template,1440000);runCycle($api,1440001);
@@ -33,15 +33,25 @@ $reset();$s['indicator_conditions']=$block;$s['stages'][0]['transitions'][0]['wh
 expectIndicator($count()===0&&$api->historyCalls===0,'indicators never evaluated before final price condition passes');
 $reset();$s=$template;$s['indicator_conditions']=$block;$api=new IndicatorMarket();$put($s,1440000);runCycle($api,1440001);
 expectIndicator($count()===1&&$latest()['indicator_snapshot']['passed']===true,'price plus passing indicator records alert');
-$payload=json_decode(db()->query('SELECT payload FROM alerts')->fetchColumn(),true);
+$payload=json_decode(db()->query("SELECT payload FROM alerts WHERE COALESCE(json_extract(payload,'$.type'),'')!='entry_conditions_only'")->fetchColumn(),true);
 expectIndicator($payload['indicators']['conditions'][0]['candle_close']===1440000&&$payload['indicators']['conditions'][0]['observed']>0,'alert contains immutable closed candle indicator snapshot');
 $before=$api->historyCalls;runCycle($api,1440001);expectIndicator($count()===1&&$api->historyCalls===$before,'same event does not duplicate alert and reuses cache');
 $reset();$s['indicator_conditions']['conditions'][0]['value']=999999;$api=new IndicatorMarket();$put($s,1440000);runCycle($api,1440001);
 expectIndicator($count()===0&&$latest()['indicator_snapshot']['conditions'][0]['status']==='FAIL','passing price and failing EMA block alert');
+$entryOnly=fn()=>db()->query("SELECT payload FROM alerts WHERE json_extract(payload,'$.type')='entry_conditions_only'")->fetchAll(PDO::FETCH_COLUMN);
+expectIndicator(count($entryOnly())===1,'failed indicator produces a separate entry-conditions-only alert');
+$partial=json_decode($entryOnly()[0],true);
+expectIndicator(!isset($partial['trade'])&&$partial['indicators']['passed']===false,'partial alert carries failed indicator snapshot without actionable trade');
+expectIndicator(strategyLastSignal(['id'=>$s['id'],'version'=>'v1'])===null,'partial alert never becomes the last confirmed entry signal');
+runCycle($api,1440002);expectIndicator(count($entryOnly())===1,'continuous matching price does not spam partial alerts');
+$s['stages'][0]['transitions'][0]['when']['right']=200;db()->prepare('UPDATE strategies SET config=?')->execute([encode($s)]);runCycle($api,1440003);
+$s['stages'][0]['transitions'][0]['when']['right']=1;db()->prepare('UPDATE strategies SET config=?')->execute([encode($s)]);runCycle($api,1440004);
+expectIndicator(count($entryOnly())===2,'a fresh price match after conditions fail produces a new partial alert');
 $reset();$s['indicator_conditions']=$block;$s['indicator_conditions']['conditions'][0]['indicator']='RSI';$s['indicator_conditions']['conditions'][0]['operator']='lt';$s['indicator_conditions']['conditions'][0]['value']=50;$api=new IndicatorMarket();$put($s,1440000);runCycle($api,1440001);
 expectIndicator($count()===0&&$latest()['indicator_snapshot']['conditions'][0]['status']==='FAIL','passing price and failing RSI block alert');
 $reset();$s['indicator_conditions']=$block;$api=new IndicatorMarket();$api->fail=true;$put($s,1440000);runCycle($api,1440001);
 expectIndicator($count()===0&&$latest()['status']==='indicator_blocked'&&$latest()['indicator_snapshot']['conditions'][0]['status']==='UNAVAILABLE','API failure is unavailable and fails closed');
+expectIndicator(count($entryOnly())===1&&json_decode($entryOnly()[0],true)['indicators']['conditions'][0]['status']==='UNAVAILABLE','unavailable indicators still report confirmed entry conditions');
 expectIndicator($state()['stage']==='start'&&$state()['error']===null,'indicator API failure does not reset stage or trigger generic recovery');
 $reset();$api=new IndicatorMarket();$api->gap=true;$put($s,1440000);runCycle($api,1440001);
 expectIndicator($count()===0&&$latest()['indicator_snapshot']['conditions'][0]['status']==='UNAVAILABLE','missing history fails closed');
@@ -60,8 +70,8 @@ $api->entryMatch=false;runCycle($api,1441800);
 expectIndicator($count()===0,'next candle rechecks original entry condition, not just indicator');
 $api->entryMatch=true;runCycle($api,1442700);
 expectIndicator($count()===1,'new matching candle and passing indicator emit alert');
-$alert=json_decode(db()->query('SELECT payload FROM alerts')->fetchColumn(),true);
-$key=db()->query('SELECT unique_key FROM alerts')->fetchColumn();
+$alert=json_decode(db()->query("SELECT payload FROM alerts WHERE COALESCE(json_extract(payload,'$.type'),'')!='entry_conditions_only'")->fetchColumn(),true);
+$key=db()->query("SELECT unique_key FROM alerts WHERE COALESCE(json_extract(payload,'$.type'),'')!='entry_conditions_only'")->fetchColumn();
 expectIndicator($alert['event_time']===1442700&&$alert['indicators']['as_of']===1442700&&str_ends_with($key,':bar_close:15m:1442700'),'event time, snapshot and unique key all identify the new candle');
 runCycle($api,1442700);expectIndicator($count()===1,'repeated new-event check does not duplicate alert');
 $reset();$api=new IndicatorMarket();$s['indicator_conditions']['conditions'][0]['value']=999999;$put($s,1440899);setSetting('interval','600');runCycle($api,1440900);
@@ -89,7 +99,7 @@ $api->priceFail=false;runCycle($api,1440121);expectIndicator($count()===1,'price
 // Cancellation after a long outage takes priority over entry retries.
 $reset();$s=$template;$s['indicator_conditions']=$block;$s['cancellation']=[['event'=>'bar_close:4h','when'=>['left'=>['candle'=>['timeframe'=>'4h','offset'=>1,'field'=>'close']],'op'=>'gt','right'=>1],'reason'=>'cancel test']];
 $api=new IndicatorMarket();$put($s,1440001);$api->priceFail=true;runCycle($api,1440061);$api->priceFail=false;runCycle($api,1454401);
-$alerts=db()->query('SELECT payload FROM alerts')->fetchAll(PDO::FETCH_COLUMN);expectIndicator(count($alerts)===1&&json_decode($alerts[0],true)['type']==='cancelled','latest closed cancellation wins after gap recovery');
+$alerts=db()->query("SELECT payload FROM alerts WHERE COALESCE(json_extract(payload,'$.type'),'')!='entry_conditions_only'")->fetchAll(PDO::FETCH_COLUMN);expectIndicator(count($alerts)===1&&json_decode($alerts[0],true)['type']==='cancelled','latest closed cancellation wins after gap recovery');
 // A multi-timeframe all block requires every condition to pass.
 $reset();$s=$template;$s['indicator_conditions']=['enabled'=>true,'logic'=>'all','conditions'=>[]];
 foreach(['RSI'=>'value','EMA'=>'close_minus_ema_pct','ATR'=>'atr_pct','VOLUME'=>'ratio_to_previous_avg'] as $name=>$metric){$c=$condition;$c['id']=strtolower($name);$c['indicator']=$name;$c['metric']=$metric;$c['period']=2;$c['timeframe']=$name==='ATR'?'4h':'15m';$c['operator']='gte';$c['value']=0;$s['indicator_conditions']['conditions'][]=$c;}
@@ -134,7 +144,7 @@ $r=(new IndicatorData($api))->evaluate($s,1440001,1440001);
 expectIndicator($r['passed']&&$api->historyCalls===2,'temporary disconnect recovers on bounded second fetch');
 $reset();$s['stages'][0]['transitions'][0]=['event'=>'bar_close:15m','when'=>['left'=>['candle'=>['timeframe'=>'15m','offset'=>1,'field'=>'close']],'op'=>'gt','right'=>100],'signal'=>true];
 $put($s,1440899);setSetting('interval','600');runCycle(new IndicatorMarket(),1441860);
-$alert=json_decode(db()->query('SELECT payload FROM alerts')->fetchColumn(),true);
+$alert=json_decode(db()->query("SELECT payload FROM alerts WHERE COALESCE(json_extract(payload,'$.type'),'')!='entry_conditions_only'")->fetchColumn(),true);
 expectIndicator($count()===1&&$alert['event_time']===1441800,'backlog may only emit the latest closed entry event, never historical final signals');
 
 foreach([null,['enabled'=>false]] as $legacyBlock){

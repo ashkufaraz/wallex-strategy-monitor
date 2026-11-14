@@ -13,16 +13,24 @@ require_once __DIR__.'/OrderFlowConfig.php';
 require_once __DIR__.'/OrderFlowMarketData.php';
 require_once __DIR__.'/OrderFlowAdvisory.php';
 require_once __DIR__.'/SystemLog.php';
-function db():PDO {static $db; if($db) return $db; $db=new PDO('sqlite:'.(defined('TEST_DATABASE') && PHP_SAPI==='cli' ? TEST_DATABASE : dirname(__DIR__).'/data/app.sqlite'),null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$db->exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS strategies(id TEXT PRIMARY KEY, version TEXT NOT NULL, config TEXT NOT NULL, state TEXT NOT NULL); CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY,v TEXT NOT NULL); CREATE TABLE IF NOT EXISTS check_logs(id INTEGER PRIMARY KEY AUTOINCREMENT,strategy_id TEXT NOT NULL,version TEXT NOT NULL,checked INTEGER NOT NULL,payload TEXT NOT NULL); CREATE INDEX IF NOT EXISTS check_logs_strategy ON check_logs(strategy_id,id); CREATE TABLE IF NOT EXISTS alerts(id INTEGER PRIMARY KEY AUTOINCREMENT, unique_key TEXT UNIQUE NOT NULL, created INTEGER NOT NULL, payload TEXT NOT NULL);');return $db;}
+function db():PDO {static $db; if($db) return $db; $db=new PDO('sqlite:'.(defined('TEST_DATABASE') && PHP_SAPI==='cli' ? TEST_DATABASE : dirname(__DIR__).'/data/app.sqlite'),null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$db->exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS strategies(id TEXT PRIMARY KEY, version TEXT NOT NULL, config TEXT NOT NULL, state TEXT NOT NULL); CREATE TABLE IF NOT EXISTS alert_archives(alert_id INTEGER PRIMARY KEY); CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY,v TEXT NOT NULL); CREATE TABLE IF NOT EXISTS check_logs(id INTEGER PRIMARY KEY AUTOINCREMENT,strategy_id TEXT NOT NULL,version TEXT NOT NULL,checked INTEGER NOT NULL,payload TEXT NOT NULL); CREATE INDEX IF NOT EXISTS check_logs_strategy ON check_logs(strategy_id,id); CREATE TABLE IF NOT EXISTS alerts(id INTEGER PRIMARY KEY AUTOINCREMENT, unique_key TEXT UNIQUE NOT NULL, created INTEGER NOT NULL, payload TEXT NOT NULL);');return $db;}
 function setting(string $key,string $default=''):string {$q=db()->prepare('SELECT v FROM settings WHERE k=?');$q->execute([$key]);$v=$q->fetchColumn();return $v===false?$default:$v;}
 function setSetting(string $key,string $value):void {db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute([$key,$value]);}
 function encode(mixed $x):string {return json_encode($x,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);}
 function recordAlert(array $s,string $version,string $event,int $at,float $price,?string $cancellationReason=null,?array $indicators=null):void {$p=['strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>$event,'event_time'=>$at];if($cancellationReason!==null){$p['type']='cancelled';$p['reason']=$cancellationReason;}if($cancellationReason===null&&isset($s['trade'])) {$p['trade']=$s['trade'];$p['trade']['entry']['reference_price']=$s['trade']['entry']['price']??$price;}if($indicators!==null)$p['indicators']=$indicators;db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute([$s['id'].':'.$version.':'.$event.':'.$at,time(),encode($p)]);}
 // Look up the current version only; cancellation is not an entry signal.
+function recordEntryOnlyAlert(array $s,string $version,array $candidate,float $price,int $now):void {
+ $event=$candidate['event'];$at=$candidate['time'];
+ // Price conditions stay true between polls: notify at most once per uninterrupted match.
+ $episode=$event.':'.($candidate['episode']??$at);
+ $key=$s['id'].':'.$version.':entry_conditions_only:'.$episode;
+ $p=['type'=>'entry_conditions_only','strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>$event,'event_time'=>$at,'indicators'=>$candidate['snapshot'],'reason'=>'فقط شرط‌های ورود بدون اندیکاتور تأیید شده‌اند؛ فیلترهای اندیکاتور ورود را تأیید نکرده‌اند. این هشدار تأیید نهایی ورود نیست.'];
+ db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute([$key,$now,encode($p)]);
+}
 function strategyLastSignal(array $row):?array {
  $prefix=$row['id'].':'.$row['version'].':';
  $q=db()->prepare('SELECT id,created,payload FROM alerts WHERE substr(unique_key,1,?)=? ORDER BY id DESC');$q->execute([strlen($prefix),$prefix]);
- while($r=$q->fetch(PDO::FETCH_ASSOC)){$p=json_decode($r['payload'],true);if(($p['type']??'')==='cancelled')continue;return ['id'=>(int)$r['id'],'created'=>(int)$r['created'],'payload'=>$p];}
+ while($r=$q->fetch(PDO::FETCH_ASSOC)){$p=json_decode($r['payload'],true);if(in_array($p['type']??'',['cancelled','entry_conditions_only'],true))continue;return ['id'=>(int)$r['id'],'created'=>(int)$r['created'],'payload'=>$p];}
  return null;
 }
 class Wallex {
@@ -103,14 +111,14 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
   if(isset($st['cancelled_at']))continue;
   if(ExecutionMonitor::pending(db(),$row['id'],$row['version'])){$st['last_check']=$now;$st['cursor']=$now;persistCycleState($row,$st,true);continue;}
  }
- $recoveringGap=false;
+ $recoveringGap=false;$entryOnly=[];
  $withIndicators=Indicators::enabled($s);if($withIndicators)unset($st['pending_signal']);
- Strategy::$signalFilter=$withIndicators?function($config,$event,$at,$ctx)use($indicatorData,$now,&$indicatorReports,&$st){
+ Strategy::$signalFilter=$withIndicators?function($config,$event,$at,$ctx)use($indicatorData,$now,&$indicatorReports,&$st,&$entryOnly){
   if(str_starts_with($event,'bar_close:')){
    $sec=Strategy::TIMEFRAMES[substr($event,10)];
    if($at!==intdiv($now,$sec)*$sec)return false;
   }
-  $snapshot=$indicatorData->evaluate($config,$at,$now);$indicatorReports[]=['event'=>$event,'event_time'=>$at,'snapshot'=>$snapshot];$st['indicators']=$snapshot;return $snapshot['passed'];
+  $snapshot=$indicatorData->evaluate($config,$at,$now);$indicatorReports[]=['event'=>$event,'event_time'=>$at,'snapshot'=>$snapshot];$st['indicators']=$snapshot;if(!$snapshot['passed']){if($event==='price')$st['entry_only_price_at']??=$at;$entryOnly[]=['event'=>$event,'time'=>$at,'episode'=>$event==='price'?$st['entry_only_price_at']:$at,'snapshot'=>$snapshot];}return $snapshot['passed'];
  }:null;
  Strategy::$onCheck=function($kind,$event,$condition,$ctx,$meta)use(&$trace,&$st,&$now){
   $record=array_merge(['kind'=>$kind,'event'=>$event,'candle_close'=>$ctx['close']??null,'condition'=>Diagnostics::inspect($condition,$ctx)],$meta);
@@ -155,11 +163,12 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
  }
  if(!$blocked&&!isset($st['cancelled_at'])&&Strategy::event($s,$st,'price',$now,['price'=>$price])) $events[]=['event'=>'price','time'=>$now,'indicators'=>$withIndicators?($st['indicators']??null):null];$st['cursor']=$now;
  }
+ if(!array_filter($entryOnly,fn($candidate)=>$candidate['event']==='price'))unset($st['entry_only_price_at']);
  $st['error']=null;$st['last_check']=$now;$st['last_price']=$price;$st['price_at']=$now;
  $report=['analysis_provider'=>$api instanceof BinanceMarketDataProvider?'binance_spot':'wallex','action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$st['stage'],'status'=>isset($st['cancelled_at'])?'cancelled':($events?'signal':($blocked??false?'blocked':'checked')),'trace'=>$trace,'waiting'=>Diagnostics::waiting($s,$st,$bars,$now,$price),'trade'=>$s['trade']??null,'events'=>$events];
  if($withIndicators){$report['indicators']=$indicatorReports;$report['indicator_snapshot']=$st['indicators']??null;if(!$events&&$indicatorReports)$report['status']='indicator_blocked';}
  // Optimistic comparison prevents a concurrent edit from being overwritten.
- db()->beginTransaction();if(persistCycleState($row,$st,$architecture['analysis_enabled'])){foreach($events as $event){if($architecture['analysis_enabled']&&!isset($event['reason']))ExecutionGate::create(db(),$s,$row['version'],$event['event'],$event['time'],str_starts_with($event['event'],'bar_close:')?$bars[substr($event['event'],10)][$event['time']-Strategy::TIMEFRAMES[substr($event['event'],10)]]['close']:$price,$event['indicators']??null,$architecture,$now);else recordAlert($s,$row['version'],$event['event'],$event['time'],$price,$event['reason']??null,$event['indicators']??null);}Diagnostics::save($s['id'],$row['version'],$report);}db()->commit();if($architecture['analysis_enabled']&&$events)OrderFlowAdvisory::afterSignals(db(),$now);
+ db()->beginTransaction();if(persistCycleState($row,$st,$architecture['analysis_enabled'])){if(!isset($st['cancelled_at']))foreach($entryOnly as $candidate)recordEntryOnlyAlert($s,$row['version'],$candidate,$price,$now);foreach($events as $event){if($architecture['analysis_enabled']&&!isset($event['reason']))ExecutionGate::create(db(),$s,$row['version'],$event['event'],$event['time'],str_starts_with($event['event'],'bar_close:')?$bars[substr($event['event'],10)][$event['time']-Strategy::TIMEFRAMES[substr($event['event'],10)]]['close']:$price,$event['indicators']??null,$architecture,$now);else recordAlert($s,$row['version'],$event['event'],$event['time'],$price,$event['reason']??null,$event['indicators']??null);}Diagnostics::save($s['id'],$row['version'],$report);}db()->commit();if($architecture['analysis_enabled']&&$events)OrderFlowAdvisory::afterSignals(db(),$now);
  } catch(Throwable $e) {if(db()->inTransaction()) db()->rollBack();$original['error']=$e->getMessage();if($withIndicators){$original['cursor']=$now;unset($original['pending_signal']);}$original['last_check']=$now;db()->beginTransaction();if(persistCycleState($row,$original,$architecture['analysis_enabled']))Diagnostics::save($s['id'],$row['version'],['analysis_provider'=>$api instanceof BinanceMarketDataProvider?'binance_spot':'wallex','action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$original['stage'],'status'=>'error','error'=>$e->getMessage(),'trace'=>$trace,'waiting'=>[],'trade'=>$s['trade']??null]);db()->commit();}finally{Strategy::$onCheck=null;Strategy::$signalFilter=null;}
  }
  if($architecture['analysis_enabled'])ExecutionMonitor::run($api,$now,$architecture);

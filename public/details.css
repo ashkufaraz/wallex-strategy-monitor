@@ -1,3 +1,4 @@
+#systemLogs{background:#151f32;padding:22px;border-radius:16px;margin:18px 0}#systemLogs>summary{font-size:18px;font-weight:bold}#systemLogs[open]>summary{margin-bottom:18px}.entry-only-warning{color:#f4d38a;border-right:3px solid #f4c368}
 #strategyDetails{width:min(1240px,94vw);max-height:90vh;padding:0;background:#0c1423;border:1px solid #334660;border-radius:20px;box-shadow:0 30px 100px #0009}
 #strategyDetails>.row{position:sticky;top:0;z-index:2;justify-content:space-between;padding:14px 24px;background:#121e30;border-bottom:1px solid #2b3b52}
 #strategyDetails>.row h2{margin:0;font-size:16px;color:#b6c7df}

@@ -6,10 +6,16 @@
  const tabs=document.createElement('div');tabs.className='row strategy-tabs';
  tabs.innerHTML='<button type="button" id="activeStrategies" aria-pressed="true">استراتژی‌های فعال</button><button type="button" id="archivedStrategies" aria-pressed="false">آرشیو غیرفعال‌ها</button>';
  list.insertBefore(tabs,strategies);main.append(list,editor,history);grid.remove();
- const logs=document.createElement('section');logs.id='systemLogs';
+ const alertTabs=document.createElement('div');alertTabs.className='row';
+ alertTabs.innerHTML='<button type="button" id="currentAlerts" aria-pressed="true">هشدارها</button><button type="button" id="archivedAlerts" aria-pressed="false">آرشیو هشدارها</button>';
+ history.insertBefore(alertTabs,document.getElementById('clearAlerts'));
+ window.alertArchive=false;
+ alertTabs.onclick=e=>{if(e.target.tagName!=='BUTTON')return;window.alertArchive=e.target.id==='archivedAlerts';for(const b of alertTabs.children)b.setAttribute('aria-pressed',String((b.id==='archivedAlerts')===window.alertArchive));refresh();};
+ const logs=document.createElement('details');logs.id='systemLogs';
  logs.innerHTML='<h2>گزارش رویدادهای سیستم</h2><p class="small muted">۳۰۰ رویداد آخر از ۱۰٬۰۰۰ رویداد ذخیره‌شده در سرور؛ پیام‌های مرورگر در همین نشست نگهداری می‌شوند. برای بررسی علت، جزئیات رویداد را باز کنید.</p><div class="row"><label>سطح <select id="logLevel"><option value="">همه موارد</option><option value="error">خطا</option><option value="warning">هشدار</option><option value="success">موفقیت</option><option value="info">اطلاعات</option></select></label><input id="logSearch" type="search" placeholder="جست‌وجوی پیام، شناسه و جزئیات" aria-label="جست‌وجوی لاگ"><span id="logCount" class="muted small"></span></div><div id="logEntries" aria-live="polite"></div>';
+ const logTitle=logs.querySelector('h2');const logSummary=document.createElement('summary');logSummary.textContent=logTitle.textContent;logTitle.replaceWith(logSummary);
  main.append(logs,settings);
- const footer=document.createElement('footer');footer.innerHTML='سازنده: اشکو فراز <span> | </span><a href="mailto:ashkufaraz@gmail.com">ashkufaraz@gmail.com</a><span> | </span><a dir="ltr" href="tel:09135128163">09135128163</a>';main.append(footer);
+ const footer=document.createElement('footer');footer.innerHTML='سازنده:  سیدمجتبی اشکوفراز-یزد <span> | </span><a href="mailto:ashkufaraz@gmail.com">ashkufaraz@gmail.com</a><span> | </span><a dir="ltr" href="tel:09135128163">09135128163</a>';main.append(footer);
  window.strategyArchive=false;
  window.updateStrategyCounts=()=>{
   document.getElementById('activeStrategies').textContent=`استراتژی‌های فعال (${data.strategies.filter(x=>tradeDetails.isActive(x)).length})`;
