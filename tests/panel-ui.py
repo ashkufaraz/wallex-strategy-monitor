@@ -5,7 +5,8 @@ from playwright.sync_api import sync_playwright
 
 root = Path(__file__).resolve().parent.parent
 config = json.loads((root/'example-btc-short.json').read_text(encoding='utf-8'))
-items = [dict(config=dict(config,id=str(i),enabled=i != 1),version=str(i),state=dict(stage=config['initial_stage'])) for i in range(4)]
+items = [dict(config=dict(config,id=str(i),enabled=i != 1),version=str(i),state=dict(stage=config['initial_stage'])) for i in range(5)]
+items[4]['state'].update(cancelled_at=123,cancel_reason='cancelled fixture')
 response = dict(csrf='test',interval=60,heartbeat=0,strategies=items,alerts=[],logs=[dict(created=1,level='error',event='test.error',message='offline',context={'strategy_id':'2'})])
 with sync_playwright() as pw:
     browser=pw.chromium.launch(headless=True,executable_path='C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe')
@@ -24,8 +25,9 @@ with sync_playwright() as pw:
     assert page.locator('#strategies .card').nth(0).bounding_box()['y']==page.locator('#strategies .card').nth(1).bounding_box()['y']
     assert page.locator('#json').bounding_box()['y']>page.locator('#strategies').bounding_box()['y']
     page.locator('#archivedStrategies').click()
-    page.wait_for_function("document.querySelectorAll('#strategies .card').length===1")
-    assert page.locator('#strategies [data-do=toggle]').get_attribute('data-index')=='1'
+    page.wait_for_function("document.querySelectorAll('#strategies .card').length===2")
+    assert page.locator('#strategies [data-do=toggle]').nth(0).get_attribute('data-index')=='1'
+    assert page.locator('#strategies [data-do=toggle]').nth(1).get_attribute('data-index')=='4'
     page.locator('#logLevel').select_option('error')
     assert page.locator('.log-error').count()==1
     page.locator('#logSearch').fill('missing term')

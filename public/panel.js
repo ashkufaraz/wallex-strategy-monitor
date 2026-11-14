@@ -12,8 +12,8 @@
  const footer=document.createElement('footer');footer.innerHTML='سازنده: اشکو فراز <span> | </span><a href="mailto:ashkufaraz@gmail.com">ashkufaraz@gmail.com</a><span> | </span><a dir="ltr" href="tel:09135128163">09135128163</a>';main.append(footer);
  window.strategyArchive=false;
  window.updateStrategyCounts=()=>{
-  document.getElementById('activeStrategies').textContent=`استراتژی‌های فعال (${data.strategies.filter(x=>x.config.enabled).length})`;
-  document.getElementById('archivedStrategies').textContent=`آرشیو غیرفعال‌ها (${data.strategies.filter(x=>!x.config.enabled).length})`;
+  document.getElementById('activeStrategies').textContent=`استراتژی‌های فعال (${data.strategies.filter(x=>tradeDetails.isActive(x)).length})`;
+  document.getElementById('archivedStrategies').textContent=`آرشیو غیرفعال‌ها (${data.strategies.filter(x=>!tradeDetails.isActive(x)).length})`;
   if(!strategies.children.length)strategies.textContent=window.strategyArchive?'آرشیو خالی است.':'استراتژی فعالی وجود ندارد.';
  };
  tabs.addEventListener('click',event=>{

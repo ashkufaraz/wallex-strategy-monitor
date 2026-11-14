@@ -1,4 +1,5 @@
 const tradeDetails = {
+  isActive(item) { return Boolean(item.config.enabled) && !item.state.cancelled_at; },
   status(item) {
     if (item.state.cancelled_at) return `لغو شده و متوقف: ${item.state.cancel_reason}`;
     return item.config.enabled ? 'فعال' : 'غیرفعال';
