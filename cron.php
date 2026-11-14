@@ -18,6 +18,7 @@ try {
  } while(microtime(true)<$deadline);
  echo encode(['checked'=>$checked,'status'=>$result['status'],'finished_at'=>time()])."\n";
 } catch(Throwable $e) {
+ systemLog('error','cron',$e->getMessage());
  fwrite(STDERR,'Cron: '.$e->getMessage()."\n");
  exit(1);
 }

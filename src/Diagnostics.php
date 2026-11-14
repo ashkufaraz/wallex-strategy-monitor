@@ -37,6 +37,9 @@ final class Diagnostics {
   return $out;
  }
  static function save(string $id,string $version,array $report):void {
+  $status=$report['status']??'checked';
+  $level=$status==='error'?'error':(in_array($status,['cancelled','blocked','indicator_blocked'],true)?'warning':($status==='signal'?'success':'info'));
+  systemLog($level,'strategy.'.$status,$report['error']??('بررسی استراتژی: '.$status),['strategy_id'=>$id,'version'=>$version,'report'=>$report]);
   db()->prepare('INSERT INTO check_logs(strategy_id,version,checked,payload) VALUES(?,?,?,?)')->execute([$id,$version,$report['checked'],encode($report)]);
   db()->prepare('DELETE FROM check_logs WHERE strategy_id=? AND id NOT IN (SELECT id FROM check_logs WHERE strategy_id=? ORDER BY id DESC LIMIT 30)')->execute([$id,$id]);
  }

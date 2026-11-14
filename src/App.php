@@ -12,6 +12,7 @@ require_once __DIR__.'/ExecutionMonitor.php';
 require_once __DIR__.'/OrderFlowConfig.php';
 require_once __DIR__.'/OrderFlowMarketData.php';
 require_once __DIR__.'/OrderFlowAdvisory.php';
+require_once __DIR__.'/SystemLog.php';
 function db():PDO {static $db; if($db) return $db; $db=new PDO('sqlite:'.(defined('TEST_DATABASE') && PHP_SAPI==='cli' ? TEST_DATABASE : dirname(__DIR__).'/data/app.sqlite'),null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$db->exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS strategies(id TEXT PRIMARY KEY, version TEXT NOT NULL, config TEXT NOT NULL, state TEXT NOT NULL); CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY,v TEXT NOT NULL); CREATE TABLE IF NOT EXISTS check_logs(id INTEGER PRIMARY KEY AUTOINCREMENT,strategy_id TEXT NOT NULL,version TEXT NOT NULL,checked INTEGER NOT NULL,payload TEXT NOT NULL); CREATE INDEX IF NOT EXISTS check_logs_strategy ON check_logs(strategy_id,id); CREATE TABLE IF NOT EXISTS alerts(id INTEGER PRIMARY KEY AUTOINCREMENT, unique_key TEXT UNIQUE NOT NULL, created INTEGER NOT NULL, payload TEXT NOT NULL);');return $db;}
 function setting(string $key,string $default=''):string {$q=db()->prepare('SELECT v FROM settings WHERE k=?');$q->execute([$key]);$v=$q->fetchColumn();return $v===false?$default:$v;}
 function setSetting(string $key,string $value):void {db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute([$key,$value]);}
