@@ -10,7 +10,7 @@ const executionGateView = {
   return ({SIGNAL_CREATED:'سیگنال بایننس ثبت شده و بررسی والکس در انتظار اجرای پایش است.',WAITING_DATA:'داده کافی و معتبر دریافت نشده یا مسیر بررسی خاموش است.',WAITING_CALIBRATION:'نمونه‌های پیشین کافی نیستند؛ طبیعی بودن اختلاف قیمت هنوز تأیید نمی‌شود.',BLOCKED_RR_THRESHOLD_NOT_CONFIGURED:'حداقل نسبت سود به زیان باید صریحاً تنظیم شود.',BLOCKED_INSTRUMENT_MISMATCH:'مدرک کافی برای تطبیق بازار و امکان اجرا وجود ندارد.',EXPIRED_TIMEOUT:'مهلت ثابت پانزده‌دقیقه‌ای پایان یافته است.',EXPIRED_TP1_REACHED:'قیمت بایننس به هدف اول رسیده است.',CANCELLED_STOP_LOSS:'قیمت بایننس حد ضرر اصلی را لمس کرده است.',CANCELLED_INVALIDATION:'یکی از شرط‌های ابطال یا لغو رخ داده است.'})[p.status]||'نتیجه مربوط به آخرین بررسی ثبت‌شده است.';
  },
  render(signals,architecture,item=null){
-  if(!architecture?.analysis_enabled)return '<div class="detail-notice">Execution Gate خاموش است؛ منبع فعلی تحلیل والکس است.</div>';
+  if(!architecture?.analysis_enabled)return '';
   if(!signals?.length)return `<header class="detail-title"><div><h2>${esc(item?.config?.name||'بررسی استراتژی')}</h2><p>${esc(item?.config?.symbol||'')} · ${item?.config?.action==='SHORT'?'فروش / شورت':'خرید / لانگ'} · تحلیل: Binance · بررسی دستی: Wallex</p></div></header><div class="detail-notice">${architecture.version_approved===false?'نسخهٔ این استراتژی برای تحلیل بایننس تأیید نشده است.':'هنوز سیگنالی ثبت نشده است؛ در انتظار تشکیل ستاپ و تأیید کندل.'} آخرین بررسی: ${item?.state?.last_check?new Date(item.state.last_check*1000).toLocaleString('fa-IR'):'هنوز انجام نشده'}</div>`;
   const n=x=>x==null?'—':Number(x).toLocaleString('fa-IR',{maximumFractionDigits:8});
   const t=x=>x?new Date(x*1000).toLocaleString('fa-IR'):'هنوز دریافت نشده';

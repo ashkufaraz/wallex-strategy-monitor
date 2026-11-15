@@ -38,6 +38,12 @@ with sync_playwright() as pw:
     page.route('**/*',route)
     page.goto('http://127.0.0.1:5078/')
     page.wait_for_selector('#strategies .card')
+    assert page.evaluate("document.querySelector('#accountBar').nextElementSibling.tagName==='FOOTER'")
+    assert page.locator('#health').is_visible()
+    response['heartbeat']=__import__('time').time()
+    page.evaluate('refresh()')
+    page.wait_for_function("document.querySelector('#health').hidden")
+    assert 'Cron' in page.locator('#monitoringNote').inner_text()
     assert page.locator('#alerts .detail-indicators').count()==0
     assert 'ChatGPT' in page.locator('#alerts').inner_text()
     assert 'ChatGPT' in page.locator('.strategy-meta').first.inner_text()

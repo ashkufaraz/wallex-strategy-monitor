@@ -36,6 +36,8 @@
  byId('commentList').onclick=async e=>{const button=e.target.closest('[data-remove-comment]');if(!button)return;if(!confirm('این نظر حذف شود؟'))return;try{await request({action:'delete_comment',id:Number(button.dataset.removeComment)});comments=comments.filter(c=>Number(c.id)!==Number(button.dataset.removeComment));await refresh();renderComments();}catch(error){msg(error.message,true);}};
  window.community={render(){
   const user=data.user,identity=user?.id??null;
+  const accountAnchor=user?main.querySelector('footer'):main.querySelector('header').nextElementSibling;
+  if(accountAnchor!==account&&account.nextElementSibling!==accountAnchor)main.insertBefore(account,accountAnchor);
   if(lastUser!==undefined&&identity!==lastUser){byId('previewBox').replaceChildren();pending=null;editVersion=null;}
   lastUser=identity;
   const html=user?`<div class="row"><span>وارد شده‌اید: <b>${escape(user.name)}</b></span><button type="button" id="logoutAccount">خروج از حساب</button></div>`:'<div class="row"><span>استراتژی‌ها و هشدارها عمومی‌اند؛ برای ثبت استراتژی و مدیریت موارد خود وارد شوید.</span><button type="button" id="openAccount" class="primary">ورود / ثبت‌نام</button></div>';
