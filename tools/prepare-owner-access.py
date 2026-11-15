@@ -16,7 +16,10 @@ def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--configure-github',action='store_true')
     args=parser.parse_args()
-    config=ROOT/'config/owner-bootstrap.php';link=ROOT/'data/owner-activation.html'
+    config=ROOT/'config/owner-bootstrap.php';link=Path.home()/'.config/wallex-strategy-monitor/owner-activation.html'
+    link.parent.mkdir(parents=True,exist_ok=True)
+    legacy=ROOT/'data/owner-activation.html'
+    if legacy.exists() and not link.exists():shutil.move(str(legacy),str(link))
     if config.exists() and link.exists():
         match=re.search(r"'token_hash'\s*=>\s*'([a-f0-9]{64})'",config.read_text(encoding='utf-8'))
         if not match:raise RuntimeError('Existing bootstrap configuration is invalid')
