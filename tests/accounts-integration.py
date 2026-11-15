@@ -110,7 +110,8 @@ def run(browser=False):
                     assert page.locator('#strategies [data-do=edit]').count()==0
                     assert page.locator('#alerts [data-delete-alert]').count()==0
                     assert page.locator('#preview').is_disabled()
-                    page.locator('#openAccount').click();page.locator('#accountEmail').fill('a@example.com');page.locator('#accountPassword').fill('test-password-123');page.locator('#submitAccount').click()
+                    page.locator('#openAccount').click();assert not page.locator('#accountNameLabel').is_visible()
+                    page.locator('#accountEmail').fill('a@example.com');page.locator('#accountPassword').fill('test-password-123');page.locator('#submitAccount').click()
                     page.wait_for_selector('#logoutAccount');assert page.locator('#strategies [data-do=edit]').count()==1
                     page.locator('#logoutAccount').click();page.wait_for_selector('#openAccount');assert page.locator('#strategies [data-do=edit]').count()==0
                     page.locator('#commentName').fill('Public visitor');page.locator('#commentBody').fill('Hello from browser');page.locator('#submitComment').click()
