@@ -14,5 +14,5 @@ assert(!stale.includes('data-manual-signal=')&&stale.includes('دادهٔ قبل
 const revoked=ctx.view.render([{...p,status:'WAITING_BASIS',revoked_at:now}],config);
 assert(revoked.includes('READY_REVOKED')&&!revoked.includes('data-manual-signal='));
 assert(ctx.view.render([],config).includes('هنوز سیگنالی'));
-assert(ctx.view.render([],{}).includes('خاموش'));
+assert.strictEqual(ctx.view.render([],{}),'');
 console.log('Execution Gate UI: 8 assertion groups passed.');
