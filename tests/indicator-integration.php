@@ -161,3 +161,10 @@ $reset();$s=$template;$s['indicator_conditions']=$block;$put($s,1440000);runCycl
 expectIndicator($count()===0&&$latest()['indicator_snapshot']['conditions'][0]['status']==='UNAVAILABLE'&&str_contains($latest()['indicator_snapshot']['conditions'][0]['error'],'no trades'),'complete no-trade indicator history is UNAVAILABLE and cannot alert');
 $reset();$s['stages'][0]['transitions'][0]=['event'=>'bar_close:4h','when'=>['left'=>['candle'=>['timeframe'=>'4h','offset'=>1,'field'=>'close']],'op'=>'gt','right'=>1],'signal'=>true];$put($s,1439999);runCycle(new NoTradeMarket(),1440000);
 expectIndicator($count()===0&&str_contains($state()['error'],'UNAVAILABLE: no trades'),'strategy engine records explicit no-trade unavailability without alert');
+
+$reset();$s=$template;$s['analysis_sources']=['chatgpt','deep'];$s['indicator_conditions']=$block;$s['indicator_conditions']['conditions'][0]['value']=999999;
+$s['stages']=[['id'=>'start','transitions'=>[['event'=>'price','when'=>['left'=>['price'=>true],'op'=>'gt','right'=>1],'signal'=>true],['event'=>'price','when'=>['left'=>['price'=>true],'op'=>'gt','right'=>9999],'to'=>'alternative']]],['id'=>'alternative','transitions'=>[['event'=>'price','when'=>['left'=>['price'=>true],'op'=>'gt','right'=>9999],'signal'=>true]]]];
+$put($s,1440000);runCycle(new IndicatorMarket(),1440001);$p=json_decode($entryOnly()[0],true);
+expectIndicator($count()===0&&$p['entry_stage']==='start'&&$p['entry_rule']===1,'a matched direct-entry branch can notify while the alternative retest branch is false');
+expectIndicator(count($p['entry_evidence'])===1&&$p['entry_evidence'][0]['condition']['result']===true,'entry warning preserves only matched-route evidence at event time');
+expectIndicator($p['analysis_sources']===['chatgpt','deep'],'alert stores analysis sources at issuance');

@@ -57,7 +57,7 @@ final class ExecutionGate {
   $q=$db->prepare('INSERT OR IGNORE INTO execution_signals VALUES(?,?,?,?,?,?,?)');$q->execute([$id,$s['id'],$version,'SIGNAL_CREATED',$at,$p['deadline'],encode($p)]);
   if($q->rowCount())$db->prepare('INSERT INTO execution_events(signal_id,at,status,reason) VALUES(?,?,?,?)')->execute([$id,$created,$p['status'],$p['reason']]);
   if($q->rowCount()&&self::advisory($c)){
-   $alert=['type'=>'binance_signal','signal_id'=>$id,'strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>'binance_signal','event_time'=>$at,'trade'=>$s['trade']??null,'reason'=>'سیگنال بایننس شناسایی شد؛ بررسی شرایط تخمینی ورود در والکس آغاز شد.'];
+   $alert=['analysis_sources'=>$s['analysis_sources']??[],'type'=>'binance_signal','signal_id'=>$id,'strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>'binance_signal','event_time'=>$at,'trade'=>$s['trade']??null,'reason'=>'سیگنال بایننس شناسایی شد؛ بررسی شرایط تخمینی ورود در والکس آغاز شد.'];
    $db->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute(['binance-signal:'.$id,$created,encode($alert)]);
   }
   return $id;
@@ -147,12 +147,12 @@ final class ExecutionGate {
   if($before['status']==='MANUAL_REVIEW_AVAILABLE'&&$after['status']!=='MANUAL_REVIEW_AVAILABLE'){$after['revoked_at']=$now;$db->prepare('INSERT INTO execution_events(signal_id,at,status,reason) VALUES(?,?,?,?)')->execute([$after['id'],$now,'MANUAL_REVIEW_REVOKED',$after['reason']]);}
   if($after['status']==='MANUAL_REVIEW_AVAILABLE'&&empty($before['advisory_notified_at'])){
    $after['advisory_notified_at']=$now;
-   $payload=['type'=>'manual_review','signal_id'=>$after['id'],'strategy_id'=>$after['strategy_id'],'name'=>$after['name'],'symbol'=>$after['symbol'],'action'=>$after['action'],'price'=>$after['rr']['entry'],'event'=>'manual_review','event_time'=>$now,'reason'=>$after['reason'],'execution'=>$after,'trade'=>['entry'=>['type'=>'MARKET','reference_price'=>$after['rr']['entry']],'stop_loss'=>$after['rr']['stop'],'take_profits'=>$after['rr']['take_profits']]];
+   $payload=['analysis_sources'=>$after['strategy']['analysis_sources']??[],'type'=>'manual_review','signal_id'=>$after['id'],'strategy_id'=>$after['strategy_id'],'name'=>$after['name'],'symbol'=>$after['symbol'],'action'=>$after['action'],'price'=>$after['rr']['entry'],'event'=>'manual_review','event_time'=>$now,'reason'=>$after['reason'],'execution'=>$after,'trade'=>['entry'=>['type'=>'MARKET','reference_price'=>$after['rr']['entry']],'stop_loss'=>$after['rr']['stop'],'take_profits'=>$after['rr']['take_profits']]];
    $db->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute(['manual-review:'.$after['id'],$now,encode($payload)]);
   }
   if($after['status']==='READY_FOR_MANUAL_ENTRY'&&empty($before['notified_at'])){
    $after['notified_at']=$now;$after['ready_snapshot']=$after;
-   $payload=['type'=>'execution_ready','signal_id'=>$after['id'],'strategy_id'=>$after['strategy_id'],'name'=>$after['name'],'symbol'=>$after['symbol'],'action'=>$after['action'],'price'=>$after['rr']['entry'],'event'=>'execution_ready','event_time'=>$now,'reason'=>$after['reason'],'execution'=>$after,'trade'=>['entry'=>['type'=>'MARKET','reference_price'=>$after['rr']['entry']],'stop_loss'=>$after['rr']['stop'],'take_profits'=>$after['rr']['take_profits']]];
+   $payload=['analysis_sources'=>$after['strategy']['analysis_sources']??[],'type'=>'execution_ready','signal_id'=>$after['id'],'strategy_id'=>$after['strategy_id'],'name'=>$after['name'],'symbol'=>$after['symbol'],'action'=>$after['action'],'price'=>$after['rr']['entry'],'event'=>'execution_ready','event_time'=>$now,'reason'=>$after['reason'],'execution'=>$after,'trade'=>['entry'=>['type'=>'MARKET','reference_price'=>$after['rr']['entry']],'stop_loss'=>$after['rr']['stop'],'take_profits'=>$after['rr']['take_profits']]];
    $db->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute(['execution-ready:'.$after['id'],$now,encode($payload)]);
   }
   $db->prepare('UPDATE execution_signals SET status=?,payload=? WHERE id=?')->execute([$after['status'],encode($after),$after['id']]);

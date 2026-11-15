@@ -1,0 +1,22 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+(async()=>{
+ const delivered=[],messages=[];let fail=false,registered=0;
+ const registration={scope:'https://example.com/public/',showNotification:async(title,options)=>{if(fail)throw Error('device rejected');delivered.push({title,...options});}};
+ function Notification(){throw Error('Illegal constructor');}Notification.permission='granted';
+ const navigator={serviceWorker:{register:async(path)=>{assert.equal(path,'notification-sw.js');registered++;},ready:Promise.resolve(registration)}};
+ const c=vm.createContext({window:{isSecureContext:true,Notification},Notification,navigator,setTimeout,clearTimeout});
+ vm.runInContext(fs.readFileSync('public/notifications.js','utf8')+';this.api=panelNotifications;',c);
+ const report=(...args)=>messages.push(args);
+ assert.equal(await c.api.send('mobile','body','test',report),true);
+ assert.equal(delivered[0].body,'body');assert.equal(registered,1);
+ c.api.cursor=10;fail=true;
+ await c.api.process([{id:11}],()=>c.api.send('retry','body','retry',report));
+ assert.equal(c.api.cursor,10,'failed service delivery must retain cursor');
+ fail=false;
+ const send=()=>c.api.send('alert','body','tag',report);
+ const pending=c.api.process([{id:11},{id:12}],send);
+ c.api.process([{id:11},{id:12}],send);
+ await pending;
+ assert.equal(c.api.cursor,12);assert.equal(delivered.length,3,'overlapping refreshes must not duplicate delivery');
+ console.log('PASS mobile service-worker notification, failed-delivery retry and concurrent cursor protection');
+})().catch(e=>{console.error(e);process.exitCode=1;});

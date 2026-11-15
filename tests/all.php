@@ -3,6 +3,7 @@
 $suites=['run.php','integration.php','wallex.php','trade.php','history.php','cancellation.php','four-hour.php','diagnostics.php','hosting.php','browser-runner.php','indicators.php','indicator-integration.php','indicator-consistency.php','candle-aggregation.php','network-diagnostics.php'];
 $suites[]='system-log.php';
 $suites[]='strategy-metadata.php';
+$suites[]='indicator-continuity.php';
 $suites[]='candle-fields.php';
 $suites[]='multi-market.php';
 $suites[]='execution-gate.php';

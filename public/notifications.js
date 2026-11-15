@@ -1,6 +1,8 @@
 const panelNotifications = {
   cursor: null,
+  processing: false,
   process(alerts, send) {
+    if(this.processing)return;
     const key='wallex-notification-cursor-v1';
     if(this.cursor===null){
       let saved=null;try{saved=window.localStorage?.getItem(key);}catch(e){}
@@ -9,7 +11,12 @@ const panelNotifications = {
     }
     for(const a of [...alerts].sort((a,b)=>a.id-b.id)){
       if(a.id<=this.cursor)continue;
-      if(!send(a))break; // Do not lose an alert when permission or construction fails.
+      const sent=send(a);
+      if(sent&&typeof sent.then==='function'){
+        this.processing=true;
+        return sent.then(ok=>{if(ok){this.cursor=a.id;try{window.localStorage?.setItem(key,String(this.cursor));}catch(e){}}this.processing=false;if(ok)return this.process(alerts,send);},()=>{this.processing=false;});
+      }
+      if(!sent)break; // Do not lose an alert when permission or construction fails.
       this.cursor=a.id;
       try{window.localStorage?.setItem(key,String(this.cursor));}catch(e){}
     }
@@ -47,8 +54,18 @@ const panelNotifications = {
       notification.onerror = () => report('مرورگر نتوانست اعلان را نمایش دهد. تنظیمات اعلان مرورگر و ویندوز را بررسی کنید.', true);
       return true;
     } catch (error) {
+      if(typeof navigator!=='undefined'&&navigator.serviceWorker)return this.serviceSend(title,body,tag,report);
       report('ساخت اعلان ناموفق بود: ' + error.message, true);
       return false;
     }
+  },
+  async serviceSend(title,body,tag,report){
+    try{
+      await navigator.serviceWorker.register('notification-sw.js');
+      let timer;
+      const registration=await Promise.race([navigator.serviceWorker.ready,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Notification service worker activation timed out')),15000);})]).finally(()=>clearTimeout(timer));
+      await registration.showNotification(title,{body,tag,lang:'fa',dir:'rtl',data:{url:registration.scope}});
+      report('اعلان به سیستم اعلان دستگاه تحویل داده شد.',false);return true;
+    }catch(error){report('ارسال اعلان دستگاه ناموفق بود: '+error.message,true);return false;}
   }
 };

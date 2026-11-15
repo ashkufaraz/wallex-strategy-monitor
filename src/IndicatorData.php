@@ -47,6 +47,18 @@ final class IndicatorData {
   foreach($out as $t=>&$bar)$bar+=['open_time'=>$t,'duration'=>$seconds];unset($bar);
   return $out;
  }
+ // Indicator time series need continuity. Empty historical intervals retain only
+ // the last observed traded close; zero volume is preserved, never fabricated.
+ static function continuous(array $source,int $base,int $seconds,int $from,int $end,?float $previous=null):array {
+  $inspection=CandleAggregation::inspect($source,$base,$seconds);$out=[];
+  for($t=$from;$t<$end;$t+=$seconds){
+   if(isset($inspection['bars'][$t])){$bar=$inspection['bars'][$t];$previous=$bar['close'];}
+   elseif(($inspection['unavailable'][$t]??'')==='UNAVAILABLE: no trades in complete interval'&&$previous!==null){$bar=['open'=>$previous,'high'=>$previous,'low'=>$previous,'close'=>$previous,'volume'=>0.,'continuity'=>'last_traded_close'];}
+   else throw new RuntimeException(($inspection['unavailable'][$t]??'UNAVAILABLE: missing complete candle').' ('.gmdate('Y-m-d H:i:s',$t).' UTC)');
+   $out[$t]=$bar+['open_time'=>$t,'duration'=>$seconds];
+  }
+  return $out;
+ }
 
  function history(string $symbol,string $tf,int $count,int $asOf,int $now):array {
   $seconds=Indicators::TIMEFRAMES[$tf];$end=intdiv($asOf,$seconds)*$seconds;$from=$end-$count*$seconds;
@@ -54,21 +66,26 @@ final class IndicatorData {
   if($from<0)throw new RuntimeException('Insufficient history before Unix epoch');
   $base=$seconds>=3600?3600:60;
   // Reuse a larger history fetched by another strategy with a different period.
-  $prefix="h:v2:$symbol:$tf:$end:";
+  $prefix="h:v3_continuous:$symbol:$tf:$end:";
   db()->exec('CREATE TABLE IF NOT EXISTS indicator_cache(k TEXT PRIMARY KEY, expires INTEGER NOT NULL, payload TEXT NOT NULL)');
   $q=db()->prepare('SELECT payload FROM indicator_cache WHERE k LIKE ? AND expires>?');$q->execute([$prefix.'%',$now]);
   foreach($q->fetchAll(PDO::FETCH_COLUMN) as $raw){$candidate=json_decode($raw,true,512,JSON_THROW_ON_ERROR);$valid=true;
    for($t=$from;$t<$end;$t+=$seconds)if(!isset($candidate[$t])){$valid=false;break;}
    if($valid)return array_filter($candidate,fn($t)=>$t>=$from&&$t<$end,ARRAY_FILTER_USE_KEY);
   }
-  return $this->cached("h:v2:$symbol:$tf:$end:$count",$now,function()use($symbol,$base,$seconds,$from,$end,$now){
+  return $this->cached("h:v3_continuous:$symbol:$tf:$end:$count",$now,function()use($symbol,$base,$seconds,$from,$end,$now){
    $source=[];
    for($start=$from;$start<$end;$start+=$base*300){$until=min($end,$start+$base*300);
     $part=$this->cached("raw:v2:$symbol:$base:$start:$until",$now,fn()=>$this->fetchPart(['symbol'=>$symbol,'resolution'=>$base===60?'1':'60','from'=>$start,'to'=>$until],$symbol,$base,$start,$until));
     $source+=$part;
    }
-   $bars=self::aggregate($source,$base,$seconds);
-   for($t=$from;$t<$end;$t+=$seconds)if(!isset($bars[$t]))throw new RuntimeException((CandleAggregation::inspect($source,$base,$seconds)['unavailable'][$t]??('Missing complete '.$seconds.'s candle')).' ('.$symbol.', '.$seconds.'s interval, '.gmdate('Y-m-d H:i:s',$t).' UTC)');
+   $previous=null;
+   $inspection=CandleAggregation::inspect($source,$base,$seconds);
+   if(($inspection['unavailable'][$from]??'')==='UNAVAILABLE: no trades in complete interval'){
+    $seedFrom=max(0,$from-24*$base);
+    if($seedFrom<$from){$seed=$this->cached("seed:v3:$symbol:$base:$seedFrom:$from",$now,fn()=>$this->fetchPart(['symbol'=>$symbol,'resolution'=>$base===60?'1':'60','from'=>$seedFrom,'to'=>$from],$symbol,$base,$seedFrom,$from));ksort($seed);foreach($seed as $bar)if($bar['volume']>0)$previous=$bar['close'];}
+   }
+   $bars=self::continuous($source,$base,$seconds,$from,$end,$previous);
    ksort($bars);return $bars;
   });
  }
@@ -85,7 +102,9 @@ final class IndicatorData {
    try{
     if(isset($errors[$c['timeframe']]))throw new RuntimeException($errors[$c['timeframe']]);
     $bars=array_slice(array_values($histories[$c['timeframe']]),-Indicators::needed($c));
-    $key=implode(':',[$this->api instanceof BinanceMarketDataProvider?'binance_spot:v1':'v2',$s['symbol'],$c['timeframe'],$c['indicator'],$c['period'],$c['metric'],$end]);
+    $row['zero_trade_intervals']=count(array_filter($bars,fn($bar)=>isset($bar['continuity'])));
+    $row['history_policy']=$this->api instanceof BinanceMarketDataProvider?'native_binance':'last_traded_close_for_empty_intervals';
+    $key=implode(':',[$this->api instanceof BinanceMarketDataProvider?'binance_spot:v1':'v3_continuous',$s['symbol'],$c['timeframe'],$c['indicator'],$c['period'],$c['metric'],$end]);
     $v=$this->cached($key,$now,fn()=>Indicators::value($c['indicator'],$c['period'],$c['metric'],$bars));
     $row['observed']=$v;$row['status']=Indicators::passes($v,$c)?'PASS':'FAIL';
    }catch(Throwable $e){$row['error']=$e->getMessage();}

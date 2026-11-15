@@ -12,6 +12,7 @@ items[0]['entry_progress']=dict(passed=2,total=5,unknown=1,checked=1)
 response = dict(csrf='test',interval=60,heartbeat=0,strategies=items,alerts=[],logs=[dict(created=1,level='error',event='test.error',message='offline',context={'strategy_id':'2'})])
 response['alerts']=[dict(id=1,created=1,payload=dict(type='entry_conditions_only',strategy_id='0',name='Partial entry',symbol='BTCUSDT',action='SHORT',price=100,event_time=1,reason='Entry conditions only; indicators failed'))]
 response['archived_alerts']=[]
+response['alerts'][0]['payload']['indicators']=dict(passed=False,conditions=[dict(id='ema',indicator='EMA',period=20,timeframe='1h',status='FAIL')])
 with sync_playwright() as pw:
     browser=pw.chromium.launch(headless=True,executable_path='C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe')
     page=browser.new_page(viewport=dict(width=1440,height=1000))
@@ -37,6 +38,8 @@ with sync_playwright() as pw:
     page.route('**/*',route)
     page.goto('http://127.0.0.1:5078/')
     page.wait_for_selector('#strategies .card')
+    assert page.locator('#alerts .detail-indicators').count()==0
+    assert 'ChatGPT' in page.locator('#alerts').inner_text()
     assert 'ChatGPT' in page.locator('.strategy-meta').first.inner_text()
     assert 'Gemini' in page.locator('.strategy-meta').first.inner_text()
     assert '2 از 5' in page.locator('.strategy-meta').first.inner_text()

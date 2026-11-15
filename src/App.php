@@ -17,14 +17,14 @@ function db():PDO {static $db; if($db) return $db; $db=new PDO('sqlite:'.(define
 function setting(string $key,string $default=''):string {$q=db()->prepare('SELECT v FROM settings WHERE k=?');$q->execute([$key]);$v=$q->fetchColumn();return $v===false?$default:$v;}
 function setSetting(string $key,string $value):void {db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute([$key,$value]);}
 function encode(mixed $x):string {return json_encode($x,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);}
-function recordAlert(array $s,string $version,string $event,int $at,float $price,?string $cancellationReason=null,?array $indicators=null):void {$p=['strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>$event,'event_time'=>$at];if($cancellationReason!==null){$p['type']='cancelled';$p['reason']=$cancellationReason;}if($cancellationReason===null&&isset($s['trade'])) {$p['trade']=$s['trade'];$p['trade']['entry']['reference_price']=$s['trade']['entry']['price']??$price;}if($indicators!==null)$p['indicators']=$indicators;db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute([$s['id'].':'.$version.':'.$event.':'.$at,time(),encode($p)]);}
+function recordAlert(array $s,string $version,string $event,int $at,float $price,?string $cancellationReason=null,?array $indicators=null):void {$p=['analysis_sources'=>$s['analysis_sources']??[],'strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>$event,'event_time'=>$at];if($cancellationReason!==null){$p['type']='cancelled';$p['reason']=$cancellationReason;}if($cancellationReason===null&&isset($s['trade'])) {$p['trade']=$s['trade'];$p['trade']['entry']['reference_price']=$s['trade']['entry']['price']??$price;}if($indicators!==null)$p['indicators']=$indicators;db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute([$s['id'].':'.$version.':'.$event.':'.$at,time(),encode($p)]);}
 // Look up the current version only; cancellation is not an entry signal.
 function recordEntryOnlyAlert(array $s,string $version,array $candidate,float $price,int $now):void {
  $event=$candidate['event'];$at=$candidate['time'];
  // Price conditions stay true between polls: notify at most once per uninterrupted match.
  $episode=$event.':'.($candidate['episode']??$at);
- $key=$s['id'].':'.$version.':entry_conditions_only:'.$episode;
- $p=['type'=>'entry_conditions_only','strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>$event,'event_time'=>$at,'indicators'=>$candidate['snapshot'],'reason'=>'فقط شرط‌های ورود بدون اندیکاتور تأیید شده‌اند؛ فیلترهای اندیکاتور ورود را تأیید نکرده‌اند. این هشدار تأیید نهایی ورود نیست.'];
+ $key=$s['id'].':'.$version.':entry_conditions_only:'.($candidate['stage']??'').':'.($candidate['rule']??'').':'.$episode;
+ $p=['analysis_sources'=>$s['analysis_sources']??[],'entry_evidence'=>$candidate['evidence']??[],'entry_stage'=>$candidate['stage']??null,'entry_rule'=>$candidate['rule']??null,'type'=>'entry_conditions_only','strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>$event,'event_time'=>$at,'indicators'=>$candidate['snapshot'],'reason'=>'شرط‌های یک مسیر مجاز ورود، بدون تأیید اندیکاتورها، در زمان صدور هشدار برقرار بوده‌اند. مسیرهای جایگزین لازم نیست هم‌زمان تأیید شوند. جزئیات استراتژی وضعیت فعلی را نشان می‌دهد؛ این پیام تأیید نهایی ورود نیست.'];
  db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute([$key,$now,encode($p)]);
 }
 function strategyLastSignal(array $row):?array {
@@ -118,7 +118,10 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
    $sec=Strategy::TIMEFRAMES[substr($event,10)];
    if($at!==intdiv($now,$sec)*$sec)return false;
   }
-  $snapshot=$indicatorData->evaluate($config,$at,$now);$indicatorReports[]=['event'=>$event,'event_time'=>$at,'snapshot'=>$snapshot];$st['indicators']=$snapshot;if(!$snapshot['passed']){if($event==='price')$st['entry_only_price_at']??=$at;$entryOnly[]=['event'=>$event,'time'=>$at,'episode'=>$event==='price'?$st['entry_only_price_at']:$at,'snapshot'=>$snapshot];}return $snapshot['passed'];
+  $snapshot=$indicatorData->evaluate($config,$at,$now);$indicatorReports[]=['event'=>$event,'event_time'=>$at,'snapshot'=>$snapshot];$st['indicators']=$snapshot;if(!$snapshot['passed']){if($event==='price')$st['entry_only_price_at']??=$at;$evidence=array_values($st['completed_rules']??[]);$trigger=null;
+   foreach($config['stages'] as $stage)if($stage['id']===$st['stage'])foreach($stage['transitions'] as $i=>$rule)if($rule['event']===$event&&isset($rule['signal'])&&Strategy::check($rule['when'],$ctx)){$trigger=['stage'=>$stage['id'],'rule'=>$i+1,'event'=>$event,'kind'=>'transition','to'=>'signal','checked'=>$at,'condition'=>Diagnostics::inspect($rule['when'],$ctx)];break;}
+   if($trigger)$evidence[]=$trigger;
+   $entryOnly[]=['event'=>$event,'time'=>$at,'episode'=>$event==='price'?$st['entry_only_price_at']:$at,'snapshot'=>$snapshot,'stage'=>$st['stage'],'rule'=>$trigger['rule']??null,'evidence'=>$evidence];}return $snapshot['passed'];
  }:null;
  Strategy::$onCheck=function($kind,$event,$condition,$ctx,$meta)use(&$trace,&$st,&$now){
   $record=array_merge(['kind'=>$kind,'event'=>$event,'candle_close'=>$ctx['close']??null,'condition'=>Diagnostics::inspect($condition,$ctx)],$meta);

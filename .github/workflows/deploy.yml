@@ -21,6 +21,7 @@ jobs:
         run: |
           php tests/all.php
           node tests/notifications.js
+          node tests/mobile-notifications.js
           node tests/trade.js
           node tests/details.js
           node tests/execution-gate.js
