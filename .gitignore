@@ -22,3 +22,5 @@ __pycache__/
 /config/diagnostics-admin.php
 /config/diagnostics-last.json
 /config/execution-gate.json
+
+/config/owner-bootstrap.php

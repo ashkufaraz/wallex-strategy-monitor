@@ -25,10 +25,17 @@ def build(destination, hosts, username, password, public_access=False, require_h
                             input=password, text=True, capture_output=True, check=True).stdout
     for folder in ['public', 'src']:
         shutil.copytree(ROOT / folder, destination / folder)
+    (destination / 'public' / 'guides').mkdir(exist_ok=True)
+    shutil.copy2(ROOT / 'strategy-json-guide-fa.md', destination / 'public' / 'guides' / 'strategy.md')
+    shutil.copy2(ROOT / 'docs' / 'live-indicators.md', destination / 'public' / 'guides' / 'indicators.md')
+    owner_hash = os.environ.get('OWNER_BOOTSTRAP_HASH', '')
+    if owner_hash and not re.fullmatch(r'[a-f0-9]{64}', owner_hash):
+        raise ValueError('Invalid OWNER_BOOTSTRAP_HASH')
     for folder in ['src', 'data', 'config']:
         path = destination / folder
         path.mkdir(exist_ok=True)
         (path / '.htaccess').write_text('Require all denied\n', encoding='utf-8')
+    (destination / 'config' / 'owner-bootstrap.php').write_text("<?php return ['token_hash'=>" + php_string(owner_hash) + "];\n", encoding='utf-8')
     shutil.copy2(ROOT / 'deploy' / 'HostingAccess.php', destination / 'src' / 'HostingAccess.php')
     shutil.copy2(ROOT / 'cron.php', destination / 'cron.php')
     # JSON is read as data; secrets never become executable PHP source.

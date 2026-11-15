@@ -28,6 +28,7 @@ jobs:
           node tests/manual-advisory.js
           node tests/order-flow.js
           python3 tests/deployment.py
+          python3 tests/accounts-integration.py
           python3 tests/indicator-reference.py
           python3 tests/candle-reference.py
           python3 tests/admin-diagnostics.py
@@ -48,6 +49,7 @@ jobs:
           SITE_HOSTS: ${{ vars.SITE_HOSTS || 'ashkufaraz.ir,www.ashkufaraz.ir' }}
           REQUIRE_HTTPS: ${{ vars.REQUIRE_HTTPS || 'true' }}
           PUBLIC_ACCESS: 'true'
+          OWNER_BOOTSTRAP_HASH: ${{ vars.OWNER_BOOTSTRAP_HASH }}
         run: python3 deploy/build.py --output build-hosting
       - name: Upload through FTPS
         env:

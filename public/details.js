@@ -175,6 +175,7 @@ const strategyDetails = {
       const signals=(result.execution_signals||[]).filter(p=>p.version===item.version);
       const flow=typeof orderFlowView!=='undefined'?orderFlowView.safeRender(result.order_flow,item,signals[0]?.id):'';
       if(typeof executionGateView!=='undefined')content.insertAdjacentHTML('afterbegin',executionGateView.render(signals,result.architecture,item)+flow);
+      if(typeof community!=='undefined')community.render();
       dialog.scrollTop = scrollTop;
     } catch (error) {
       if (this.id === id) document.getElementById('detailsContent').textContent = error.message;

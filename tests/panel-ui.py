@@ -5,12 +5,12 @@ from playwright.sync_api import sync_playwright
 
 root = Path(__file__).resolve().parent.parent
 config = json.loads((root/'example-btc-short.json').read_text(encoding='utf-8'))
-items = [dict(config=dict(config,id=str(i),enabled=i != 1),version=str(i),state=dict(stage=config['initial_stage'])) for i in range(5)]
+items = [dict(config=dict(config,id=str(i),enabled=i != 1),version=str(i),can_manage=True,state=dict(stage=config['initial_stage'])) for i in range(5)]
 items[4]['state'].update(cancelled_at=123,cancel_reason='cancelled fixture')
 items[0]['config']['analysis_sources']=['chatgpt','gemini']
 items[0]['entry_progress']=dict(passed=2,total=5,unknown=1,checked=1)
-response = dict(csrf='test',interval=60,heartbeat=0,strategies=items,alerts=[],logs=[dict(created=1,level='error',event='test.error',message='offline',context={'strategy_id':'2'})])
-response['alerts']=[dict(id=1,created=1,payload=dict(type='entry_conditions_only',strategy_id='0',name='Partial entry',symbol='BTCUSDT',action='SHORT',price=100,event_time=1,reason='Entry conditions only; indicators failed'))]
+response = dict(user=dict(id=1,name='Test owner',role='owner'),can_manage_settings=True,csrf='test',interval=60,heartbeat=0,strategies=items,alerts=[],logs=[dict(created=1,level='error',event='test.error',message='offline',context={'strategy_id':'2'})])
+response['alerts']=[dict(id=1,created=1,can_manage=True,payload=dict(type='entry_conditions_only',strategy_id='0',name='Partial entry',symbol='BTCUSDT',action='SHORT',price=100,event_time=1,reason='Entry conditions only; indicators failed'))]
 response['archived_alerts']=[]
 response['alerts'][0]['payload']['indicators']=dict(passed=False,conditions=[dict(id='ema',indicator='EMA',period=20,timeframe='1h',status='FAIL')])
 with sync_playwright() as pw:
