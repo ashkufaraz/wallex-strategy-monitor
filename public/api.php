@@ -21,6 +21,16 @@ try {
  if(!hash_equals($_SESSION['csrf'],$_SERVER['HTTP_X_CSRF_TOKEN']??'')) {http_response_code(403);throw new RuntimeException('Invalid request token');}
  if((int)($_SERVER['CONTENT_LENGTH']??0)>100000) throw new RuntimeException('Request too large');$input=json_decode(file_get_contents('php://input'),true,64,JSON_THROW_ON_ERROR);$action=$input['action']??'';
  if(in_array($action,['login','register','logout','activate_owner'],true)){echo encode(accountAction($action,$input));exit;}
+ if($action==='notification_received'){
+  if(!is_int($input['id']??null))throw new InvalidArgumentException('Invalid alert ID');
+  requireAlertOwner($input['id']);SmsFallback::acknowledge(db(),$input['id'],time());echo encode(['ok'=>true]);exit;
+ }
+ if($action==='test_sms'){
+  requireSiteOwner();rateLimit('sms_test',1,300);
+  $config=SmsFallback::config();if(empty($config['enabled']))throw new RuntimeException('SMS disabled');
+  $sent=SmsFallback::send($config,'پیامک آزمایشی پایش خودکار استراتژی والکس. ارسال پیامک فعال است.');
+  systemLog('success','sms.test','پیامک آزمایشی توسط کاوه‌نگار پذیرفته شد.',$sent);echo encode(['ok'=>true]+$sent);exit;
+ }
  if($action==='comment'){addPublicComment($input);echo encode(['ok'=>true]);exit;}
  if($action==='delete_comment'){requireSiteOwner();if(!is_int($input['id']??null))throw new InvalidArgumentException('Invalid comment ID');db()->prepare('DELETE FROM comments WHERE id=?')->execute([$input['id']]);echo encode(['ok'=>true]);exit;}
  if(in_array($action,['save','validate','toggle','delete'],true))requireAccount();

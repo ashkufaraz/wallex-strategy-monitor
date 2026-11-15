@@ -24,3 +24,4 @@ __pycache__/
 /config/execution-gate.json
 
 /config/owner-bootstrap.php
+/config/sms.json

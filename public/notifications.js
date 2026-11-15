@@ -40,7 +40,7 @@ const panelNotifications = {
       report(this.status(), result !== 'granted');
     } catch (error) { report('درخواست اجازهٔ اعلان ناموفق بود: ' + error.message, true); }
   },
-  send(title, body, tag, report) {
+  send(title, body, tag, report, received=()=>{}) {
     const problem = this.problem();
     if (problem) { report(problem, true); return false; }
     if (Notification.permission !== 'granted') {
@@ -50,21 +50,22 @@ const panelNotifications = {
     try {
       const notification = new Notification(title, { body, tag, lang: 'fa', dir: 'rtl', requireInteraction: true });
       notification.onclick = () => { window.focus(); notification.close(); };
-      notification.onshow = () => report('اعلان هشدار توسط مرورگر نمایش داده شد.', false);
+      notification.onshow = () => {received();report('اعلان هشدار توسط مرورگر نمایش داده شد.', false);};
       notification.onerror = () => report('مرورگر نتوانست اعلان را نمایش دهد. تنظیمات اعلان مرورگر و ویندوز را بررسی کنید.', true);
       return true;
     } catch (error) {
-      if(typeof navigator!=='undefined'&&navigator.serviceWorker)return this.serviceSend(title,body,tag,report);
+      if(typeof navigator!=='undefined'&&navigator.serviceWorker)return this.serviceSend(title,body,tag,report,received);
       report('ساخت اعلان ناموفق بود: ' + error.message, true);
       return false;
     }
   },
-  async serviceSend(title,body,tag,report){
+  async serviceSend(title,body,tag,report,received=()=>{}){
     try{
       await navigator.serviceWorker.register('notification-sw.js');
       let timer;
       const registration=await Promise.race([navigator.serviceWorker.ready,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Notification service worker activation timed out')),15000);})]).finally(()=>clearTimeout(timer));
       await registration.showNotification(title,{body,tag,lang:'fa',dir:'rtl',data:{url:registration.scope}});
+      received();
       report('اعلان به سیستم اعلان دستگاه تحویل داده شد.',false);return true;
     }catch(error){report('ارسال اعلان دستگاه ناموفق بود: '+error.message,true);return false;}
   }

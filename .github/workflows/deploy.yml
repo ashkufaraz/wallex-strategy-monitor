@@ -22,6 +22,7 @@ jobs:
           php tests/all.php
           node tests/notifications.js
           node tests/mobile-notifications.js
+          node tests/sms-notifications.js
           node tests/trade.js
           node tests/details.js
           node tests/execution-gate.js
@@ -50,6 +51,8 @@ jobs:
           REQUIRE_HTTPS: ${{ vars.REQUIRE_HTTPS || 'true' }}
           PUBLIC_ACCESS: 'true'
           OWNER_BOOTSTRAP_HASH: ${{ vars.OWNER_BOOTSTRAP_HASH }}
+          KAVENEGAR_API_KEY: ${{ secrets.KAVENEGAR_API_KEY }}
+          SMS_ENABLED_AT: ${{ vars.SMS_ENABLED_AT }}
         run: python3 deploy/build.py --output build-hosting
       - name: Upload through FTPS
         env:

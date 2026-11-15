@@ -4,6 +4,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -21,6 +22,17 @@ uploader = load('hosting_uploader', 'deploy/upload.py')
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_sms_secret_only_in_private_configuration(self):
+        key='ExampleSmsSecretForBuildTests12345'
+        with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ,{'KAVENEGAR_API_KEY':key,'SMS_ENABLED_AT':'123456'}):
+            output=Path(folder)/'site'
+            builder.build(output,'demo.example.com','','',public_access=True)
+            config=json.loads((output/'config/sms.json').read_text())
+            self.assertEqual(config['api_key'],key)
+            self.assertEqual(config['enabled_at'],123456)
+            self.assertIn('Require all denied',(output/'config/.htaccess').read_text())
+            self.assertFalse(any(key in p.read_text(encoding='utf-8',errors='ignore') for p in (output/'public').rglob('*') if p.is_file()))
+
     def test_cron_package_runs_without_browser_and_respects_shared_lock(self):
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder) / 'site'

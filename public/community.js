@@ -6,6 +6,9 @@
  editor.insertBefore(guides,editor.children[1]);
  const account=document.createElement('section');account.id='accountBar';
  main.insertBefore(account,main.querySelector('header').nextSibling);
+ const smsTest=document.createElement('button');smsTest.id='testSms';smsTest.type='button';smsTest.textContent='آزمایش پیامک';smsTest.hidden=true;
+ byId('settings').parentElement.append(smsTest);
+ smsTest.onclick=async()=>{smsTest.disabled=true;try{const sent=await request({action:'test_sms'});msg('پیامک آزمایشی پذیرفته شد؛ شناسه: '+sent.message_id);}catch(error){msg(error.message,true);}finally{smsTest.disabled=false;}};
  const dialog=document.createElement('dialog');dialog.id='accountDialog';
  dialog.innerHTML='<div class="row"><h2>حساب کاربری</h2><button type="button" id="closeAccount">بستن</button></div><div class="row"><button type="button" data-account-mode="login">ورود</button><button type="button" data-account-mode="register">ثبت‌نام</button></div><form id="accountForm"><label id="accountNameLabel">نام نمایشی<input id="accountName" autocomplete="name" maxlength="80"></label><label>ایمیل<input id="accountEmail" type="email" autocomplete="username" required maxlength="254" dir="ltr"></label><label>رمز عبور<input id="accountPassword" type="password" autocomplete="current-password" required maxlength="72"></label><p id="accountHelp" class="small muted"></p><div id="accountMessage" role="status"></div><button id="submitAccount" class="primary" type="submit">ورود</button></form>';
  document.body.append(dialog);
@@ -36,6 +39,7 @@
  byId('commentList').onclick=async e=>{const button=e.target.closest('[data-remove-comment]');if(!button)return;if(!confirm('این نظر حذف شود؟'))return;try{await request({action:'delete_comment',id:Number(button.dataset.removeComment)});comments=comments.filter(c=>Number(c.id)!==Number(button.dataset.removeComment));await refresh();renderComments();}catch(error){msg(error.message,true);}};
  window.community={render(){
   const user=data.user,identity=user?.id??null;
+  smsTest.hidden=!data.can_manage_settings;
   const accountAnchor=user?main.querySelector('footer'):main.querySelector('header').nextElementSibling;
   if(accountAnchor!==account&&account.nextElementSibling!==accountAnchor)main.insertBefore(account,accountAnchor);
   if(lastUser!==undefined&&identity!==lastUser){byId('previewBox').replaceChildren();pending=null;editVersion=null;}

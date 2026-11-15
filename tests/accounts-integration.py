@@ -82,6 +82,11 @@ def run(browser=False):
             php("foreach(['alice','bob'] as $id){$q=db()->prepare('SELECT config FROM strategies WHERE id=?');$q->execute([$id]);recordAlert(json_decode($q->fetchColumn(),true),'v1','price',500,75000.);}")
             alerts=a.request()['alerts'];mine=next(x for x in alerts if x['payload']['strategy_id']=='alice');other=next(x for x in alerts if x['payload']['strategy_id']=='bob')
             assert mine['can_manage'] and not other['can_manage']
+            guest.request(dict(action='notification_received',id=mine['id']),expected=401)
+            b.request(dict(action='notification_received',id=mine['id']),expected=403)
+            a.request(dict(action='notification_received',id=mine['id']))
+            guest.request(dict(action='test_sms'),expected=401)
+            a.request(dict(action='test_sms'),expected=403)
             for action in ['archive_alert','delete_alert','restore_alert']:b.request(dict(action=action,id=mine['id']),expected=403)
             a.request(dict(action='archive_alert',id=mine['id']));assert any(x['id']==mine['id'] for x in guest.request()['archived_alerts'])
             a.request(dict(action='restore_alert',id=mine['id']))
