@@ -14,7 +14,7 @@
   card(item){
    const sources=(item.config.analysis_sources||[]).filter(source=>sourceNames[source]).map(source=>sourceNames[source]);
    const p=item.entry_progress;
-   return `<div class="strategy-meta"><span>منبع تحلیل: ${sources.length?sources.join('، '):'مشخص نشده'}</span>${p?`<span class="${p.passed===p.total&&p.total?'ok':'muted'}" title="شمارش بندهای شرط‌های ورود در آخرین ارزیابی و مرحله‌های طی‌شدهٔ ستاپ جاری؛ در گروه «حداقل یکی»، لازم نیست همه بندها برقرار باشند.">شرط‌های ورود (بدون اندیکاتور): <b>${p.passed} از ${p.total}</b> برقرار${p.unknown?` · ${p.unknown} بررسی‌نشده / نامعلوم`:''}</span>`:''}</div>`;
+   return `<div class="strategy-meta"><span>منبع تحلیل: ${sources.length?sources.join('، '):'مشخص نشده'}</span>${p?`<span class="${p.passed===p.total&&p.total?'ok':'muted'}" title="شرط‌های ورود بدون اندیکاتور"><b>${p.passed} از ${p.total}</b></span>`:''}</div>`;
   }
  };
  sourceBox.onchange=()=>{try{const config=JSON.parse(document.getElementById('json').value);strategySources.apply(config);document.getElementById('json').value=JSON.stringify(config,null,2);}catch(e){}document.getElementById('previewBox').replaceChildren();pending=null;};
