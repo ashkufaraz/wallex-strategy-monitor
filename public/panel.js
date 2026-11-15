@@ -3,7 +3,7 @@
  const list=strategies.closest('section'), editor=document.getElementById('json').closest('section');
  const settings=document.getElementById('interval').closest('section'), history=document.getElementById('alerts').closest('section');
  const grid=document.querySelector('main>.grid');
- const sourceNames={chatgpt:'ChatGPT',grok:'Grok',deep:'Deep',gemini:'Gemini'};
+ const sourceNames={chatgpt:'ChatGPT',grok:'Grok',deep:'Deep',gemini:'Gemini',claude:'Claude'};
  const sourceBox=document.createElement('fieldset');sourceBox.className='analysis-sources';
  sourceBox.innerHTML='<legend>منبع تحلیل (امکان انتخاب چند مورد)</legend><div class="row">'+Object.entries(sourceNames).map(([value,label])=>`<label><input type="checkbox" name="analysisSource" value="${value}"> ${label}</label>`).join('')+'</div>';
  editor.insertBefore(sourceBox,document.getElementById('json'));

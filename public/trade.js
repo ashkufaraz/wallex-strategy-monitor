@@ -1,6 +1,6 @@
 const tradeDetails = {
   entryOnlyMessage:'شرط‌های یک مسیر مجاز ورود، بدون تأیید اندیکاتورها، در زمان صدور هشدار برقرار بوده‌اند. مسیرهای جایگزین لازم نیست هم‌زمان تأیید شوند. جزئیات استراتژی وضعیت فعلی را نشان می‌دهد؛ این پیام تأیید نهایی ورود نیست.',
-  sourceText(payload,current){const labels={chatgpt:'ChatGPT',grok:'Grok',deep:'Deep',gemini:'Gemini'};const saved=Array.isArray(payload.analysis_sources);const sources=(saved?payload.analysis_sources:(current||[])).filter(s=>Object.hasOwnProperty.call(labels,s)).map(s=>labels[s]);return `${saved?'منبع تحلیل هنگام صدور':'منبع فعلی استراتژی'}: ${sources.length?sources.join('، '):'مشخص نشده'}`;},
+  sourceText(payload,current){const labels={chatgpt:'ChatGPT',grok:'Grok',deep:'Deep',gemini:'Gemini',claude:'Claude'};const saved=Array.isArray(payload.analysis_sources);const sources=(saved?payload.analysis_sources:(current||[])).filter(s=>Object.hasOwnProperty.call(labels,s)).map(s=>labels[s]);return `${saved?'منبع تحلیل هنگام صدور':'منبع فعلی استراتژی'}: ${sources.length?sources.join('، '):'مشخص نشده'}`;},
   isActive(item) { return Boolean(item.config.enabled) && !item.state.cancelled_at; },
   status(item) {
     if (item.state.cancelled_at) return `لغو شده و متوقف: ${item.state.cancel_reason}`;

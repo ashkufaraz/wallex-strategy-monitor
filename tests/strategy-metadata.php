@@ -4,7 +4,7 @@ require dirname(__DIR__).'/src/App.php';
 function metadataCheck(bool $ok,string $message):void {if(!$ok)throw new RuntimeException('FAIL '.$message);echo 'PASS '.$message."\n";}
 $s=json_decode(file_get_contents(dirname(__DIR__).'/example-btc-short.json'),true);
 metadataCheck(!isset(Strategy::validate($s)['analysis_sources']),'legacy strategy stays compatible');
-$s['analysis_sources']=['chatgpt','grok','deep','gemini'];
+$s['analysis_sources']=['chatgpt','grok','deep','gemini','claude'];
 metadataCheck(Strategy::validate($s)['analysis_sources']===$s['analysis_sources'],'multiple analysis sources survive validation');
 foreach([['chatgpt','chatgpt'],['unknown'],['ChatGPT'],'chatgpt',[123],['x'=>'grok']] as $bad){
  $invalid=$s;$invalid['analysis_sources']=$bad;$rejected=false;
