@@ -1,0 +1,4 @@
+Options -Indexes
+DirectoryIndex install.html
+AddType application/vnd.android.package-archive .apk
+AddType text/plain .sha256

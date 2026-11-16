@@ -30,7 +30,7 @@
  logs.innerHTML='<h2>گزارش رویدادهای سیستم</h2><p class="small muted">۳۰۰ رویداد آخر از ۱۰٬۰۰۰ رویداد ذخیره‌شده در سرور؛ پیام‌های مرورگر در همین نشست نگهداری می‌شوند. برای بررسی علت، جزئیات رویداد را باز کنید.</p><div class="row"><label>سطح <select id="logLevel"><option value="">همه موارد</option><option value="error">خطا</option><option value="warning">هشدار</option><option value="success">موفقیت</option><option value="info">اطلاعات</option></select></label><input id="logSearch" type="search" placeholder="جست‌وجوی پیام، شناسه و جزئیات" aria-label="جست‌وجوی لاگ"><span id="logCount" class="muted small"></span></div><div id="logEntries" aria-live="polite"></div>';
  const logTitle=logs.querySelector('h2');const logSummary=document.createElement('summary');logSummary.textContent=logTitle.textContent;logTitle.replaceWith(logSummary);
  main.append(logs,settings);
- const footer=document.createElement('footer');footer.innerHTML='سازنده:  سیدمجتبی اشکوفراز-یزد <span> | </span><a href="mailto:ashkufaraz@gmail.com">ashkufaraz@gmail.com</a><span> | </span><a dir="ltr" href="tel:09135128163">09135128163</a>';main.append(footer);
+ const footer=document.createElement('footer');footer.innerHTML='سازنده:  سیدمجتبی اشکوفراز-یزد <span> | </span><a href="mailto:ashkufaraz@gmail.com">ashkufaraz@gmail.com</a><span> | </span><a dir="ltr" href="tel:09135128163">09135128163</a><br><a href="downloads/">دانلود اپ هشدارهای اندروید</a>';main.append(footer);
  window.strategyArchive=false;
  window.updateStrategyCounts=()=>{
   document.getElementById('activeStrategies').textContent=`استراتژی‌های فعال (${data.strategies.filter(x=>tradeDetails.isActive(x)).length})`;

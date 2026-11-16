@@ -6,6 +6,21 @@ $host=$_SERVER['HTTP_HOST']??'';
 if(!in_array($host,['127.0.0.1:8080','localhost:8080','127.0.0.1:5078','localhost:5078'],true)) {http_response_code(403);exit('{"error":"Local access only"}');}
 session_start(['cookie_httponly'=>true,'cookie_samesite'=>'Strict','use_strict_mode'=>true]);$_SESSION['csrf']??=bin2hex(random_bytes(24));
 try {
+ if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['mobile_feed'])){
+  $userId=MobileAlerts::authenticate(db(),$_SERVER['HTTP_AUTHORIZATION']??'',time());
+  $after=isset($_GET['after'])?filter_var($_GET['after'],FILTER_VALIDATE_INT,['options'=>['min_range'=>0]]):null;
+  if($after===false)throw new InvalidArgumentException('Invalid cursor');
+  echo encode(MobileAlerts::feed(db(),$userId,$after));exit;
+ }
+ if($_SERVER['REQUEST_METHOD']==='POST'&&isset($_GET['mobile_action'])){
+  $header=$_SERVER['HTTP_AUTHORIZATION']??'';$userId=MobileAlerts::authenticate(db(),$header,time());
+  if((int)($_SERVER['CONTENT_LENGTH']??0)>10000)throw new InvalidArgumentException('Request too large');
+  $body=json_decode(file_get_contents('php://input'),true,32,JSON_THROW_ON_ERROR);
+  if($_GET['mobile_action']==='ack')MobileAlerts::acknowledge(db(),$userId,$body['ids']??[],time());
+  elseif($_GET['mobile_action']==='revoke')MobileAlerts::revoke(db(),$header);
+  else throw new InvalidArgumentException('Invalid mobile action');
+  echo encode(['ok'=>true]);exit;
+ }
  if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['comments_before'])){echo encode(['comments'=>publicComments(max(1,(int)$_GET['comments_before']))]);exit;}
  if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['details'])) {
  $id=$_GET['details'];if(!is_string($id)||!preg_match('/^[A-Za-z0-9_-]{1,64}$/D',$id))throw new InvalidArgumentException('Invalid strategy ID');
@@ -21,6 +36,7 @@ try {
  if(!hash_equals($_SESSION['csrf'],$_SERVER['HTTP_X_CSRF_TOKEN']??'')) {http_response_code(403);throw new RuntimeException('Invalid request token');}
  if((int)($_SERVER['CONTENT_LENGTH']??0)>100000) throw new RuntimeException('Request too large');$input=json_decode(file_get_contents('php://input'),true,64,JSON_THROW_ON_ERROR);$action=$input['action']??'';
  if(in_array($action,['login','register','logout','activate_owner'],true)){echo encode(accountAction($action,$input));exit;}
+ if($action==='mobile_register'){$user=requireAccount();rateLimit('mobile_register',10,3600);echo encode(MobileAlerts::register(db(),$user['id'],(string)($input['name']??'Android'),time()));exit;}
  if($action==='notification_received'){
   if(!is_int($input['id']??null))throw new InvalidArgumentException('Invalid alert ID');
   requireAlertOwner($input['id']);SmsFallback::acknowledge(db(),$input['id'],time());echo encode(['ok'=>true]);exit;

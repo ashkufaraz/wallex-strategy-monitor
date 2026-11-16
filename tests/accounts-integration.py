@@ -22,10 +22,11 @@ class Client:
     def __init__(self,url):
         self.url=url;self.cookies=http.cookiejar.CookieJar();self.csrf=''
         self.opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),urllib.request.HTTPCookieProcessor(self.cookies))
-    def request(self,body=None,path='api.php',expected=200,token=None):
+    def request(self,body=None,path='api.php',expected=200,token=None,authorization=None):
         headers={};raw=None
         if body is not None:
             headers={'Content-Type':'application/json','X-CSRF-Token':self.csrf if token is None else token};raw=json.dumps(body).encode()
+        if authorization:headers['Authorization']=authorization
         req=urllib.request.Request(self.url+path,data=raw,headers=headers)
         try:response=self.opener.open(req,timeout=10)
         except urllib.error.HTTPError as e:response=e
@@ -82,6 +83,16 @@ def run(browser=False):
             php("foreach(['alice','bob'] as $id){$q=db()->prepare('SELECT config FROM strategies WHERE id=?');$q->execute([$id]);recordAlert(json_decode($q->fetchColumn(),true),'v1','price',500,75000.);}")
             alerts=a.request()['alerts'];mine=next(x for x in alerts if x['payload']['strategy_id']=='alice');other=next(x for x in alerts if x['payload']['strategy_id']=='bob')
             assert mine['can_manage'] and not other['can_manage']
+            guest.request(dict(action='mobile_register'),expected=401)
+            device=a.request(dict(action='mobile_register',name='Samsung A36'))
+            mobile_header='Bearer '+device['token']
+            mobile_feed=guest.request(path='api.php?mobile_feed=1&after=0',authorization=mobile_header)
+            assert [x['id'] for x in mobile_feed['alerts']]==[mine['id']]
+            guest.request(dict(ids=[mine['id'],other['id']]),path='api.php?mobile_action=ack',authorization=mobile_header)
+            guest.request(path='api.php?mobile_feed=1',expected=401)
+            guest.request(path='api.php?mobile_feed=1&after=-1',authorization=mobile_header,expected=400)
+            guest.request({},path='api.php?mobile_action=revoke',authorization=mobile_header)
+            guest.request(path='api.php?mobile_feed=1',authorization=mobile_header,expected=401)
             guest.request(dict(action='notification_received',id=mine['id']),expected=401)
             b.request(dict(action='notification_received',id=mine['id']),expected=403)
             a.request(dict(action='notification_received',id=mine['id']))
