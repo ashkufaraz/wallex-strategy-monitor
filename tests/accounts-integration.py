@@ -83,6 +83,10 @@ def run(browser=False):
             php("foreach(['alice','bob'] as $id){$q=db()->prepare('SELECT config FROM strategies WHERE id=?');$q->execute([$id]);recordAlert(json_decode($q->fetchColumn(),true),'v1','price',500,75000.);}")
             alerts=a.request()['alerts'];mine=next(x for x in alerts if x['payload']['strategy_id']=='alice');other=next(x for x in alerts if x['payload']['strategy_id']=='bob')
             assert mine['can_manage'] and not other['can_manage']
+            if '--android-api' in __import__('sys').argv:
+                native_spec=importlib.util.spec_from_file_location('native_api',ROOT/'tests/native-api.py')
+                native=importlib.util.module_from_spec(native_spec);native_spec.loader.exec_module(native)
+                native.check(ROOT,directory,url)
             guest.request(dict(action='mobile_register'),expected=401)
             device=a.request(dict(action='mobile_register',name='Samsung A36'))
             mobile_header='Bearer '+device['token']
