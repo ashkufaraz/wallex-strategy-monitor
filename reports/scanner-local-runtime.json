@@ -45,23 +45,23 @@
     },
     "version": "wallex-break-retest-v1:1.2.0:ea5e9fdf47f087ea",
     "enabled": true,
-    "last_checked": 1794908638,
+    "last_checked": 1794909002,
     "last_result": {
-        "observed_at": 1794908638,
+        "observed_at": 1794909002,
         "strategy_version": "wallex-break-retest-v1:1.2.0:ea5e9fdf47f087ea",
         "decision": {
             "status": "UNAVAILABLE",
-            "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-14T09:00:00+00:00",
+            "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
             "reason_code": "data_quality",
             "conditions": [
                 {
                     "id": "data_quality",
                     "status": "UNAVAILABLE",
-                    "actual": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-14T09:00:00+00:00",
+                    "actual": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
                     "required": null
                 }
             ],
-            "candle_close": 1794907800
+            "candle_close": 1794908700
         },
         "signal": null,
         "trade_events": [],
@@ -70,11 +70,8 @@
             "phase": "BLOCKED_DATA",
             "scope": "DATA_COLLECTION_AND_PATTERN_DETECTION",
             "acquisition": {
-                "status": "DEGRADED",
-                "errors": {
-                    "1h": "Wallex HTTP 0 Operation timed out after 1009 milliseconds with 0 bytes received",
-                    "15m": "Market request time budget exceeded; retry on next check"
-                }
+                "status": "RECEIVED",
+                "errors": []
             },
             "indicators": {
                 "status": "UNAVAILABLE",
@@ -93,38 +90,114 @@
                     "1h": {
                         "status": "UNAVAILABLE",
                         "required_closed": 72,
-                        "healthy_closed": 0,
+                        "healthy_closed": 71,
                         "window_start_utc": "2026-11-14T09:00:00+00:00",
                         "last_close_utc": "2026-11-17T09:00:00+00:00",
                         "timestamp_unit": "SECONDS_UTC",
                         "issues": [
                             {
                                 "timeframe": "1h",
-                                "code": "FETCH_ERROR",
-                                "reason": "Wallex HTTP 0 Operation timed out after 1009 milliseconds with 0 bytes received",
-                                "healthy_closes_until_rollout": 72
+                                "open_utc": "2026-11-16T23:00:00+00:00",
+                                "close_utc": "2026-11-17T00:00:00+00:00",
+                                "open_time": 1794870000,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 63
                             }
                         ],
-                        "healthy_closes_until_recovery": 72,
-                        "earliest_recovery_if_next_bars_healthy_utc": "2026-11-20T09:00:00+00:00"
+                        "healthy_closes_until_recovery": 63,
+                        "earliest_recovery_if_next_bars_healthy_utc": "2026-11-20T00:00:00+00:00"
                     },
                     "15m": {
                         "status": "UNAVAILABLE",
                         "required_closed": 72,
-                        "healthy_closed": 0,
-                        "window_start_utc": "2026-11-16T15:30:00+00:00",
-                        "last_close_utc": "2026-11-17T09:30:00+00:00",
+                        "healthy_closed": 62,
+                        "window_start_utc": "2026-11-16T15:45:00+00:00",
+                        "last_close_utc": "2026-11-17T09:45:00+00:00",
                         "timestamp_unit": "SECONDS_UTC",
                         "issues": [
                             {
                                 "timeframe": "15m",
-                                "code": "FETCH_ERROR",
-                                "reason": "Market request time budget exceeded; retry on next check",
-                                "healthy_closes_until_rollout": 72
+                                "open_utc": "2026-11-16T23:00:00+00:00",
+                                "close_utc": "2026-11-16T23:15:00+00:00",
+                                "open_time": 1794870000,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 30
+                            },
+                            {
+                                "timeframe": "15m",
+                                "open_utc": "2026-11-16T23:15:00+00:00",
+                                "close_utc": "2026-11-16T23:30:00+00:00",
+                                "open_time": 1794870900,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 31
+                            },
+                            {
+                                "timeframe": "15m",
+                                "open_utc": "2026-11-16T23:30:00+00:00",
+                                "close_utc": "2026-11-16T23:45:00+00:00",
+                                "open_time": 1794871800,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 32
+                            },
+                            {
+                                "timeframe": "15m",
+                                "open_utc": "2026-11-16T23:45:00+00:00",
+                                "close_utc": "2026-11-17T00:00:00+00:00",
+                                "open_time": 1794872700,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 33
+                            },
+                            {
+                                "timeframe": "15m",
+                                "open_utc": "2026-11-17T00:45:00+00:00",
+                                "close_utc": "2026-11-17T01:00:00+00:00",
+                                "open_time": 1794876300,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 37
+                            },
+                            {
+                                "timeframe": "15m",
+                                "open_utc": "2026-11-17T01:15:00+00:00",
+                                "close_utc": "2026-11-17T01:30:00+00:00",
+                                "open_time": 1794878100,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 39
+                            },
+                            {
+                                "timeframe": "15m",
+                                "open_utc": "2026-11-17T03:45:00+00:00",
+                                "close_utc": "2026-11-17T04:00:00+00:00",
+                                "open_time": 1794887100,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 49
+                            },
+                            {
+                                "timeframe": "15m",
+                                "open_utc": "2026-11-17T04:00:00+00:00",
+                                "close_utc": "2026-11-17T04:15:00+00:00",
+                                "open_time": 1794888000,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 50
+                            },
+                            {
+                                "timeframe": "15m",
+                                "open_utc": "2026-11-17T04:15:00+00:00",
+                                "close_utc": "2026-11-17T04:30:00+00:00",
+                                "open_time": 1794888900,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 51
+                            },
+                            {
+                                "timeframe": "15m",
+                                "open_utc": "2026-11-17T05:00:00+00:00",
+                                "close_utc": "2026-11-17T05:15:00+00:00",
+                                "open_time": 1794891600,
+                                "code": "NO_TRADES",
+                                "healthy_closes_until_rollout": 54
                             }
                         ],
-                        "healthy_closes_until_recovery": 72,
-                        "earliest_recovery_if_next_bars_healthy_utc": "2026-11-18T03:30:00+00:00"
+                        "healthy_closes_until_recovery": 54,
+                        "earliest_recovery_if_next_bars_healthy_utc": "2026-11-17T23:15:00+00:00"
                     }
                 },
                 "seed": {
@@ -150,7 +223,7 @@
                     "FEE_RATE_UNCONFIRMED"
                 ],
                 "source_timestamp": null,
-                "received_at": 1794908630,
+                "received_at": 1794908997,
                 "trust_status": "UNVERIFIED",
                 "fee_reference": "",
                 "supported_live_instrument": "SPOT_LONG_ONLY",
@@ -177,10 +250,30 @@
         "pattern": [],
         "paper": null,
         "last_signal": null,
-        "last_observation": 1794908638
+        "last_observation": 1794909002
     },
     "signals": [],
     "checks": [
+        {
+            "observed": 1794908758,
+            "status": "UNAVAILABLE",
+            "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+            "payload": "{\"status\":\"UNAVAILABLE\",\"reason\":\"UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00\",\"reason_code\":\"data_quality\",\"conditions\":[{\"id\":\"data_quality\",\"status\":\"UNAVAILABLE\",\"actual\":\"UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00\",\"required\":null}],\"candle_close\":1794908700}",
+            "decision": {
+                "status": "UNAVAILABLE",
+                "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+                "reason_code": "data_quality",
+                "conditions": [
+                    {
+                        "id": "data_quality",
+                        "status": "UNAVAILABLE",
+                        "actual": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+                        "required": null
+                    }
+                ],
+                "candle_close": 1794908700
+            }
+        },
         {
             "observed": 1794908638,
             "status": "UNAVAILABLE",
@@ -221,27 +314,32 @@
         "evaluation": "INSUFFICIENT_EVIDENCE",
         "real_orders": false,
         "open_or_pending": 0,
-        "rejected_decisions": 1,
+        "rejected_decisions": 2,
         "closed_trade_costs_usdt": 0,
         "unclosed_entry_costs_usdt": 0,
         "run_id": "wallex-break-retest-v1:1.2.0:ea5e9fdf47f087ea",
         "code_version": "2bcd48a824ff0dc5e3f2b754103ffb87d7fda9cf2f6c177738bc9d66d69f833d",
         "rules_version": "1.2.0",
         "period_start_utc": "2026-11-17T09:43:58+00:00",
-        "period_end_utc": "2026-11-17T09:43:58+00:00",
-        "duration_seconds": 0,
+        "period_end_utc": "2026-11-17T09:50:02+00:00",
+        "duration_seconds": 364,
         "expected_interval_seconds": 120,
-        "expected_executions": 1,
-        "recorded_executions": 1,
-        "retained_replay_executions": 1,
-        "last_observation_age_seconds": 8,
+        "expected_executions": 4,
+        "recorded_executions": 4,
+        "retained_replay_executions": 4,
+        "last_observation_age_seconds": 11,
         "valid_observations": 0,
         "valid_coverage_pct": 0,
         "valid_observed_seconds": 0,
-        "unavailable_observed_seconds": 0,
-        "unobserved_schedule_seconds": 0,
-        "execution_unavailable_reasons_seconds": [],
-        "unavailable_reasons_seconds": [],
+        "unavailable_observed_seconds": 359,
+        "unobserved_schedule_seconds": 5,
+        "execution_unavailable_reasons_seconds": {
+            "QUOTE_SOURCE_TIME_UNAVAILABLE": 359,
+            "FEE_RATE_UNCONFIRMED": 359
+        },
+        "unavailable_reasons_seconds": {
+            "data_quality": 359
+        },
         "detected_patterns": 0,
         "rejected_observations": 0,
         "expirations_or_invalidations": 0,

@@ -1,0 +1,370 @@
+{
+  "source_url": "https://ashkufaraz.ir/public/api.php?scanner=1",
+  "verified_utc": "2026-11-17T09:51:42.342601+00:00",
+  "response": {
+    "config": {
+      "enabled": true,
+      "symbol": "BTCUSDT",
+      "capital": 70,
+      "risk_pct": 1,
+      "ema_fast": 20,
+      "ema_slow": 50,
+      "atr_period": 14,
+      "level_lookback": 20,
+      "level_touches": 2,
+      "touch_separation": 2,
+      "level_tolerance_atr": 0.25,
+      "break_buffer_atr": 0.1,
+      "retest_tolerance_atr": 0.25,
+      "confirm_buffer_atr": 0.05,
+      "volume_period": 20,
+      "break_volume_ratio": 1.5,
+      "confirm_volume_ratio": 1,
+      "setup_bars": 8,
+      "entry_expiry_seconds": 1800,
+      "manual_delay_seconds": 60,
+      "entry_band_atr": 0.3,
+      "structure_buffer_atr": 0.2,
+      "stop_atr": 1.5,
+      "max_stop_atr": 3,
+      "tp1_r": 2.5,
+      "tp2_r": 4,
+      "min_net_rr": 2,
+      "max_spread_bps": 20,
+      "tp1_exit_pct": 100,
+      "tp2_exit_pct": 0,
+      "stop_after_tp1": "POSITION_CLOSED",
+      "entry_fee_bps": 10,
+      "exit_fee_bps": 10,
+      "slippage_bps": 5,
+      "fixed_cost_usdt": 0,
+      "financing_bps_day": null,
+      "quote_max_age_seconds": 10,
+      "max_paper_seconds": 86400,
+      "fees_verified": false,
+      "fee_reference": "",
+      "observation_interval_seconds": 120,
+      "evaluation_id": "btc-v1-001"
+    },
+    "version": "wallex-break-retest-v1:1.2.0:ea5e9fdf47f087ea",
+    "enabled": true,
+    "last_checked": 1794909062,
+    "last_result": {
+      "observed_at": 1794909062,
+      "strategy_version": "wallex-break-retest-v1:1.2.0:ea5e9fdf47f087ea",
+      "decision": {
+        "status": "UNAVAILABLE",
+        "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+        "reason_code": "data_quality",
+        "conditions": [
+          {
+            "id": "data_quality",
+            "status": "UNAVAILABLE",
+            "actual": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+            "required": null
+          }
+        ],
+        "candle_close": 1794908700
+      },
+      "signal": null,
+      "trade_events": [],
+      "equity": 70,
+      "stages": {
+        "phase": "BLOCKED_DATA",
+        "scope": "DATA_COLLECTION_AND_PATTERN_DETECTION",
+        "acquisition": {
+          "status": "RECEIVED",
+          "errors": []
+        },
+        "indicators": {
+          "status": "UNAVAILABLE",
+          "frames": {
+            "4h": {
+              "status": "READY",
+              "required_closed": 252,
+              "healthy_closed": 252,
+              "window_start_utc": "2026-10-06T08:00:00+00:00",
+              "last_close_utc": "2026-11-17T08:00:00+00:00",
+              "timestamp_unit": "SECONDS_UTC",
+              "issues": [],
+              "healthy_closes_until_recovery": 0,
+              "earliest_recovery_if_next_bars_healthy_utc": "2026-11-17T08:00:00+00:00"
+            },
+            "1h": {
+              "status": "UNAVAILABLE",
+              "required_closed": 72,
+              "healthy_closed": 71,
+              "window_start_utc": "2026-11-14T09:00:00+00:00",
+              "last_close_utc": "2026-11-17T09:00:00+00:00",
+              "timestamp_unit": "SECONDS_UTC",
+              "issues": [
+                {
+                  "timeframe": "1h",
+                  "open_utc": "2026-11-16T23:00:00+00:00",
+                  "close_utc": "2026-11-17T00:00:00+00:00",
+                  "open_time": 1794870000,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 63
+                }
+              ],
+              "healthy_closes_until_recovery": 63,
+              "earliest_recovery_if_next_bars_healthy_utc": "2026-11-20T00:00:00+00:00"
+            },
+            "15m": {
+              "status": "UNAVAILABLE",
+              "required_closed": 72,
+              "healthy_closed": 62,
+              "window_start_utc": "2026-11-16T15:45:00+00:00",
+              "last_close_utc": "2026-11-17T09:45:00+00:00",
+              "timestamp_unit": "SECONDS_UTC",
+              "issues": [
+                {
+                  "timeframe": "15m",
+                  "open_utc": "2026-11-16T23:00:00+00:00",
+                  "close_utc": "2026-11-16T23:15:00+00:00",
+                  "open_time": 1794870000,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 30
+                },
+                {
+                  "timeframe": "15m",
+                  "open_utc": "2026-11-16T23:15:00+00:00",
+                  "close_utc": "2026-11-16T23:30:00+00:00",
+                  "open_time": 1794870900,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 31
+                },
+                {
+                  "timeframe": "15m",
+                  "open_utc": "2026-11-16T23:30:00+00:00",
+                  "close_utc": "2026-11-16T23:45:00+00:00",
+                  "open_time": 1794871800,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 32
+                },
+                {
+                  "timeframe": "15m",
+                  "open_utc": "2026-11-16T23:45:00+00:00",
+                  "close_utc": "2026-11-17T00:00:00+00:00",
+                  "open_time": 1794872700,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 33
+                },
+                {
+                  "timeframe": "15m",
+                  "open_utc": "2026-11-17T00:45:00+00:00",
+                  "close_utc": "2026-11-17T01:00:00+00:00",
+                  "open_time": 1794876300,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 37
+                },
+                {
+                  "timeframe": "15m",
+                  "open_utc": "2026-11-17T01:15:00+00:00",
+                  "close_utc": "2026-11-17T01:30:00+00:00",
+                  "open_time": 1794878100,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 39
+                },
+                {
+                  "timeframe": "15m",
+                  "open_utc": "2026-11-17T03:45:00+00:00",
+                  "close_utc": "2026-11-17T04:00:00+00:00",
+                  "open_time": 1794887100,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 49
+                },
+                {
+                  "timeframe": "15m",
+                  "open_utc": "2026-11-17T04:00:00+00:00",
+                  "close_utc": "2026-11-17T04:15:00+00:00",
+                  "open_time": 1794888000,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 50
+                },
+                {
+                  "timeframe": "15m",
+                  "open_utc": "2026-11-17T04:15:00+00:00",
+                  "close_utc": "2026-11-17T04:30:00+00:00",
+                  "open_time": 1794888900,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 51
+                },
+                {
+                  "timeframe": "15m",
+                  "open_utc": "2026-11-17T05:00:00+00:00",
+                  "close_utc": "2026-11-17T05:15:00+00:00",
+                  "open_time": 1794891600,
+                  "code": "NO_TRADES",
+                  "healthy_closes_until_rollout": 54
+                }
+              ],
+              "healthy_closes_until_recovery": 54,
+              "earliest_recovery_if_next_bars_healthy_utc": "2026-11-17T23:15:00+00:00"
+            }
+          },
+          "seed": {
+            "EMA": "SMA of first period closes, then alpha=2/(period+1)",
+            "ATR": "mean of first period true ranges excluding first bar, then Wilder smoothing",
+            "VOLUME": "previous volume_period closes, current bar excluded"
+          },
+          "required_windows": {
+            "4h": 252,
+            "1h": 72,
+            "15m": 72
+          }
+        },
+        "pattern": {
+          "status": "UNAVAILABLE",
+          "reason_code": "data_quality",
+          "setup_stage": null
+        },
+        "manual_entry": {
+          "status": "UNAVAILABLE",
+          "reasons": [
+            "QUOTE_SOURCE_TIME_UNAVAILABLE",
+            "FEE_RATE_UNCONFIRMED"
+          ],
+          "source_timestamp": null,
+          "received_at": 1794909062,
+          "trust_status": "UNVERIFIED",
+          "fee_reference": "",
+          "supported_live_instrument": "SPOT_LONG_ONLY",
+          "source_time_not_inferred_from_receipt": true,
+          "execution_data_status": "UNAVAILABLE"
+        },
+        "paper": {
+          "status": "NONE",
+          "unresolved": false,
+          "reason": null
+        },
+        "wallet": {
+          "balance_usdt": 70,
+          "reserved_principal_usdt": 0,
+          "entry_fee_paid_usdt": 0,
+          "available_cash_usdt": 70,
+          "position_locked": false,
+          "risk_budget_current_usdt": 0.7000000000000001
+        }
+      }
+    },
+    "state": {
+      "balance": 70,
+      "pattern": [],
+      "paper": null,
+      "last_signal": null,
+      "last_observation": 1794909062
+    },
+    "signals": [],
+    "checks": [
+      {
+        "observed": 1794909062,
+        "status": "UNAVAILABLE",
+        "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+        "payload": "{\"status\":\"UNAVAILABLE\",\"reason\":\"UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00\",\"reason_code\":\"data_quality\",\"conditions\":[{\"id\":\"data_quality\",\"status\":\"UNAVAILABLE\",\"actual\":\"UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00\",\"required\":null}],\"candle_close\":1794908700}",
+        "decision": {
+          "status": "UNAVAILABLE",
+          "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+          "reason_code": "data_quality",
+          "conditions": [
+            {
+              "id": "data_quality",
+              "status": "UNAVAILABLE",
+              "actual": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+              "required": null
+            }
+          ],
+          "candle_close": 1794908700
+        }
+      }
+    ],
+    "trades": [],
+    "report": {
+      "closed_trades": 0,
+      "wins": 0,
+      "win_rate_pct": null,
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "net_profit_usdt": null,
+      "expectancy_usdt": null,
+      "profit_factor": null,
+      "profit_factor_note": "UNDEFINED_NO_LOSS_SAMPLE",
+      "max_drawdown_usdt": null,
+      "max_drawdown_pct": null,
+      "drawdown_status": "AVAILABLE_AT_OBSERVATION_TIMES",
+      "unavailable_equity_points": 0,
+      "total_costs_usdt": 0,
+      "ambiguous_stop_first": 0,
+      "evaluation": "INSUFFICIENT_EVIDENCE",
+      "real_orders": false,
+      "open_or_pending": 0,
+      "rejected_decisions": 1,
+      "closed_trade_costs_usdt": 0,
+      "unclosed_entry_costs_usdt": 0,
+      "run_id": "wallex-break-retest-v1:1.2.0:ea5e9fdf47f087ea",
+      "code_version": "2bcd48a824ff0dc5e3f2b754103ffb87d7fda9cf2f6c177738bc9d66d69f833d",
+      "rules_version": "1.2.0",
+      "period_start_utc": "2026-11-17T09:51:02+00:00",
+      "period_end_utc": "2026-11-17T09:51:02+00:00",
+      "duration_seconds": 0,
+      "expected_interval_seconds": 120,
+      "expected_executions": 1,
+      "recorded_executions": 1,
+      "retained_replay_executions": 1,
+      "last_observation_age_seconds": 39,
+      "valid_observations": 0,
+      "valid_coverage_pct": 0,
+      "valid_observed_seconds": 0,
+      "unavailable_observed_seconds": 0,
+      "unobserved_schedule_seconds": 0,
+      "execution_unavailable_reasons_seconds": [],
+      "unavailable_reasons_seconds": [],
+      "detected_patterns": 0,
+      "rejected_observations": 0,
+      "expirations_or_invalidations": 0,
+      "alerts": 0,
+      "open_trades": 0,
+      "unknown_trades": 0,
+      "pending_trades": 0,
+      "actual_entry_delays_seconds": [],
+      "mean_actual_entry_delay_seconds": null,
+      "wallet": {
+        "balance_usdt": 70,
+        "reserved_principal_usdt": 0,
+        "entry_fee_paid_usdt": 0,
+        "available_cash_usdt": 70,
+        "position_locked": false,
+        "risk_budget_current_usdt": 0.7000000000000001
+      },
+      "open_pnl_usdt": 0,
+      "open_pnl_status": "NO_OPEN_POSITION",
+      "exit_models": [],
+      "risk_is_planned_not_gap_guarantee": true,
+      "coverage_is_retained_observations_only": false,
+      "evaluation_complete": false
+    },
+    "last_backtest": {
+      "id": 1,
+      "created": 1794898056,
+      "version": "wallex-break-retest-v1:1.1.0:a6861f016d0aa460",
+      "report": {
+        "closed_trades": 0,
+        "wins": 0,
+        "win_rate_pct": null,
+        "net_profit_usdt": 0,
+        "expectancy_usdt": null,
+        "profit_factor": null,
+        "profit_factor_note": "UNDEFINED_NO_LOSS_SAMPLE",
+        "max_drawdown_usdt": 0,
+        "max_drawdown_pct": 0,
+        "drawdown_status": "AVAILABLE_AT_OBSERVATION_TIMES",
+        "unavailable_equity_points": 0,
+        "total_costs_usdt": 0,
+        "ambiguous_stop_first": 0,
+        "evaluation": "UNVALIDATED_PAPER_SAMPLE",
+        "real_orders": false
+      }
+    },
+    "can_manage": false,
+    "real_orders": false
+  }
+}

@@ -4,6 +4,21 @@
             "observed_at": 1794908638,
             "result_equal": true,
             "state_equal": true
+        },
+        {
+            "observed_at": 1794908758,
+            "result_equal": true,
+            "state_equal": true
+        },
+        {
+            "observed_at": 1794908877,
+            "result_equal": true,
+            "state_equal": true
+        },
+        {
+            "observed_at": 1794909002,
+            "result_equal": true,
+            "state_equal": true
         }
     ],
     "replay_match": true,
@@ -12,7 +27,7 @@
         "pattern": [],
         "paper": null,
         "last_signal": null,
-        "last_observation": 1794908638
+        "last_observation": 1794909002
     },
     "mode": "BACKTEST_REPLAY",
     "strategy_version": "wallex-break-retest-v1:1.2.0:ea5e9fdf47f087ea",
@@ -76,6 +91,51 @@
             ],
             "candle_close": 1794907800,
             "observed_at": 1794908638
+        },
+        {
+            "status": "UNAVAILABLE",
+            "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+            "reason_code": "data_quality",
+            "conditions": [
+                {
+                    "id": "data_quality",
+                    "status": "UNAVAILABLE",
+                    "actual": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+                    "required": null
+                }
+            ],
+            "candle_close": 1794908700,
+            "observed_at": 1794908758
+        },
+        {
+            "status": "UNAVAILABLE",
+            "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+            "reason_code": "data_quality",
+            "conditions": [
+                {
+                    "id": "data_quality",
+                    "status": "UNAVAILABLE",
+                    "actual": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+                    "required": null
+                }
+            ],
+            "candle_close": 1794908700,
+            "observed_at": 1794908877
+        },
+        {
+            "status": "UNAVAILABLE",
+            "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+            "reason_code": "data_quality",
+            "conditions": [
+                {
+                    "id": "data_quality",
+                    "status": "UNAVAILABLE",
+                    "actual": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+                    "required": null
+                }
+            ],
+            "candle_close": 1794908700,
+            "observed_at": 1794909002
         }
     ],
     "trades": [],
@@ -87,6 +147,18 @@
         },
         {
             "time": 1794908638,
+            "equity": 70
+        },
+        {
+            "time": 1794908758,
+            "equity": 70
+        },
+        {
+            "time": 1794908877,
+            "equity": 70
+        },
+        {
+            "time": 1794909002,
             "equity": 70
         }
     ],
