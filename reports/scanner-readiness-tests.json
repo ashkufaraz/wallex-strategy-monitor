@@ -1,0 +1,653 @@
+{
+  "suite": "Readiness follow-up; synthetic offline only",
+  "config_operational": {
+    "enabled": true,
+    "symbol": "BTCUSDT",
+    "capital": 70,
+    "risk_pct": 1,
+    "ema_fast": 20,
+    "ema_slow": 50,
+    "atr_period": 14,
+    "level_lookback": 20,
+    "level_touches": 2,
+    "touch_separation": 2,
+    "level_tolerance_atr": 0.25,
+    "break_buffer_atr": 0.1,
+    "retest_tolerance_atr": 0.25,
+    "confirm_buffer_atr": 0.05,
+    "volume_period": 20,
+    "break_volume_ratio": 1.5,
+    "confirm_volume_ratio": 1,
+    "setup_bars": 8,
+    "entry_expiry_seconds": 1800,
+    "manual_delay_seconds": 60,
+    "entry_band_atr": 0.3,
+    "structure_buffer_atr": 0.2,
+    "stop_atr": 1.5,
+    "max_stop_atr": 3,
+    "tp1_r": 2.5,
+    "tp2_r": 4,
+    "min_net_rr": 2,
+    "max_spread_bps": 20,
+    "tp1_exit_pct": 100,
+    "tp2_exit_pct": 0,
+    "stop_after_tp1": "POSITION_CLOSED",
+    "entry_fee_bps": 10,
+    "exit_fee_bps": 10,
+    "slippage_bps": 5,
+    "fixed_cost_usdt": 0,
+    "financing_bps_day": null,
+    "quote_max_age_seconds": 10,
+    "max_paper_seconds": 86400,
+    "fees_verified": false,
+    "fee_reference": "",
+    "observation_interval_seconds": 120,
+    "evaluation_id": "btc-v1-001"
+  },
+  "cases": [
+    {
+      "id": "operational.windows",
+      "input": {
+        "config": "EMA20/50 ATR14 volume20 level20"
+      },
+      "expected": {
+        "4h": 252,
+        "1h": 72,
+        "15m": 72
+      },
+      "actual": {
+        "4h": 252,
+        "1h": 72,
+        "15m": 72
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "operational.reject-fixture",
+      "input": {
+        "fixture": "short periods, synthetic fees"
+      },
+      "expected": {
+        "blocked": true
+      },
+      "actual": {
+        "blocked": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "operational.real-window",
+      "input": {
+        "full": "252/72/72 closed bars"
+      },
+      "expected": {
+        "ready": "READY",
+        "count4h": 252
+      },
+      "actual": {
+        "ready": "READY",
+        "count4h": 252
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "seed.EMA20",
+      "input": {
+        "closes": "1..period then period+1",
+        "seed": "arithmetic mean"
+      },
+      "expected": {
+        "seed": 10.5,
+        "next": 11.5
+      },
+      "actual": {
+        "seed": 10.5,
+        "next": 11.5
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "seed.EMA50",
+      "input": {
+        "closes": "1..period then period+1",
+        "seed": "arithmetic mean"
+      },
+      "expected": {
+        "seed": 25.5,
+        "next": 26.5
+      },
+      "actual": {
+        "seed": 25.5,
+        "next": 26.5
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "seed.ATR14",
+      "input": {
+        "first_TRs": 14,
+        "TR": 2,
+        "next_TR": 4
+      },
+      "expected": {
+        "seed": 2,
+        "next": 2.142857142857143
+      },
+      "actual": {
+        "seed": 1.9999999999999993,
+        "next": 2.1428571428571423
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "seed.volume20",
+      "input": {
+        "previous": [
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "current": 30
+      },
+      "expected": {
+        "average": 10,
+        "ratio": 3
+      },
+      "actual": {
+        "average": 10,
+        "ratio": 3
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "warmup.boundary",
+      "input": {
+        "last4h": "T-4h",
+        "observations": [
+          "T-1",
+          "T"
+        ]
+      },
+      "expected": {
+        "before": "UNAVAILABLE",
+        "at": "READY"
+      },
+      "actual": {
+        "before": "UNAVAILABLE",
+        "at": "READY"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "recovery.full-window-rollout",
+      "input": {
+        "bad": "first 4h slot of 252",
+        "missing_is_not_filled": true
+      },
+      "expected": {
+        "blocked": "UNAVAILABLE",
+        "needed": 1,
+        "recovered": "READY"
+      },
+      "actual": {
+        "blocked": "UNAVAILABLE",
+        "needed": 1,
+        "recovered": "READY"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "pattern.production-periods",
+      "input": {
+        "three_distinct_closes": [
+          1728000000,
+          1728000900,
+          1728001800
+        ]
+      },
+      "expected": {
+        "candidate": true,
+        "level": 100,
+        "close": 1728001800,
+        "direction": "LONG"
+      },
+      "actual": {
+        "candidate": true,
+        "level": 100,
+        "close": 1728001800,
+        "direction": "LONG"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "json.roundtrip.invalidated",
+      "input": {
+        "review_model": "manual executable after delay",
+        "terminal": "invalidated"
+      },
+      "expected": {
+        "disabled": true,
+        "market": true,
+        "same_invalidation": true,
+        "reason": "SETUP_INVALIDATED",
+        "revived": false
+      },
+      "actual": {
+        "disabled": true,
+        "market": true,
+        "same_invalidation": true,
+        "reason": "SETUP_INVALIDATED",
+        "revived": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "json.roundtrip.expired",
+      "input": {
+        "review_model": "manual executable after delay",
+        "terminal": "expired"
+      },
+      "expected": {
+        "disabled": true,
+        "market": true,
+        "same_invalidation": true,
+        "reason": "ENTRY_EXPIRED",
+        "revived": false
+      },
+      "actual": {
+        "disabled": true,
+        "market": true,
+        "same_invalidation": true,
+        "reason": "ENTRY_EXPIRED",
+        "revived": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "json.no-activation",
+      "input": {
+        "enabled": true
+      },
+      "expected": {
+        "blocked": true
+      },
+      "actual": {
+        "blocked": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "conditions.evidence",
+      "input": {
+        "complete_gate": true,
+        "missing_market": true
+      },
+      "expected": {
+        "pass_has_evidence": true,
+        "not_evaluated": true
+      },
+      "actual": {
+        "pass_has_evidence": true,
+        "not_evaluated": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "fees.require-evidence",
+      "input": {
+        "rates_bps": [
+          10,
+          10
+        ],
+        "verified": false
+      },
+      "expected": {
+        "status": "UNAVAILABLE",
+        "reason": "cost_model"
+      },
+      "actual": {
+        "status": "UNAVAILABLE",
+        "reason": "cost_model"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "cron.first-observation-120",
+      "input": {
+        "signal_at": 1728001800,
+        "observations_after": [
+          59,
+          120
+        ]
+      },
+      "expected": {
+        "before": "PENDING",
+        "delay": 120,
+        "schedule_delay": 60,
+        "entry_at": 1728001920
+      },
+      "actual": {
+        "before": "PENDING",
+        "delay": 120,
+        "schedule_delay": 60,
+        "entry_at": 1728001920
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "capital.reservation-restart",
+      "input": {
+        "base": 70,
+        "risk_pct": 1
+      },
+      "expected": {
+        "accounted": 70,
+        "fee_once": true,
+        "reserved": true,
+        "risk_budget": 0.7
+      },
+      "actual": {
+        "accounted": 70,
+        "fee_once": true,
+        "reserved": true,
+        "risk_budget": 0.7
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "capital.reject-other-candidate",
+      "input": {
+        "existing": "PENDING",
+        "new_candidate": true,
+        "book": "UNVERIFIED"
+      },
+      "expected": {
+        "reason": "POSITION_ALREADY_OPEN",
+        "second_signal": false
+      },
+      "actual": {
+        "reason": "POSITION_ALREADY_OPEN",
+        "second_signal": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "unknown.lifecycle.partial_target",
+      "input": {
+        "entry": "T+1920",
+        "later": "recovered complete bars and new candidate"
+      },
+      "expected": {
+        "status": "UNKNOWN",
+        "no_close": true,
+        "balance_unchanged": true,
+        "locked": true,
+        "no_retroactive_result": true
+      },
+      "actual": {
+        "status": "UNKNOWN",
+        "no_close": true,
+        "balance_unchanged": true,
+        "locked": true,
+        "no_retroactive_result": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "unknown.lifecycle.outage",
+      "input": {
+        "entry": "T+1920",
+        "later": "recovered complete bars and new candidate"
+      },
+      "expected": {
+        "status": "UNKNOWN",
+        "no_close": true,
+        "balance_unchanged": true,
+        "locked": true,
+        "no_retroactive_result": true
+      },
+      "actual": {
+        "status": "UNKNOWN",
+        "no_close": true,
+        "balance_unchanged": true,
+        "locked": true,
+        "no_retroactive_result": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "retention.checkpoint-replay",
+      "input": {
+        "drop": "all observations before OPEN; keep state_before"
+      },
+      "expected": {
+        "match": true,
+        "no_new_signal": true,
+        "balance_same": true
+      },
+      "actual": {
+        "match": true,
+        "no_new_signal": true,
+        "balance_same": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "replay.recovered-data-not-rewritten",
+      "input": {
+        "first": "missing15m",
+        "second": "recovered"
+      },
+      "expected": {
+        "match": true,
+        "first": "UNAVAILABLE",
+        "second": "WAITING_RETEST",
+        "source_times": true
+      },
+      "actual": {
+        "match": true,
+        "first": "UNAVAILABLE",
+        "second": "WAITING_RETEST",
+        "source_times": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "report.insufficient",
+      "input": {
+        "trades": 0,
+        "valid_executions": 0
+      },
+      "expected": {
+        "evidence": "INSUFFICIENT_EVIDENCE",
+        "net": null,
+        "drawdown": null,
+        "balance": 70
+      },
+      "actual": {
+        "evidence": "INSUFFICIENT_EVIDENCE",
+        "net": null,
+        "drawdown": null,
+        "balance": 70
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "phase.source-unverified",
+      "input": {
+        "healthy_candles": true,
+        "source_time": null
+      },
+      "expected": {
+        "phase": "COLLECTING",
+        "manual": "UNAVAILABLE",
+        "source": null
+      },
+      "actual": {
+        "phase": "COLLECTING",
+        "manual": "UNAVAILABLE",
+        "source": null
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "report.full-period-after-retention",
+      "input": {
+        "observations": [
+          "T valid",
+          "T+120 missing",
+          "T+240 valid"
+        ],
+        "retained": 1
+      },
+      "expected": {
+        "actual": 3,
+        "expected": 3,
+        "valid_seconds": 120,
+        "unavailable_seconds": 120,
+        "coverage": 66.66666666666667
+      },
+      "actual": {
+        "actual": 3,
+        "expected": 3,
+        "valid_seconds": 120,
+        "unavailable_seconds": 120,
+        "coverage": 66.66666666666667
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "report.unknown-capital-visible",
+      "input": {
+        "unresolved": true,
+        "closed_trades": 0
+      },
+      "expected": {
+        "unknown": 1,
+        "locked": true,
+        "net": null,
+        "complete": false,
+        "costs_positive": true
+      },
+      "actual": {
+        "unknown": 1,
+        "locked": true,
+        "net": null,
+        "complete": false,
+        "costs_positive": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "replay.code-version-pin",
+      "input": {
+        "observation_code_version": "different archived code"
+      },
+      "expected": {
+        "blocked": true
+      },
+      "actual": {
+        "blocked": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "timestamps.reject-milliseconds",
+      "input": {
+        "t": 1794907800000
+      },
+      "expected": {
+        "blocked": true
+      },
+      "actual": {
+        "blocked": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "adapter.actual-precision-shape",
+      "input": {
+        "legacy": {
+          "stepSize": 8,
+          "tickSize": 2
+        },
+        "modern": {
+          "amount_precision": 8,
+          "price_precision": 2
+        }
+      },
+      "expected": {
+        "step": 1e-08,
+        "tick": 0.01,
+        "proof": true,
+        "source_unverified": true,
+        "read_only": true
+      },
+      "actual": {
+        "step": 1e-08,
+        "tick": 0.01,
+        "proof": true,
+        "source_unverified": true,
+        "read_only": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "capital.concurrent-entry-and-restart",
+      "input": {
+        "processes": 6,
+        "capital": 70,
+        "entry_fee_bps": 10
+      },
+      "expected": {
+        "discarded": 5,
+        "one_trade": true,
+        "reserve_matches": true,
+        "accounted": 70,
+        "unchanged_after_restart": true
+      },
+      "actual": {
+        "discarded": 5,
+        "one_trade": true,
+        "reserve_matches": true,
+        "accounted": 70,
+        "unchanged_after_restart": true
+      },
+      "status": "PASS",
+      "wallet": {
+        "balance_usdt": 69.9769816966,
+        "reserved_principal_usdt": 23.018303399999997,
+        "entry_fee_paid_usdt": 0.023018303399999995,
+        "available_cash_usdt": 46.95867829660001,
+        "position_locked": true,
+        "risk_budget_current_usdt": 0.699769816966,
+        "status": "OPEN",
+        "accounted": 70,
+        "reserve_matches": true,
+        "trades": 1
+      }
+    }
+  ],
+  "summary": {
+    "total": 30,
+    "pass": 30,
+    "fail": 0
+  }
+}

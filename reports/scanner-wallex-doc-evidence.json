@@ -1,0 +1,102 @@
+{
+  "retrieved_utc": "2026-11-17T09:32:40.617861+00:00",
+  "sources": [
+    {
+      "url": "https://developers.wallex.ir/docs/basic-services-markets",
+      "status": 200,
+      "sha256": "8e4e89a8f4f0e22ed380351fd1e0ebdde714dc2aef1f7e947640c0f29cf90386",
+      "bytes": 32867,
+      "field_mentions": {
+        "timestamp": 0,
+        "lastUpdate": 0,
+        "stepSize": 0,
+        "tickSize": 0,
+        "quantity": 0,
+        "buyDepth": 0,
+        "sellDepth": 0,
+        "sequence": 0
+      }
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/basic-services-depth",
+      "status": 200,
+      "sha256": "93f197af3afbf2a1a3c577836db8dd773960c557703c0f7c3eedb6a434b52d21",
+      "bytes": 24352,
+      "field_mentions": {
+        "timestamp": 0,
+        "lastUpdate": 0,
+        "stepSize": 0,
+        "tickSize": 0,
+        "quantity": 2,
+        "buyDepth": 0,
+        "sellDepth": 0,
+        "sequence": 0
+      }
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/basic-services-candles",
+      "status": 200,
+      "sha256": "871cc579464c2046584835fc6fed02ab6d7e6b459701431bc006af9bb9fb43b4",
+      "bytes": 23992,
+      "field_mentions": {
+        "timestamp": 2,
+        "lastUpdate": 0,
+        "stepSize": 0,
+        "tickSize": 0,
+        "quantity": 0,
+        "buyDepth": 0,
+        "sellDepth": 0,
+        "sequence": 0
+      }
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/socket-buy-depth",
+      "status": 200,
+      "sha256": "087f68115862d2ee24027c6a0f2424ca038377263c4b5fade820b0b8ff1c9d7e",
+      "bytes": 50350,
+      "field_mentions": {
+        "timestamp": 0,
+        "lastUpdate": 0,
+        "stepSize": 0,
+        "tickSize": 0,
+        "quantity": 10,
+        "buyDepth": 21,
+        "sellDepth": 0,
+        "sequence": 0
+      }
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/socket-sell-depth",
+      "status": 200,
+      "sha256": "af082d79e985fb0af0591101542a66d9302e24e17794c6013fafb7877af5fa74",
+      "bytes": 50393,
+      "field_mentions": {
+        "timestamp": 0,
+        "lastUpdate": 0,
+        "stepSize": 0,
+        "tickSize": 0,
+        "quantity": 10,
+        "buyDepth": 0,
+        "sellDepth": 21,
+        "sequence": 0
+      }
+    },
+    {
+      "url": "https://developers.wallex.ir/docs/socket-connection",
+      "status": 200,
+      "sha256": "8aa03bedc4f28c673b9e1bd414dd8e269155e9920f56fa9332d8e46603a122c3",
+      "bytes": 45849,
+      "field_mentions": {
+        "timestamp": 0,
+        "lastUpdate": 0,
+        "stepSize": 0,
+        "tickSize": 0,
+        "quantity": 0,
+        "buyDepth": 0,
+        "sellDepth": 0,
+        "sequence": 0
+      }
+    }
+  ],
+  "conclusion": "REST snapshot has no source time. Socket documentation must prove generation timestamp before executable adapter can be trusted."
+}

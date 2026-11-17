@@ -21,6 +21,7 @@ jobs:
         run: |
           php tests/all.php
           python3 tools/scanner-audit.py --output reports/scanner-audit-ci
+          python3 tools/scanner-readiness-tests.py
           node tests/notifications.js
           node tests/mobile-notifications.js
           node tests/sms-notifications.js

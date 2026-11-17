@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 final class ScannerPaper {
+ static function unknown(array &$state,string $reason,int $now):void {$state['paper']['status']='UNKNOWN';$state['paper']['quality']='UNAVAILABLE';$state['paper']['unresolved']=true;$state['paper']['unknown_since']??=$now;$state['paper']['reason']=$reason;$state['paper']['result_certainty']='UNRESOLVED_NO_ORDERED_EVIDENCE';}
+ static function wallet(array $state):array {$p=$state['paper'];$reserved=$p?($p['reserved_principal']??0.0):0.0;return ['balance_usdt'=>$state['balance'],'reserved_principal_usdt'=>$reserved,'entry_fee_paid_usdt'=>$p['entry_fee']??0.0,'available_cash_usdt'=>max(0,$state['balance']-$reserved),'position_locked'=>$p!==null,'risk_budget_current_usdt'=>$state['balance']*.01];}
  static function fresh(array $c):array {return ['balance'=>$c['capital'],'pattern'=>[],'paper'=>null,'last_signal'=>null];}
  static function financingRate(array $p,array $c):float {
   if(isset($p['financing_rate_bps_day']))return (float)$p['financing_rate_bps_day'];
@@ -14,12 +16,13 @@ final class ScannerPaper {
   $exitFee=$qty*$exit*$c['exit_fee_bps']/10000;$financing=$qty*$p['entry']*self::financingRate($p,$c)/10000*max(0,$at-$p['entry_at'])/86400;
   $grossAfterSlip=$sign*($exit-$p['entry'])*$qty;$slip=$qty*(abs($p['entry']-$p['raw_entry'])+abs($exit-$rawExit));$fees=$p['entry_fee']+$exitFee+$financing;
   $state['balance']+=$grossAfterSlip-$exitFee-$financing;
-  $trade=array_replace($p,['status'=>'CLOSED','exit_at'=>$at,'raw_exit'=>$rawExit,'exit'=>$exit,'exit_reason'=>$reason,'ambiguous'=>$ambiguous,'exit_fee'=>$exitFee,'financing_cost'=>$financing,'slippage_cost'=>$slip,'costs'=>$fees+$slip,'gross_pnl'=>$grossAfterSlip+$slip,'net_pnl'=>$grossAfterSlip-$fees,'balance_after'=>$state['balance'],'exit_model'=>'CONSERVATIVE_CLOSED_OHLC_WITH_CONFIGURED_COSTS']);
+  $trade=array_replace($p,['status'=>'CLOSED','exit_at'=>$at,'raw_exit'=>$rawExit,'exit'=>$exit,'exit_reason'=>$reason,'ambiguous'=>$ambiguous,'exit_fee'=>$exitFee,'financing_cost'=>$financing,'slippage_cost'=>$slip,'costs'=>$fees+$slip,'gross_pnl'=>$grossAfterSlip+$slip,'net_pnl'=>$grossAfterSlip-$fees,'balance_after'=>$state['balance'],'result_certainty'=>'SIMULATION_ESTIMATE_NOT_PROVEN_EXECUTION','exit_model'=>$reason==='TIME_STOP'?'OBSERVED_EXECUTABLE_BOOK_WITH_CONFIGURED_COSTS':'CONSERVATIVE_CLOSED_OHLC_WITH_CONFIGURED_COSTS']);
   $state['paper']=null;return $trade;
  }
  static function monitor(array &$state,array $snapshot,array $c):array {
   $events=[];$p=$state['paper']??null;if(!$p)return $events;$now=$snapshot['observed_at'];
   $enabled=$c['enabled'];$c=$p['config_snapshot']??$p['candidate']['config_snapshot']??$c;$c['enabled']=$enabled;
+  if($p['unresolved']??false)return $events;
   if($p['status']==='PENDING'){
    if(!$c['enabled']){$events[]=array_replace($p,['status'=>'CANCELLED','reason'=>'ورود آزمایشی در انتظار، با توقف اسکنر لغو شد.']);$state['paper']=null;return $events;}
    if($now>=$p['candidate']['expires_at']){$events[]=array_replace($p,['status'=>'EXPIRED','reason'=>'ورود آزمایشی تا انقضا انجام نشد.']);$state['paper']=null;return $events;}
@@ -29,16 +32,17 @@ final class ScannerPaper {
    if($now<$p['eligible_at'])return $events;
    $fee=$gate['quantity']*$gate['entry']*$c['entry_fee_bps']/10000+$c['fixed_cost_usdt'];$state['balance']-=$fee;
    $state['paper']=array_replace($p,$gate,['status'=>'OPEN','entry_at'=>$now,'entry_fee'=>$fee,'last_bar'=>intdiv($now,900)*900-900,'quality'=>'AVAILABLE','config_snapshot'=>$c,'rules_version'=>ScannerConfig::RULES_VERSION]);
+   $state['paper']['reserved_principal']=$gate['quantity']*$gate['entry'];$state['paper']['reserved_at_entry']=$state['paper']['reserved_principal']+$fee;$state['paper']['entry_model']=ScannerPlan::ENTRY_MODEL;$state['paper']['actual_entry_delay_seconds']=$now-($p['candidate']['created_at']??$p['candidate']['candle_close']);$state['paper']['schedule_delay_seconds']=$now-$p['eligible_at'];
    return $events;
   }
-  $bars=[];foreach($snapshot['bars']['15m']??[] as $bar)if(isset($bar['time'])&&is_int($bar['time'])){if(isset($bars[$bar['time']])&&$bars[$bar['time']]!==$bar){$state['paper']['quality']='UNAVAILABLE';$state['paper']['reason']='Conflicting paper candle';return $events;}$bars[$bar['time']]=$bar;}
+  $bars=[];foreach($snapshot['bars']['15m']??[] as $bar)if(isset($bar['time'])&&is_int($bar['time'])){if(isset($bars[$bar['time']])&&$bars[$bar['time']]!==$bar){self::unknown($state,'Conflicting paper candle',$now);return $events;}$bars[$bar['time']]=$bar;}
   $sign=$p['candidate']['direction']==='LONG'?1:-1;
   for($t=$p['last_bar']+900;$t+900<=$now;$t+=900){
-   try{$valid=ScannerData::closed(isset($bars[$t])?[$bars[$t]]:[],900,$t+900,1);$b=$valid[0];}catch(Throwable $e){$state['paper']['quality']='UNAVAILABLE';$state['paper']['reason']=$e->getMessage();return $events;}
+   try{$valid=ScannerData::closed(isset($bars[$t])?[$bars[$t]]:[],900,$t+900,1);$b=$valid[0];}catch(Throwable $e){self::unknown($state,$e->getMessage(),$now);return $events;}
    $stopHit=$sign===1?$b['low']<=$p['stop_loss']:$b['high']>=$p['stop_loss'];$targetHit=$sign===1?$b['high']>=$p['targets'][0]:$b['low']<=$p['targets'][0];
    if($stopHit){$raw=$sign===1?min($p['stop_loss'],$b['open']):max($p['stop_loss'],$b['open']);$events[]=self::close($state,$raw,$targetHit?'AMBIGUOUS_STOP_FIRST':'STOP_LOSS',$t+900,$c,$targetHit||$t<$p['entry_at']);return $events;}
    if($targetHit){
-    if($t<$p['entry_at']){$state['paper']['quality']='UNAVAILABLE';$state['paper']['reason']='UNAVAILABLE: target touched in partial entry candle; order after manual entry is unknown';return $events;}
+    if($t<$p['entry_at']){self::unknown($state,'UNAVAILABLE: target touched in partial entry candle; order after manual entry is unknown',$now);return $events;}
     $events[]=self::close($state,$p['targets'][0],'TARGET_1',$t+900,$c);return $events;
    }
    $state['paper']['last_bar']=$t;$state['paper']['quality']='AVAILABLE';unset($state['paper']['reason']);
@@ -65,6 +69,6 @@ final class ScannerPaper {
   $closed=array_values(array_filter($trades,fn($t)=>$t['status']==='CLOSED'));$n=count($closed);$wins=0;$positive=0.;$negative=0.;$net=0.;$costs=0.;$ambiguous=0;
   foreach($closed as $t){$v=$t['net_pnl'];$net+=$v;$costs+=$t['costs'];if($v>0){$wins++;$positive+=$v;}elseif($v<0)$negative-=$v;if($t['ambiguous'])$ambiguous++;}
   $peak=$capital;$dd=0.;$ddPct=0.;$missing=0;foreach($equity as $point){$value=is_array($point)?$point['equity']:$point;if($value===null){$missing++;continue;}$peak=max($peak,$value);$dd=max($dd,$peak-$value);$ddPct=max($ddPct,$peak>0?100*($peak-$value)/$peak:0);}
-  return ['closed_trades'=>$n,'wins'=>$wins,'win_rate_pct'=>$n?100*$wins/$n:null,'net_profit_usdt'=>$net,'expectancy_usdt'=>$n?$net/$n:null,'profit_factor'=>$negative>0?$positive/$negative:null,'profit_factor_note'=>$negative>0?null:'UNDEFINED_NO_LOSS_SAMPLE','max_drawdown_usdt'=>$dd,'max_drawdown_pct'=>$ddPct,'drawdown_status'=>$missing?'PARTIAL_UNAVAILABLE_MARKS':'AVAILABLE_AT_OBSERVATION_TIMES','unavailable_equity_points'=>$missing,'total_costs_usdt'=>$costs,'ambiguous_stop_first'=>$ambiguous,'evaluation'=>'UNVALIDATED_PAPER_SAMPLE','real_orders'=>false];
+  return ['closed_trades'=>$n,'wins'=>$wins,'win_rate_pct'=>$n?100*$wins/$n:null,'evidence_status'=>$n?'UNVALIDATED_PAPER_SAMPLE':'INSUFFICIENT_EVIDENCE','net_profit_usdt'=>$n?$net:null,'expectancy_usdt'=>$n?$net/$n:null,'profit_factor'=>$negative>0?$positive/$negative:null,'profit_factor_note'=>$negative>0?null:'UNDEFINED_NO_LOSS_SAMPLE','max_drawdown_usdt'=>$n?$dd:null,'max_drawdown_pct'=>$n?$ddPct:null,'drawdown_status'=>$missing?'PARTIAL_UNAVAILABLE_MARKS':'AVAILABLE_AT_OBSERVATION_TIMES','unavailable_equity_points'=>$missing,'total_costs_usdt'=>$costs,'ambiguous_stop_first'=>$ambiguous,'evaluation'=>$n?'UNVALIDATED_PAPER_SAMPLE':'INSUFFICIENT_EVIDENCE','real_orders'=>false];
  }
 }

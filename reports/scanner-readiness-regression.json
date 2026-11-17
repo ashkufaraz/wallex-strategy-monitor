@@ -1,0 +1,2944 @@
+{
+  "suite": "Deterministic scanner audit",
+  "fixture": "tests/scanner-fixture.php; synthetic, not Wallex performance evidence",
+  "anchor_utc": "2024-10-04T00:00:00+00:00",
+  "config": {
+    "enabled": true,
+    "symbol": "BTCUSDT",
+    "capital": 70,
+    "risk_pct": 1,
+    "ema_fast": 2,
+    "ema_slow": 3,
+    "atr_period": 2,
+    "level_lookback": 5,
+    "level_touches": 2,
+    "touch_separation": 2,
+    "level_tolerance_atr": 0.25,
+    "break_buffer_atr": 0.1,
+    "retest_tolerance_atr": 0.25,
+    "confirm_buffer_atr": 0.05,
+    "volume_period": 2,
+    "break_volume_ratio": 1.5,
+    "confirm_volume_ratio": 1,
+    "setup_bars": 8,
+    "entry_expiry_seconds": 1800,
+    "manual_delay_seconds": 60,
+    "entry_band_atr": 0.3,
+    "structure_buffer_atr": 0.2,
+    "stop_atr": 1.5,
+    "max_stop_atr": 3,
+    "tp1_r": 3,
+    "tp2_r": 4,
+    "min_net_rr": 2,
+    "max_spread_bps": 20,
+    "tp1_exit_pct": 100,
+    "tp2_exit_pct": 0,
+    "stop_after_tp1": "POSITION_CLOSED",
+    "entry_fee_bps": 10,
+    "exit_fee_bps": 10,
+    "slippage_bps": 5,
+    "fixed_cost_usdt": 0,
+    "financing_bps_day": null,
+    "quote_max_age_seconds": 10,
+    "max_paper_seconds": 86400,
+    "fees_verified": true,
+    "fee_reference": "SYNTHETIC_FIXTURE_ONLY",
+    "observation_interval_seconds": 60,
+    "evaluation_id": "btc-v1-001"
+  },
+  "cases": [
+    {
+      "id": "closed.open-reversal",
+      "section": "کندل بسته‌شده",
+      "input": {
+        "fixture": "base",
+        "observation": "T-1,T",
+        "break_close": 99.4
+      },
+      "expected": {
+        "before": "REJECTED",
+        "after": "REJECTED",
+        "signals": 0
+      },
+      "actual": {
+        "before": "REJECTED",
+        "after": "REJECTED",
+        "signals": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "closed.boundary",
+      "section": "کندل بسته‌شده",
+      "input": {
+        "observations": [
+          "T-1",
+          "T",
+          "T+1"
+        ]
+      },
+      "expected": {
+        "before": "REJECTED",
+        "at": "WAITING_RETEST",
+        "repeat": "DUPLICATE"
+      },
+      "actual": {
+        "before": "REJECTED",
+        "at": "WAITING_RETEST",
+        "repeat": "DUPLICATE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "future.mutation",
+      "section": "اطلاعات آینده",
+      "input": {
+        "mutate": "all timeframes strictly beyond final observation"
+      },
+      "expected": {
+        "same_signals": true,
+        "same_decisions": true
+      },
+      "actual": {
+        "same_signals": true,
+        "same_decisions": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "level.cutoff",
+      "section": "اطلاعات آینده",
+      "input": {
+        "level_bars": "hours ending before breakout open",
+        "mutation": "hour ending T high=1000000; must not alter level tolerance"
+      },
+      "expected": {
+        "same_level_condition": true
+      },
+      "actual": {
+        "same_level_condition": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "pattern.complete",
+      "section": "مسیر کامل",
+      "input": {
+        "fixture": "base; TP1=3R, TP2=4R"
+      },
+      "expected": {
+        "count": 1,
+        "direction": "LONG",
+        "close": 1728001800,
+        "level": 100,
+        "atr": 1.3625,
+        "stop": 99.22,
+        "targets": [
+          108.71,
+          111.09
+        ],
+        "entry_range": [
+          101.19125,
+          102.00875
+        ],
+        "created": 1728001800
+      },
+      "actual": {
+        "count": 1,
+        "direction": "LONG",
+        "close": 1728001800,
+        "level": 100,
+        "atr": 1.3624999999999954,
+        "stop": 99.22,
+        "targets": [
+          108.71000000000001,
+          111.09
+        ],
+        "entry_range": [
+          101.19125,
+          102.00874999999999
+        ],
+        "created": 1728001800
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.trend",
+      "section": "رد تک‌شرط",
+      "input": {
+        "fixture": "base",
+        "only_violation": "trend"
+      },
+      "expected": {
+        "failed": [
+          "trend_4h"
+        ],
+        "reason_code": "trend_4h"
+      },
+      "actual": {
+        "failed": [
+          "trend_4h"
+        ],
+        "reason_code": "trend_4h"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.volume",
+      "section": "رد تک‌شرط",
+      "input": {
+        "fixture": "base",
+        "only_violation": "volume"
+      },
+      "expected": {
+        "failed": [
+          "break_volume"
+        ],
+        "reason_code": "break_volume"
+      },
+      "actual": {
+        "failed": [
+          "break_volume"
+        ],
+        "reason_code": "break_volume"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.breakout",
+      "section": "رد تک‌شرط",
+      "input": {
+        "fixture": "base",
+        "only_violation": "breakout"
+      },
+      "expected": {
+        "failed": [
+          "breakout_15m"
+        ],
+        "reason_code": "breakout_15m"
+      },
+      "actual": {
+        "failed": [
+          "breakout_15m"
+        ],
+        "reason_code": "breakout_15m"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.retest",
+      "section": "رد تک‌شرط",
+      "input": {
+        "fixture": "base",
+        "only_violation": "retest"
+      },
+      "expected": {
+        "failed": [
+          "retest_15m"
+        ],
+        "reason_code": "retest_15m"
+      },
+      "actual": {
+        "failed": [
+          "retest_15m"
+        ],
+        "reason_code": "retest_15m"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "setup.invalidated",
+      "section": "انقضا و ابطال",
+      "input": {
+        "retest_close": 99,
+        "then": "return to base at T+1800"
+      },
+      "expected": {
+        "invalidated": true,
+        "revived": false
+      },
+      "actual": {
+        "invalidated": true,
+        "revived": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "setup.late-retest",
+      "section": "انقضا و ابطال",
+      "input": {
+        "setup_bars": 2,
+        "retests": "none until third bar"
+      },
+      "expected": {
+        "expired": true,
+        "candidate": false
+      },
+      "actual": {
+        "expired": true,
+        "candidate": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.missing",
+      "section": "شکاف و بازیابی",
+      "input": {
+        "fixture": "base",
+        "mutation": "missing"
+      },
+      "expected": {
+        "blocked": true,
+        "recovered": true
+      },
+      "actual": {
+        "blocked": true,
+        "recovered": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.zero",
+      "section": "شکاف و بازیابی",
+      "input": {
+        "fixture": "base",
+        "mutation": "zero"
+      },
+      "expected": {
+        "blocked": true,
+        "recovered": true
+      },
+      "actual": {
+        "blocked": true,
+        "recovered": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.stale",
+      "section": "شکاف و بازیابی",
+      "input": {
+        "fixture": "base",
+        "mutation": "stale"
+      },
+      "expected": {
+        "blocked": true,
+        "recovered": true
+      },
+      "actual": {
+        "blocked": true,
+        "recovered": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.shuffled",
+      "section": "شکاف و بازیابی",
+      "input": {
+        "fixture": "base",
+        "mutation": "shuffled"
+      },
+      "expected": {
+        "blocked": false,
+        "recovered": true
+      },
+      "actual": {
+        "blocked": false,
+        "recovered": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "book.missing",
+      "section": "تازگی دفتر",
+      "input": {
+        "source_delta_seconds": null,
+        "allowed_age": 10
+      },
+      "expected": {
+        "status": "UNAVAILABLE",
+        "condition": "UNAVAILABLE"
+      },
+      "actual": {
+        "status": "UNAVAILABLE",
+        "condition": "UNAVAILABLE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "book.stale",
+      "section": "تازگی دفتر",
+      "input": {
+        "source_delta_seconds": -11,
+        "allowed_age": 10
+      },
+      "expected": {
+        "status": "UNAVAILABLE",
+        "condition": "UNAVAILABLE"
+      },
+      "actual": {
+        "status": "UNAVAILABLE",
+        "condition": "UNAVAILABLE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "book.future",
+      "section": "تازگی دفتر",
+      "input": {
+        "source_delta_seconds": 1,
+        "allowed_age": 10
+      },
+      "expected": {
+        "status": "UNAVAILABLE",
+        "condition": "UNAVAILABLE"
+      },
+      "actual": {
+        "status": "UNAVAILABLE",
+        "condition": "UNAVAILABLE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "execution.side.LONG",
+      "section": "قیمت قابل‌اجرا",
+      "input": {
+        "direction": "LONG",
+        "bids": [
+          [
+            99,
+            1
+          ],
+          [
+            98,
+            2
+          ]
+        ],
+        "asks": [
+          [
+            101,
+            1
+          ],
+          [
+            102,
+            2
+          ]
+        ],
+        "quantity": 2
+      },
+      "expected": {
+        "entry_vwap": 101.5,
+        "exit_vwap": 98.5
+      },
+      "actual": {
+        "entry_vwap": 101.5,
+        "exit_vwap": 98.5
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "execution.side.SHORT",
+      "section": "قیمت قابل‌اجرا",
+      "input": {
+        "direction": "SHORT",
+        "bids": [
+          [
+            99,
+            1
+          ],
+          [
+            98,
+            2
+          ]
+        ],
+        "asks": [
+          [
+            101,
+            1
+          ],
+          [
+            102,
+            2
+          ]
+        ],
+        "quantity": 2
+      },
+      "expected": {
+        "entry_vwap": 98.5,
+        "exit_vwap": 101.5
+      },
+      "actual": {
+        "entry_vwap": 98.5,
+        "exit_vwap": 101.5
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "execution.depth",
+      "section": "قیمت قابل‌اجرا",
+      "input": {
+        "ask_quantity": 1e-05
+      },
+      "expected": {
+        "status": "UNAVAILABLE",
+        "failed": "executable_depth"
+      },
+      "actual": {
+        "status": "UNAVAILABLE",
+        "failed": "executable_depth"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "boundary.spread.-1",
+      "section": "مرز تنظیمات",
+      "input": {
+        "spread_formula": "10000*(101.70-101.66)/((101.70+101.66)/2)",
+        "limit_offset": -1e-06
+      },
+      "expected": {
+        "spread_pass": false
+      },
+      "actual": {
+        "spread_pass": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "boundary.rr.-1",
+      "section": "مرز تنظیمات",
+      "input": {
+        "limit": "computed net RR",
+        "limit_offset": -1e-06
+      },
+      "expected": {
+        "rr_pass": true
+      },
+      "actual": {
+        "rr_pass": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "boundary.expiry.-1",
+      "section": "مرز تنظیمات",
+      "input": {
+        "observed_at": "expiry + -1"
+      },
+      "expected": {
+        "expired": false
+      },
+      "actual": {
+        "expired": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "boundary.spread.0",
+      "section": "مرز تنظیمات",
+      "input": {
+        "spread_formula": "10000*(101.70-101.66)/((101.70+101.66)/2)",
+        "limit_offset": 0
+      },
+      "expected": {
+        "spread_pass": true
+      },
+      "actual": {
+        "spread_pass": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "boundary.rr.0",
+      "section": "مرز تنظیمات",
+      "input": {
+        "limit": "computed net RR",
+        "limit_offset": 0
+      },
+      "expected": {
+        "rr_pass": true
+      },
+      "actual": {
+        "rr_pass": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "boundary.expiry.0",
+      "section": "مرز تنظیمات",
+      "input": {
+        "observed_at": "expiry + 0"
+      },
+      "expected": {
+        "expired": true
+      },
+      "actual": {
+        "expired": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "boundary.spread.1",
+      "section": "مرز تنظیمات",
+      "input": {
+        "spread_formula": "10000*(101.70-101.66)/((101.70+101.66)/2)",
+        "limit_offset": 1e-06
+      },
+      "expected": {
+        "spread_pass": true
+      },
+      "actual": {
+        "spread_pass": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "boundary.rr.1",
+      "section": "مرز تنظیمات",
+      "input": {
+        "limit": "computed net RR",
+        "limit_offset": 1e-06
+      },
+      "expected": {
+        "rr_pass": false
+      },
+      "actual": {
+        "rr_pass": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "boundary.expiry.1",
+      "section": "مرز تنظیمات",
+      "input": {
+        "observed_at": "expiry + 1"
+      },
+      "expected": {
+        "expired": true
+      },
+      "actual": {
+        "expired": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "risk.budget",
+      "section": "محاسبات ریسک",
+      "input": {
+        "capital": 70,
+        "risk_pct": 1,
+        "fees_bps": [
+          10,
+          10
+        ],
+        "slippage_bps_per_side": 5,
+        "step": 0.001
+      },
+      "expected": {
+        "budget": 0.7,
+        "within_budget": true,
+        "step_valid": true,
+        "capital_valid": true
+      },
+      "actual": {
+        "budget": 0.7,
+        "within_budget": true,
+        "step_valid": true,
+        "capital_valid": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "limits.min_notional",
+      "section": "محدودیت سفارش",
+      "input": {
+        "violation": "min_notional"
+      },
+      "expected": {
+        "accepted": false
+      },
+      "actual": {
+        "accepted": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "limits.min_qty",
+      "section": "محدودیت سفارش",
+      "input": {
+        "violation": "min_qty"
+      },
+      "expected": {
+        "accepted": false
+      },
+      "actual": {
+        "accepted": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "limits.capital",
+      "section": "محدودیت سفارش",
+      "input": {
+        "violation": "capital"
+      },
+      "expected": {
+        "accepted": false
+      },
+      "actual": {
+        "accepted": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "costs.manual",
+      "section": "هزینه‌ها",
+      "input": {
+        "qty": 2,
+        "raw_entry": 100,
+        "raw_exit": 110,
+        "entry_bps": 10,
+        "exit_bps": 20,
+        "slippage_bps_per_side": 5,
+        "financing_bps_day": 30,
+        "fixed_usdt": 0.1,
+        "duration": 86400
+      },
+      "expected": {
+        "entry": 100.05,
+        "exit": 109.945,
+        "entry_fee": 0.3001,
+        "exit_fee": 0.43978,
+        "financing_cost": 0.6003,
+        "slippage_cost": 0.21,
+        "costs": 1.55018,
+        "gross_pnl": 20,
+        "net_pnl": 18.44982,
+        "balance_after": 88.44982
+      },
+      "actual": {
+        "id": "audit",
+        "status": "CLOSED",
+        "candidate": {
+          "id": "8f55a64be22cb61940acba8eac0a112f",
+          "direction": "LONG",
+          "symbol": "BTCUSDT",
+          "strategy_version": "wallex-break-retest-v1:1.2.0:aaac706cde7f6440",
+          "candle_close": 1728001800,
+          "candle_utc": "2024-10-04T00:30:00Z",
+          "break_at": 1728000000,
+          "retest_at": 1728000900,
+          "level": 100,
+          "atr": 1.3624999999999954,
+          "reference_price": 101.6,
+          "entry_range": [
+            101.19125,
+            102.00874999999999
+          ],
+          "stop_loss": 99.22,
+          "targets": [
+            108.71000000000001,
+            111.09
+          ],
+          "expires_at": 1728003600,
+          "conditions": [
+            {
+              "id": "trend_4h",
+              "status": "PASS",
+              "actual": {
+                "direction": "LONG",
+                "ema_fast": 98.69999999999999,
+                "ema_slow": 98.6,
+                "previous_fast": 98.5,
+                "close": 98.8
+              },
+              "required": "EMA fast/slow + slope + close"
+            },
+            {
+              "id": "level_1h",
+              "status": "PASS",
+              "actual": {
+                "level": 100,
+                "touches": 3
+              },
+              "required": 2
+            },
+            {
+              "id": "breakout_15m",
+              "status": "PASS",
+              "actual": 100.8,
+              "required": 100.125
+            },
+            {
+              "id": "break_volume",
+              "status": "PASS",
+              "actual": 3,
+              "required": 1.5
+            },
+            {
+              "id": "trend_4h",
+              "status": "PASS",
+              "actual": {
+                "direction": "LONG",
+                "ema_fast": 98.69999999999999,
+                "ema_slow": 98.6,
+                "previous_fast": 98.5,
+                "close": 98.8
+              },
+              "required": "EMA fast/slow + slope + close"
+            },
+            {
+              "id": "retest_15m",
+              "status": "PASS",
+              "actual": 100,
+              "required": [
+                99.6875,
+                100.3125
+              ]
+            },
+            {
+              "id": "trend_4h",
+              "status": "PASS",
+              "actual": {
+                "direction": "LONG",
+                "ema_fast": 98.69999999999999,
+                "ema_slow": 98.6,
+                "previous_fast": 98.5,
+                "close": 98.8
+              },
+              "required": "EMA fast/slow + slope + close"
+            },
+            {
+              "id": "confirmation_15m",
+              "status": "PASS",
+              "actual": 101.6,
+              "required": 101.068125
+            },
+            {
+              "id": "confirmation_volume",
+              "status": "PASS",
+              "actual": 1.4285714285714286,
+              "required": 1
+            },
+            {
+              "id": "structural_atr_stop",
+              "status": "PASS",
+              "actual": 1.741284403669722,
+              "required": 3
+            },
+            {
+              "id": "not_expired",
+              "status": "PASS",
+              "actual": 1728001800,
+              "required": {
+                "expires_at": 1728003600
+              }
+            },
+            {
+              "id": "market_identity",
+              "status": "PASS",
+              "actual": {
+                "provider": "wallex",
+                "symbol": "BTCUSDT",
+                "quote_asset": "USDT"
+              },
+              "required": {
+                "provider": "wallex",
+                "symbol": "BTCUSDT",
+                "quote_asset": "USDT"
+              }
+            },
+            {
+              "id": "instrument_support",
+              "status": "PASS",
+              "actual": "SPOT",
+              "required": "LONG"
+            },
+            {
+              "id": "market_limits",
+              "status": "PASS",
+              "actual": {
+                "step_size": 0.001,
+                "tick_size": 0.01,
+                "min_qty": 0.001,
+                "min_notional": 1
+              },
+              "required": "positive finite public market limits"
+            },
+            {
+              "id": "quote_freshness",
+              "status": "PASS",
+              "actual": {
+                "source_timestamp": 1728001800,
+                "received_at": 1728001800,
+                "trust": "VERIFIED"
+              },
+              "required": 10
+            },
+            {
+              "id": "orderbook",
+              "status": "PASS",
+              "actual": {
+                "bid": 101.66,
+                "ask": 101.7
+              },
+              "required": "ask > bid; validated price/base-quantity rows"
+            },
+            {
+              "id": "spread",
+              "status": "PASS",
+              "actual": 3.9339103068456187,
+              "required": 20
+            },
+            {
+              "id": "target_before_entry",
+              "status": "PASS",
+              "actual": {
+                "top": 101.7,
+                "checked_closed_from": 1728001800,
+                "through": 1728001800
+              },
+              "required": 108.71749999999996
+            },
+            {
+              "id": "plan_geometry",
+              "status": "PASS",
+              "actual": {
+                "entry_worst": 102.05975437499998,
+                "stop": 99.22,
+                "targets": [
+                  108.71000000000001,
+                  111.09
+                ]
+              },
+              "required": "directionally ordered positive prices"
+            },
+            {
+              "id": "executable_depth",
+              "status": "PASS",
+              "actual": 101.7,
+              "required": 0.226
+            },
+            {
+              "id": "position_size",
+              "status": "PASS",
+              "actual": {
+                "quantity": 0.226,
+                "step": 0.001,
+                "executable_notional": 22.9842,
+                "capital_cost": 23.018687792099996
+              },
+              "required": {
+                "min_qty": 0.001,
+                "min_notional": 1,
+                "capital": 70
+              }
+            },
+            {
+              "id": "entry_range",
+              "status": "PASS",
+              "actual": 101.7,
+              "required": [
+                101.19125,
+                102.00874999999999
+              ]
+            },
+            {
+              "id": "risk_budget",
+              "status": "PASS",
+              "actual": 0.6285921602400005,
+              "required": 0.7
+            },
+            {
+              "id": "net_rr",
+              "status": "PASS",
+              "actual": 2.4068575744761986,
+              "required": 2
+            },
+            {
+              "id": "cost_model",
+              "status": "PASS",
+              "actual": {
+                "entry_fee_bps": 10,
+                "exit_fee_bps": 10,
+                "slippage_bps": 5,
+                "fixed_cost_usdt": 0,
+                "financing_bps_day": 0,
+                "fees_verified": true,
+                "fee_reference": "SYNTHETIC_FIXTURE_ONLY"
+              },
+              "required": "configured verified fee rates; depth VWAP plus separate per-side residual slippage"
+            }
+          ],
+          "reason": "روند ۴ساعته، سطح ۱ساعته و شکست، بازآزمایی و تأیید روی سه کندل بسته‌شدهٔ متمایز ۱۵دقیقه.",
+          "config_snapshot": {
+            "enabled": true,
+            "symbol": "BTCUSDT",
+            "capital": 70,
+            "risk_pct": 1,
+            "ema_fast": 2,
+            "ema_slow": 3,
+            "atr_period": 2,
+            "level_lookback": 5,
+            "level_touches": 2,
+            "touch_separation": 2,
+            "level_tolerance_atr": 0.25,
+            "break_buffer_atr": 0.1,
+            "retest_tolerance_atr": 0.25,
+            "confirm_buffer_atr": 0.05,
+            "volume_period": 2,
+            "break_volume_ratio": 1.5,
+            "confirm_volume_ratio": 1,
+            "setup_bars": 8,
+            "entry_expiry_seconds": 1800,
+            "manual_delay_seconds": 60,
+            "entry_band_atr": 0.3,
+            "structure_buffer_atr": 0.2,
+            "stop_atr": 1.5,
+            "max_stop_atr": 3,
+            "tp1_r": 3,
+            "tp2_r": 4,
+            "min_net_rr": 2,
+            "max_spread_bps": 20,
+            "tp1_exit_pct": 100,
+            "tp2_exit_pct": 0,
+            "stop_after_tp1": "POSITION_CLOSED",
+            "entry_fee_bps": 10,
+            "exit_fee_bps": 10,
+            "slippage_bps": 5,
+            "fixed_cost_usdt": 0,
+            "financing_bps_day": null,
+            "quote_max_age_seconds": 10,
+            "max_paper_seconds": 86400,
+            "fees_verified": true,
+            "fee_reference": "SYNTHETIC_FIXTURE_ONLY",
+            "observation_interval_seconds": 60,
+            "evaluation_id": "btc-v1-001"
+          },
+          "rules_version": "1.2.0",
+          "invalidation_price": 99.6875,
+          "exit_policy": {
+            "tp1_exit_pct": 100,
+            "tp2_exit_pct": 0,
+            "stop_after_tp1": "POSITION_CLOSED"
+          },
+          "created_at": 1728001800,
+          "status": "MANUAL_REVIEW_AVAILABLE",
+          "entry": 101.75085,
+          "raw_entry": 101.7,
+          "quantity": 0.226,
+          "risk_usdt": 0.6285921602400005,
+          "net_reward_usdt": 1.5129318021300016,
+          "net_rr": 2.4068575744761986,
+          "spread_bps": 3.9339103068456187,
+          "quote_source_time": 1728001800,
+          "quote_received_at": 1728001800,
+          "execution_confirmed": false,
+          "reason_code": "MANUAL_REVIEW_AVAILABLE",
+          "risk_budget_usdt": 0.7,
+          "instrument": "SPOT",
+          "financing_rate_bps_day": 0,
+          "cost_assumptions": {
+            "entry_fee_bps": 10,
+            "exit_fee_bps": 10,
+            "fee_reference": "SYNTHETIC_FIXTURE_ONLY",
+            "fees_verified": true,
+            "depth_impact": "ALREADY_INCLUDED_IN_ENTRY_VWAP",
+            "residual_slippage": "ADDITIONAL_PER_SIDE_NOT_DEPTH_IMPACT",
+            "fee_basis": "MANUAL_EXECUTABLE_RATE_OWNER_CONFIRMED",
+            "entry_liquidity": "UNSPECIFIED_NOT_ASSUMED_MAKER",
+            "slippage_bps": 5,
+            "slippage_scope": "PER_SIDE",
+            "financing_basis": "NON_FINANCED_SPOT"
+          },
+          "entry_model": "MANUAL_EXECUTABLE_AFTER_DELAY",
+          "json_strategy": {
+            "strategy_version": 1,
+            "id": "scan_8f55a64be22cb61940acba8eac0a112f",
+            "name": "اسکنر شکست و بازآزمایی BTCUSDT",
+            "symbol": "BTCUSDT",
+            "enabled": false,
+            "action": "LONG",
+            "initial_stage": "manual_review",
+            "max_setup_seconds": 1800,
+            "invalidation": {
+              "left": {
+                "price": true
+              },
+              "op": "lte",
+              "right": 99.6875
+            },
+            "stages": [
+              {
+                "id": "manual_review",
+                "transitions": [
+                  {
+                    "event": "price",
+                    "when": {
+                      "all": [
+                        {
+                          "left": {
+                            "price": true
+                          },
+                          "op": "gte",
+                          "right": 101.19125
+                        },
+                        {
+                          "left": {
+                            "price": true
+                          },
+                          "op": "lte",
+                          "right": 102.00874999999999
+                        }
+                      ]
+                    },
+                    "signal": true
+                  }
+                ]
+              }
+            ],
+            "trade": {
+              "entry": {
+                "type": "MARKET"
+              },
+              "stop_loss": 99.22,
+              "take_profits": [
+                108.71000000000001,
+                111.09
+              ],
+              "quantity": 0.226,
+              "notes": "MANUAL_REVIEW_AVAILABLE · wallex-break-retest-v1:1.2.0:aaac706cde7f6440 · انقضا UTC: 2024-10-04T01:00:00+00:00 · طرح آزمایشی؛ ثبت سفارش واقعی ندارد. · ورود دستی شبیه‌سازی‌شده با VWAP مشاهدهٔ معتبر پس از تأخیر؛ LIMIT و تضمین پرشدن ندارد. · خروج TP1: 100٪، TP2: 0٪؛ پس از TP1 کل موقعیت بسته است."
+            },
+            "scanner_plan": {
+              "model": "MANUAL_EXECUTABLE_AFTER_DELAY",
+              "candle_close": 1728001800,
+              "created_at": 1728001800,
+              "eligible_at": 1728001860,
+              "expires_at": 1728003600,
+              "invalidation_price": 99.6875,
+              "stop_loss": 99.22,
+              "entry_range": [
+                101.19125,
+                102.00874999999999
+              ],
+              "strategy_version": "wallex-break-retest-v1:1.2.0:aaac706cde7f6440",
+              "rules_version": "1.2.0",
+              "config_snapshot": {
+                "enabled": true,
+                "symbol": "BTCUSDT",
+                "capital": 70,
+                "risk_pct": 1,
+                "ema_fast": 2,
+                "ema_slow": 3,
+                "atr_period": 2,
+                "level_lookback": 5,
+                "level_touches": 2,
+                "touch_separation": 2,
+                "level_tolerance_atr": 0.25,
+                "break_buffer_atr": 0.1,
+                "retest_tolerance_atr": 0.25,
+                "confirm_buffer_atr": 0.05,
+                "volume_period": 2,
+                "break_volume_ratio": 1.5,
+                "confirm_volume_ratio": 1,
+                "setup_bars": 8,
+                "entry_expiry_seconds": 1800,
+                "manual_delay_seconds": 60,
+                "entry_band_atr": 0.3,
+                "structure_buffer_atr": 0.2,
+                "stop_atr": 1.5,
+                "max_stop_atr": 3,
+                "tp1_r": 3,
+                "tp2_r": 4,
+                "min_net_rr": 2,
+                "max_spread_bps": 20,
+                "tp1_exit_pct": 100,
+                "tp2_exit_pct": 0,
+                "stop_after_tp1": "POSITION_CLOSED",
+                "entry_fee_bps": 10,
+                "exit_fee_bps": 10,
+                "slippage_bps": 5,
+                "fixed_cost_usdt": 0,
+                "financing_bps_day": null,
+                "quote_max_age_seconds": 10,
+                "max_paper_seconds": 86400,
+                "fees_verified": true,
+                "fee_reference": "SYNTHETIC_FIXTURE_ONLY",
+                "observation_interval_seconds": 60,
+                "evaluation_id": "btc-v1-001"
+              },
+              "exit_policy": {
+                "tp1_exit_pct": 100,
+                "tp2_exit_pct": 0,
+                "stop_after_tp1": "POSITION_CLOSED"
+              }
+            }
+          }
+        },
+        "config_snapshot": {
+          "enabled": true,
+          "symbol": "BTCUSDT",
+          "capital": 70,
+          "risk_pct": 1,
+          "ema_fast": 2,
+          "ema_slow": 3,
+          "atr_period": 2,
+          "level_lookback": 5,
+          "level_touches": 2,
+          "touch_separation": 2,
+          "level_tolerance_atr": 0.25,
+          "break_buffer_atr": 0.1,
+          "retest_tolerance_atr": 0.25,
+          "confirm_buffer_atr": 0.05,
+          "volume_period": 2,
+          "break_volume_ratio": 1.5,
+          "confirm_volume_ratio": 1,
+          "setup_bars": 8,
+          "entry_expiry_seconds": 1800,
+          "manual_delay_seconds": 60,
+          "entry_band_atr": 0.3,
+          "structure_buffer_atr": 0.2,
+          "stop_atr": 1.5,
+          "max_stop_atr": 3,
+          "tp1_r": 3,
+          "tp2_r": 4,
+          "min_net_rr": 2,
+          "max_spread_bps": 20,
+          "tp1_exit_pct": 100,
+          "tp2_exit_pct": 0,
+          "stop_after_tp1": "POSITION_CLOSED",
+          "entry_fee_bps": 10,
+          "exit_fee_bps": 20,
+          "slippage_bps": 5,
+          "fixed_cost_usdt": 0.1,
+          "financing_bps_day": 30,
+          "quote_max_age_seconds": 10,
+          "max_paper_seconds": 86400,
+          "fees_verified": true,
+          "fee_reference": "SYNTHETIC_FIXTURE_ONLY",
+          "observation_interval_seconds": 60,
+          "evaluation_id": "btc-v1-001"
+        },
+        "quantity": 2,
+        "raw_entry": 100,
+        "entry": 100.05,
+        "entry_fee": 0.30010000000000003,
+        "entry_at": 1728000000,
+        "last_bar": 1727999100,
+        "stop_loss": 90,
+        "targets": [
+          110,
+          120
+        ],
+        "quality": "AVAILABLE",
+        "exit_at": 1728086400,
+        "raw_exit": 110,
+        "exit": 109.94500000000001,
+        "exit_reason": "TEST",
+        "ambiguous": false,
+        "exit_fee": 0.43978,
+        "financing_cost": 0.6003,
+        "slippage_cost": 0.20999999999997954,
+        "costs": 1.5501799999999797,
+        "gross_pnl": 20,
+        "net_pnl": 18.44982000000002,
+        "balance_after": 88.44982000000002,
+        "result_certainty": "SIMULATION_ESTIMATE_NOT_PROVEN_EXECUTION",
+        "exit_model": "CONSERVATIVE_CLOSED_OHLC_WITH_CONFIGURED_COSTS"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "costs.unknown-financing",
+      "section": "هزینه‌ها",
+      "input": {
+        "instrument": "MARGIN",
+        "financing_bps_day": null
+      },
+      "expected": {
+        "status": "UNAVAILABLE"
+      },
+      "actual": {
+        "status": "UNAVAILABLE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "delay.59",
+      "section": "تأخیر ورود",
+      "input": {
+        "seconds_after_signal": 59
+      },
+      "expected": {
+        "status": "PENDING"
+      },
+      "actual": {
+        "status": "PENDING"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "delay.60",
+      "section": "تأخیر ورود",
+      "input": {
+        "seconds_after_signal": 60
+      },
+      "expected": {
+        "status": "OPEN"
+      },
+      "actual": {
+        "status": "OPEN"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "delay.outside-range",
+      "section": "تأخیر ورود",
+      "input": {
+        "ask": 105,
+        "time": "signal+60"
+      },
+      "expected": {
+        "opened": false
+      },
+      "actual": {
+        "opened": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "delay.invalidated-no-revival",
+      "section": "تأخیر ورود",
+      "input": {
+        "after_signal": "quote=99 below stop, then return to 101.7"
+      },
+      "expected": {
+        "cancelled": true,
+        "revived": false
+      },
+      "actual": {
+        "cancelled": true,
+        "revived": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "exit.stop",
+      "section": "خروج و ابهام",
+      "input": {
+        "bar": "stop",
+        "SL": 90,
+        "TP1": 110,
+        "entry": 100
+      },
+      "expected": {
+        "reason": "STOP_LOSS",
+        "raw_exit": 90,
+        "win": false
+      },
+      "actual": {
+        "reason": "STOP_LOSS",
+        "raw_exit": 90,
+        "win": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "exit.target",
+      "section": "خروج و ابهام",
+      "input": {
+        "bar": "target",
+        "SL": 90,
+        "TP1": 110,
+        "entry": 100
+      },
+      "expected": {
+        "reason": "TARGET_1",
+        "raw_exit": 110,
+        "win": true
+      },
+      "actual": {
+        "reason": "TARGET_1",
+        "raw_exit": 110,
+        "win": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "exit.gap",
+      "section": "خروج و ابهام",
+      "input": {
+        "bar": "gap",
+        "SL": 90,
+        "TP1": 110,
+        "entry": 100
+      },
+      "expected": {
+        "reason": "STOP_LOSS",
+        "raw_exit": 85,
+        "win": false
+      },
+      "actual": {
+        "reason": "STOP_LOSS",
+        "raw_exit": 85,
+        "win": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "exit.ambiguous",
+      "section": "خروج و ابهام",
+      "input": {
+        "bar": "ambiguous",
+        "SL": 90,
+        "TP1": 110,
+        "entry": 100
+      },
+      "expected": {
+        "reason": "AMBIGUOUS_STOP_FIRST",
+        "raw_exit": 90,
+        "win": false
+      },
+      "actual": {
+        "reason": "AMBIGUOUS_STOP_FIRST",
+        "raw_exit": 90,
+        "win": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "exit.time-stop",
+      "section": "خروج معامله",
+      "input": {
+        "age": 900,
+        "bid": 99,
+        "ask": 101,
+        "SL": 90,
+        "TP1": 110
+      },
+      "expected": {
+        "reason": "TIME_STOP",
+        "raw_exit": 99
+      },
+      "actual": {
+        "reason": "TIME_STOP",
+        "raw_exit": 99
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "exit.allocations",
+      "section": "اهداف چندگانه",
+      "input": {
+        "current_policy": "100% TP1 / 0% TP2; no remaining stop"
+      },
+      "expected": {
+        "tp1": 100,
+        "tp2": 0,
+        "sum": 100,
+        "stop_after": "POSITION_CLOSED"
+      },
+      "actual": {
+        "tp1": 100,
+        "tp2": 0,
+        "sum": 100,
+        "stop_after": "POSITION_CLOSED"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "history.config-copy",
+      "section": "نسخه و تنظیمات",
+      "input": {
+        "after_signal_change": "entry fee 90 bps"
+      },
+      "expected": {
+        "snapshot_present": true,
+        "unchanged": true,
+        "version_present": true
+      },
+      "actual": {
+        "snapshot_present": true,
+        "unchanged": true,
+        "version_present": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "parity.runner-replay",
+      "section": "برابری اجرای تاریخی و آزمایشی",
+      "input": {
+        "fixture": "same observations and books; fresh paper state"
+      },
+      "expected": {
+        "same_signals": true,
+        "same_decisions": true,
+        "same_trades": true
+      },
+      "actual": {
+        "same_signals": true,
+        "same_decisions": true,
+        "same_trades": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "report.manual",
+      "section": "گزارش عملکرد",
+      "input": {
+        "net_results": [
+          10,
+          -5,
+          0,
+          5
+        ],
+        "equity": [
+          70,
+          80,
+          75,
+          75,
+          80
+        ],
+        "costs": [
+          1,
+          2,
+          0.5,
+          1.5
+        ]
+      },
+      "expected": {
+        "closed_trades": 4,
+        "win_rate_pct": 50,
+        "net_profit_usdt": 10,
+        "expectancy_usdt": 2.5,
+        "profit_factor": 3,
+        "max_drawdown_usdt": 5,
+        "max_drawdown_pct": 6.25,
+        "total_costs_usdt": 5
+      },
+      "actual": {
+        "closed_trades": 4,
+        "wins": 2,
+        "win_rate_pct": 50,
+        "evidence_status": "UNVALIDATED_PAPER_SAMPLE",
+        "net_profit_usdt": 10,
+        "expectancy_usdt": 2.5,
+        "profit_factor": 3,
+        "profit_factor_note": null,
+        "max_drawdown_usdt": 5,
+        "max_drawdown_pct": 6.25,
+        "drawdown_status": "AVAILABLE_AT_OBSERVATION_TIMES",
+        "unavailable_equity_points": 0,
+        "total_costs_usdt": 5,
+        "ambiguous_stop_first": 0,
+        "evaluation": "UNVALIDATED_PAPER_SAMPLE",
+        "real_orders": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "risk.manual-quantity",
+      "section": "محاسبات ریسک",
+      "input": {
+        "formula": "floor((0.70 / 3.090594519375) / 0.001) * 0.001",
+        "actual_entry": 101.75085,
+        "stop_exit": 99.17039
+      },
+      "expected": {
+        "quantity": 0.226,
+        "risk_usdt": 0.62859216024,
+        "net_reward_usdt": 1.51293180213
+      },
+      "actual": {
+        "status": "MANUAL_REVIEW_AVAILABLE",
+        "reason": "الگو و کنترل‌های قیمت، عمق، هزینه و ریسک تأیید شده‌اند؛ فقط بررسی دستی و شبیه‌سازی.",
+        "conditions": [
+          {
+            "id": "not_expired",
+            "status": "PASS",
+            "actual": 1728001800,
+            "required": {
+              "expires_at": 1728003600
+            }
+          },
+          {
+            "id": "market_identity",
+            "status": "PASS",
+            "actual": {
+              "provider": "wallex",
+              "symbol": "BTCUSDT",
+              "quote_asset": "USDT"
+            },
+            "required": {
+              "provider": "wallex",
+              "symbol": "BTCUSDT",
+              "quote_asset": "USDT"
+            }
+          },
+          {
+            "id": "instrument_support",
+            "status": "PASS",
+            "actual": "SPOT",
+            "required": "LONG"
+          },
+          {
+            "id": "market_limits",
+            "status": "PASS",
+            "actual": {
+              "step_size": 0.001,
+              "tick_size": 0.01,
+              "min_qty": 0.001,
+              "min_notional": 1
+            },
+            "required": "positive finite public market limits"
+          },
+          {
+            "id": "quote_freshness",
+            "status": "PASS",
+            "actual": {
+              "source_timestamp": 1728001800,
+              "received_at": 1728001800,
+              "trust": "VERIFIED"
+            },
+            "required": 10
+          },
+          {
+            "id": "orderbook",
+            "status": "PASS",
+            "actual": {
+              "bid": 101.66,
+              "ask": 101.7
+            },
+            "required": "ask > bid; validated price/base-quantity rows"
+          },
+          {
+            "id": "spread",
+            "status": "PASS",
+            "actual": 3.9339103068456187,
+            "required": 20
+          },
+          {
+            "id": "target_before_entry",
+            "status": "PASS",
+            "actual": {
+              "top": 101.7,
+              "checked_closed_from": 1728001800,
+              "through": 1728001800
+            },
+            "required": 108.71000000000001
+          },
+          {
+            "id": "plan_geometry",
+            "status": "PASS",
+            "actual": {
+              "entry_worst": 102.05975437499998,
+              "stop": 99.22,
+              "targets": [
+                108.71000000000001,
+                111.09
+              ]
+            },
+            "required": "directionally ordered positive prices"
+          },
+          {
+            "id": "executable_depth",
+            "status": "PASS",
+            "actual": 101.7,
+            "required": 0.226
+          },
+          {
+            "id": "position_size",
+            "status": "PASS",
+            "actual": {
+              "quantity": 0.226,
+              "step": 0.001,
+              "executable_notional": 22.9842,
+              "capital_cost": 23.018687792099996
+            },
+            "required": {
+              "min_qty": 0.001,
+              "min_notional": 1,
+              "capital": 70
+            }
+          },
+          {
+            "id": "entry_range",
+            "status": "PASS",
+            "actual": 101.7,
+            "required": [
+              101.19125,
+              102.00874999999999
+            ]
+          },
+          {
+            "id": "risk_budget",
+            "status": "PASS",
+            "actual": 0.6285921602400005,
+            "required": 0.7
+          },
+          {
+            "id": "net_rr",
+            "status": "PASS",
+            "actual": 2.4068575744761986,
+            "required": 2
+          },
+          {
+            "id": "cost_model",
+            "status": "PASS",
+            "actual": {
+              "entry_fee_bps": 10,
+              "exit_fee_bps": 10,
+              "slippage_bps": 5,
+              "fixed_cost_usdt": 0,
+              "financing_bps_day": 0,
+              "fees_verified": true,
+              "fee_reference": "SYNTHETIC_FIXTURE_ONLY"
+            },
+            "required": "configured verified fee rates; depth VWAP plus separate per-side residual slippage"
+          }
+        ],
+        "entry": 101.75085,
+        "raw_entry": 101.7,
+        "quantity": 0.226,
+        "stop_loss": 99.22,
+        "targets": [
+          108.71000000000001,
+          111.09
+        ],
+        "risk_usdt": 0.6285921602400005,
+        "net_reward_usdt": 1.5129318021300016,
+        "net_rr": 2.4068575744761986,
+        "spread_bps": 3.9339103068456187,
+        "quote_source_time": 1728001800,
+        "quote_received_at": 1728001800,
+        "execution_confirmed": false,
+        "reason_code": "MANUAL_REVIEW_AVAILABLE",
+        "risk_budget_usdt": 0.7,
+        "instrument": "SPOT",
+        "financing_rate_bps_day": 0,
+        "cost_assumptions": {
+          "entry_fee_bps": 10,
+          "exit_fee_bps": 10,
+          "fee_reference": "SYNTHETIC_FIXTURE_ONLY",
+          "fees_verified": true,
+          "depth_impact": "ALREADY_INCLUDED_IN_ENTRY_VWAP",
+          "residual_slippage": "ADDITIONAL_PER_SIDE_NOT_DEPTH_IMPACT",
+          "fee_basis": "MANUAL_EXECUTABLE_RATE_OWNER_CONFIRMED",
+          "entry_liquidity": "UNSPECIFIED_NOT_ASSUMED_MAKER",
+          "slippage_bps": 5,
+          "slippage_scope": "PER_SIDE",
+          "financing_basis": "NON_FINANCED_SPOT"
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "risk.capital-cap",
+      "section": "موجودی و گردکردن",
+      "input": {
+        "capital": 70,
+        "risk_pct": 5,
+        "entry": 100,
+        "stop": 99.9,
+        "fees_bps": [
+          10,
+          10
+        ],
+        "slippage": 0,
+        "step": 0.001
+      },
+      "expected": {
+        "quantity": 0.699,
+        "capital_cost": 69.9699
+      },
+      "actual": {
+        "quantity": 0.6990000000000001,
+        "capital_cost": 69.9699
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "limits.notional-boundary.-1",
+      "section": "محدودیت سفارش",
+      "input": {
+        "min_notional": "22.9842 + -1.0E-6"
+      },
+      "expected": {
+        "accepted": true
+      },
+      "actual": {
+        "accepted": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "limits.notional-boundary.0",
+      "section": "محدودیت سفارش",
+      "input": {
+        "min_notional": "22.9842 + 0"
+      },
+      "expected": {
+        "accepted": true
+      },
+      "actual": {
+        "accepted": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "limits.notional-boundary.1",
+      "section": "محدودیت سفارش",
+      "input": {
+        "min_notional": "22.9842 + 1.0E-6"
+      },
+      "expected": {
+        "accepted": false
+      },
+      "actual": {
+        "accepted": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "limits.step-rounding",
+      "section": "محدودیت سفارش",
+      "input": {
+        "step": 0.005,
+        "unrounded_qty": 0.2264936
+      },
+      "expected": {
+        "quantity": 0.225
+      },
+      "actual": {
+        "status": "MANUAL_REVIEW_AVAILABLE",
+        "reason": "الگو و کنترل‌های قیمت، عمق، هزینه و ریسک تأیید شده‌اند؛ فقط بررسی دستی و شبیه‌سازی.",
+        "conditions": [
+          {
+            "id": "not_expired",
+            "status": "PASS",
+            "actual": 1728001800,
+            "required": {
+              "expires_at": 1728003600
+            }
+          },
+          {
+            "id": "market_identity",
+            "status": "PASS",
+            "actual": {
+              "provider": "wallex",
+              "symbol": "BTCUSDT",
+              "quote_asset": "USDT"
+            },
+            "required": {
+              "provider": "wallex",
+              "symbol": "BTCUSDT",
+              "quote_asset": "USDT"
+            }
+          },
+          {
+            "id": "instrument_support",
+            "status": "PASS",
+            "actual": "SPOT",
+            "required": "LONG"
+          },
+          {
+            "id": "market_limits",
+            "status": "PASS",
+            "actual": {
+              "step_size": 0.005,
+              "tick_size": 0.01,
+              "min_qty": 0.001,
+              "min_notional": 1
+            },
+            "required": "positive finite public market limits"
+          },
+          {
+            "id": "quote_freshness",
+            "status": "PASS",
+            "actual": {
+              "source_timestamp": 1728001800,
+              "received_at": 1728001800,
+              "trust": "VERIFIED"
+            },
+            "required": 10
+          },
+          {
+            "id": "orderbook",
+            "status": "PASS",
+            "actual": {
+              "bid": 101.66,
+              "ask": 101.7
+            },
+            "required": "ask > bid; validated price/base-quantity rows"
+          },
+          {
+            "id": "spread",
+            "status": "PASS",
+            "actual": 3.9339103068456187,
+            "required": 20
+          },
+          {
+            "id": "target_before_entry",
+            "status": "PASS",
+            "actual": {
+              "top": 101.7,
+              "checked_closed_from": 1728001800,
+              "through": 1728001800
+            },
+            "required": 108.71000000000001
+          },
+          {
+            "id": "plan_geometry",
+            "status": "PASS",
+            "actual": {
+              "entry_worst": 102.05975437499998,
+              "stop": 99.22,
+              "targets": [
+                108.71000000000001,
+                111.09
+              ]
+            },
+            "required": "directionally ordered positive prices"
+          },
+          {
+            "id": "executable_depth",
+            "status": "PASS",
+            "actual": 101.7,
+            "required": 0.225
+          },
+          {
+            "id": "position_size",
+            "status": "PASS",
+            "actual": {
+              "quantity": 0.225,
+              "step": 0.005,
+              "executable_notional": 22.8825,
+              "capital_cost": 22.916835191249998
+            },
+            "required": {
+              "min_qty": 0.001,
+              "min_notional": 1,
+              "capital": 70
+            }
+          },
+          {
+            "id": "entry_range",
+            "status": "PASS",
+            "actual": 101.7,
+            "required": [
+              101.19125,
+              102.00874999999999
+            ]
+          },
+          {
+            "id": "risk_budget",
+            "status": "PASS",
+            "actual": 0.6258107790000005,
+            "required": 0.7
+          },
+          {
+            "id": "net_rr",
+            "status": "PASS",
+            "actual": 2.4068575744761986,
+            "required": 2
+          },
+          {
+            "id": "cost_model",
+            "status": "PASS",
+            "actual": {
+              "entry_fee_bps": 10,
+              "exit_fee_bps": 10,
+              "slippage_bps": 5,
+              "fixed_cost_usdt": 0,
+              "financing_bps_day": 0,
+              "fees_verified": true,
+              "fee_reference": "SYNTHETIC_FIXTURE_ONLY"
+            },
+            "required": "configured verified fee rates; depth VWAP plus separate per-side residual slippage"
+          }
+        ],
+        "entry": 101.75085,
+        "raw_entry": 101.7,
+        "quantity": 0.225,
+        "stop_loss": 99.22,
+        "targets": [
+          108.71000000000001,
+          111.09
+        ],
+        "risk_usdt": 0.6258107790000005,
+        "net_reward_usdt": 1.5062374136250016,
+        "net_rr": 2.4068575744761986,
+        "spread_bps": 3.9339103068456187,
+        "quote_source_time": 1728001800,
+        "quote_received_at": 1728001800,
+        "execution_confirmed": false,
+        "reason_code": "MANUAL_REVIEW_AVAILABLE",
+        "risk_budget_usdt": 0.7,
+        "instrument": "SPOT",
+        "financing_rate_bps_day": 0,
+        "cost_assumptions": {
+          "entry_fee_bps": 10,
+          "exit_fee_bps": 10,
+          "fee_reference": "SYNTHETIC_FIXTURE_ONLY",
+          "fees_verified": true,
+          "depth_impact": "ALREADY_INCLUDED_IN_ENTRY_VWAP",
+          "residual_slippage": "ADDITIONAL_PER_SIDE_NOT_DEPTH_IMPACT",
+          "fee_basis": "MANUAL_EXECUTABLE_RATE_OWNER_CONFIRMED",
+          "entry_liquidity": "UNSPECIFIED_NOT_ASSUMED_MAKER",
+          "slippage_bps": 5,
+          "slippage_scope": "PER_SIDE",
+          "financing_basis": "NON_FINANCED_SPOT"
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "book.age.9",
+      "section": "مرز تازگی",
+      "input": {
+        "source_age_seconds": 9,
+        "max_age": 10
+      },
+      "expected": {
+        "available": true
+      },
+      "actual": {
+        "available": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "book.age.10",
+      "section": "مرز تازگی",
+      "input": {
+        "source_age_seconds": 10,
+        "max_age": 10
+      },
+      "expected": {
+        "available": true
+      },
+      "actual": {
+        "available": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "book.age.11",
+      "section": "مرز تازگی",
+      "input": {
+        "source_age_seconds": 11,
+        "max_age": 10
+      },
+      "expected": {
+        "available": false
+      },
+      "actual": {
+        "available": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "book.future-receipt",
+      "section": "تازگی دفتر",
+      "input": {
+        "received_at": "now+1"
+      },
+      "expected": {
+        "status": "UNAVAILABLE"
+      },
+      "actual": {
+        "status": "UNAVAILABLE",
+        "reason": "تازگی منبع دفتر سفارش قابل تأیید نیست؛ زمان دریافت محلی جای timestamp منبع استفاده نمی‌شود.",
+        "conditions": [
+          {
+            "id": "not_expired",
+            "status": "PASS",
+            "actual": 1728001800,
+            "required": {
+              "expires_at": 1728003600
+            }
+          },
+          {
+            "id": "market_identity",
+            "status": "PASS",
+            "actual": {
+              "provider": "wallex",
+              "symbol": "BTCUSDT",
+              "quote_asset": "USDT"
+            },
+            "required": {
+              "provider": "wallex",
+              "symbol": "BTCUSDT",
+              "quote_asset": "USDT"
+            }
+          },
+          {
+            "id": "instrument_support",
+            "status": "PASS",
+            "actual": "SPOT",
+            "required": "LONG"
+          },
+          {
+            "id": "market_limits",
+            "status": "PASS",
+            "actual": {
+              "step_size": 0.001,
+              "tick_size": 0.01,
+              "min_qty": 0.001,
+              "min_notional": 1
+            },
+            "required": "positive finite public market limits"
+          },
+          {
+            "id": "quote_freshness",
+            "status": "UNAVAILABLE",
+            "actual": {
+              "source_timestamp": 1728001800,
+              "received_at": 1728001801,
+              "trust": "VERIFIED"
+            },
+            "required": 10
+          },
+          {
+            "id": "orderbook",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "spread",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "target_before_entry",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "plan_geometry",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "position_size",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "executable_depth",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "entry_range",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "risk_budget",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "net_rr",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "cost_model",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          }
+        ],
+        "reason_code": "quote_freshness"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "expiry.pending-no-revival",
+      "section": "انقضا و ابطال",
+      "input": {
+        "first_observation": "expiry",
+        "next": "expiry+1"
+      },
+      "expected": {
+        "first": "EXPIRED",
+        "revived": false
+      },
+      "actual": {
+        "first": "EXPIRED",
+        "revived": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.conflicting-duplicate",
+      "section": "شکاف داده",
+      "input": {
+        "duplicate": "same timestamp, different high"
+      },
+      "expected": {
+        "status": "UNAVAILABLE"
+      },
+      "actual": {
+        "status": "UNAVAILABLE",
+        "reason": "UNAVAILABLE: conflicting duplicate candle",
+        "reason_code": "data_quality",
+        "conditions": [
+          {
+            "id": "data_quality",
+            "status": "UNAVAILABLE",
+            "actual": "UNAVAILABLE: conflicting duplicate candle",
+            "required": null
+          }
+        ],
+        "candle_close": 1728000000
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.out-of-order-observation",
+      "section": "ترتیب و بازیابی",
+      "input": {
+        "observations": [
+          "T",
+          "T-1",
+          "T+900"
+        ]
+      },
+      "expected": {
+        "blocked": true,
+        "state_unchanged": true,
+        "recovered": true
+      },
+      "actual": {
+        "blocked": true,
+        "state_unchanged": true,
+        "recovered": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.out-of-order-replay",
+      "section": "ترتیب بازپخش",
+      "input": {
+        "observations": [
+          "T+900",
+          "T"
+        ]
+      },
+      "expected": {
+        "rejected": true
+      },
+      "actual": {
+        "rejected": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.setup-recovery",
+      "section": "شکاف و بازیابی",
+      "input": {
+        "flow": "valid breakout, missing retest history, restored same bar at +1s"
+      },
+      "expected": {
+        "blocked": true,
+        "no_fill": true,
+        "recovered": true
+      },
+      "actual": {
+        "blocked": true,
+        "no_fill": true,
+        "recovered": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "exit.partial-entry-unknown",
+      "section": "ابهام داخل کندل",
+      "input": {
+        "entry_at": "T+60",
+        "entry_bar_high": 111,
+        "SL": 90,
+        "TP": 110
+      },
+      "expected": {
+        "events": 0,
+        "quality": "UNAVAILABLE"
+      },
+      "actual": {
+        "events": 0,
+        "quality": "UNAVAILABLE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "exit.time-stop-unavailable",
+      "section": "خروج معامله",
+      "input": {
+        "age": 900,
+        "book_source_timestamp": null
+      },
+      "expected": {
+        "closed": false,
+        "quality": "UNAVAILABLE"
+      },
+      "actual": {
+        "closed": false,
+        "quality": "UNAVAILABLE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "exit.partial-settings-rejected",
+      "section": "اهداف چندگانه",
+      "input": {
+        "tp1_exit_pct": 50,
+        "tp2_exit_pct": 50,
+        "policy": "not implemented in v1"
+      },
+      "expected": {
+        "rejected": true
+      },
+      "actual": {
+        "rejected": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "exit.tp2-no-double-close",
+      "section": "اهداف چندگانه",
+      "input": {
+        "one_bar": "TP1 and TP2 touched; stop not touched",
+        "allocation": [
+          100,
+          0
+        ]
+      },
+      "expected": {
+        "trades": 1,
+        "exit_reason": "TARGET_1",
+        "quantity": 2,
+        "position_closed": true
+      },
+      "actual": {
+        "trades": 1,
+        "exit_reason": "TARGET_1",
+        "quantity": 2,
+        "position_closed": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "costs.known-zero-margin",
+      "section": "هزینه‌ها",
+      "input": {
+        "instrument": "MARGIN",
+        "financing_bps_day": 0,
+        "explicit": true
+      },
+      "expected": {
+        "status": "MANUAL_REVIEW_AVAILABLE",
+        "financing_rate_bps_day": 0
+      },
+      "actual": {
+        "status": "MANUAL_REVIEW_AVAILABLE",
+        "reason": "الگو و کنترل‌های قیمت، عمق، هزینه و ریسک تأیید شده‌اند؛ فقط بررسی دستی و شبیه‌سازی.",
+        "conditions": [
+          {
+            "id": "not_expired",
+            "status": "PASS",
+            "actual": 1728001800,
+            "required": {
+              "expires_at": 1728003600
+            }
+          },
+          {
+            "id": "market_identity",
+            "status": "PASS",
+            "actual": {
+              "provider": "wallex",
+              "symbol": "BTCUSDT",
+              "quote_asset": "USDT"
+            },
+            "required": {
+              "provider": "wallex",
+              "symbol": "BTCUSDT",
+              "quote_asset": "USDT"
+            }
+          },
+          {
+            "id": "instrument_support",
+            "status": "PASS",
+            "actual": "MARGIN",
+            "required": "LONG"
+          },
+          {
+            "id": "market_limits",
+            "status": "PASS",
+            "actual": {
+              "step_size": 0.001,
+              "tick_size": 0.01,
+              "min_qty": 0.001,
+              "min_notional": 1
+            },
+            "required": "positive finite public market limits"
+          },
+          {
+            "id": "quote_freshness",
+            "status": "PASS",
+            "actual": {
+              "source_timestamp": 1728001800,
+              "received_at": 1728001800,
+              "trust": "VERIFIED"
+            },
+            "required": 10
+          },
+          {
+            "id": "orderbook",
+            "status": "PASS",
+            "actual": {
+              "bid": 101.66,
+              "ask": 101.7
+            },
+            "required": "ask > bid; validated price/base-quantity rows"
+          },
+          {
+            "id": "spread",
+            "status": "PASS",
+            "actual": 3.9339103068456187,
+            "required": 20
+          },
+          {
+            "id": "target_before_entry",
+            "status": "PASS",
+            "actual": {
+              "top": 101.7,
+              "checked_closed_from": 1728001800,
+              "through": 1728001800
+            },
+            "required": 108.71000000000001
+          },
+          {
+            "id": "plan_geometry",
+            "status": "PASS",
+            "actual": {
+              "entry_worst": 102.05975437499998,
+              "stop": 99.22,
+              "targets": [
+                108.71000000000001,
+                111.09
+              ]
+            },
+            "required": "directionally ordered positive prices"
+          },
+          {
+            "id": "executable_depth",
+            "status": "PASS",
+            "actual": 101.7,
+            "required": 0.226
+          },
+          {
+            "id": "position_size",
+            "status": "PASS",
+            "actual": {
+              "quantity": 0.226,
+              "step": 0.001,
+              "executable_notional": 22.9842,
+              "capital_cost": 23.018687792099996
+            },
+            "required": {
+              "min_qty": 0.001,
+              "min_notional": 1,
+              "capital": 70
+            }
+          },
+          {
+            "id": "entry_range",
+            "status": "PASS",
+            "actual": 101.7,
+            "required": [
+              101.19125,
+              102.00874999999999
+            ]
+          },
+          {
+            "id": "risk_budget",
+            "status": "PASS",
+            "actual": 0.6285921602400005,
+            "required": 0.7
+          },
+          {
+            "id": "net_rr",
+            "status": "PASS",
+            "actual": 2.4068575744761986,
+            "required": 2
+          },
+          {
+            "id": "cost_model",
+            "status": "PASS",
+            "actual": {
+              "entry_fee_bps": 10,
+              "exit_fee_bps": 10,
+              "slippage_bps": 5,
+              "fixed_cost_usdt": 0,
+              "financing_bps_day": 0,
+              "fees_verified": true,
+              "fee_reference": "SYNTHETIC_FIXTURE_ONLY"
+            },
+            "required": "configured verified fee rates; depth VWAP plus separate per-side residual slippage"
+          }
+        ],
+        "entry": 101.75085,
+        "raw_entry": 101.7,
+        "quantity": 0.226,
+        "stop_loss": 99.22,
+        "targets": [
+          108.71000000000001,
+          111.09
+        ],
+        "risk_usdt": 0.6285921602400005,
+        "net_reward_usdt": 1.5129318021300016,
+        "net_rr": 2.4068575744761986,
+        "spread_bps": 3.9339103068456187,
+        "quote_source_time": 1728001800,
+        "quote_received_at": 1728001800,
+        "execution_confirmed": false,
+        "reason_code": "MANUAL_REVIEW_AVAILABLE",
+        "risk_budget_usdt": 0.7,
+        "instrument": "MARGIN",
+        "financing_rate_bps_day": 0,
+        "cost_assumptions": {
+          "entry_fee_bps": 10,
+          "exit_fee_bps": 10,
+          "fee_reference": "SYNTHETIC_FIXTURE_ONLY",
+          "fees_verified": true,
+          "depth_impact": "ALREADY_INCLUDED_IN_ENTRY_VWAP",
+          "residual_slippage": "ADDITIONAL_PER_SIDE_NOT_DEPTH_IMPACT",
+          "fee_basis": "MANUAL_EXECUTABLE_RATE_OWNER_CONFIRMED",
+          "entry_liquidity": "UNSPECIFIED_NOT_ASSUMED_MAKER",
+          "slippage_bps": 5,
+          "slippage_scope": "PER_SIDE",
+          "financing_basis": "EXPLICIT_CONFIGURED_RATE"
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "history.exit-uses-copy",
+      "section": "نسخه و تنظیمات",
+      "input": {
+        "after_open": "change slippage to 100 bps",
+        "stored_slippage": 5,
+        "raw_exit": 110
+      },
+      "expected": {
+        "exit": 109.945,
+        "config_slippage": 5
+      },
+      "actual": {
+        "exit": 109.94500000000001,
+        "config_slippage": 5
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "history.assumptions",
+      "section": "تنظیمات هزینه",
+      "input": {
+        "entry_fee_bps": 10,
+        "slippage_bps": 5
+      },
+      "expected": {
+        "fee_pct": 0.1,
+        "entry_liquidity": "UNSPECIFIED_NOT_ASSUMED_MAKER",
+        "slippage_scope": "PER_SIDE"
+      },
+      "actual": {
+        "fee_pct": 0.1,
+        "entry_liquidity": "UNSPECIFIED_NOT_ASSUMED_MAKER",
+        "slippage_scope": "PER_SIDE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "pattern.short-synthetic",
+      "section": "برابری لانگ و شورت مصنوعی",
+      "input": {
+        "transform": "price -> 200-price; mirror highs/lows and books",
+        "instrument": "synthetic MARGIN; financing explicitly 0"
+      },
+      "expected": {
+        "signals": 1,
+        "direction": "SHORT",
+        "raw_entry": 98.2,
+        "win": true
+      },
+      "actual": {
+        "signals": 1,
+        "direction": "SHORT",
+        "raw_entry": 98.2,
+        "win": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "book.rest-receipt-not-verification",
+      "section": "تازگی دفتر",
+      "input": {
+        "adapter": "real WallexExecutionMarketProvider with synthetic REST response",
+        "source_timestamp": "absent"
+      },
+      "expected": {
+        "source_timestamp": null,
+        "trust": "UNVERIFIED",
+        "status": "UNAVAILABLE"
+      },
+      "actual": {
+        "source_timestamp": null,
+        "trust": "UNVERIFIED",
+        "status": "UNAVAILABLE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "safety.no-real-orders",
+      "section": "عدم سفارش واقعی",
+      "input": {
+        "paths_allowlist": [
+          "/v1/udf/history",
+          "/v1/depth",
+          "/v1/markets"
+        ],
+        "runs": [
+          "normal",
+          "duplicate",
+          "settings change",
+          "synthetic transport error"
+        ],
+        "transport": "network functions disabled"
+      },
+      "expected": {
+        "private_calls": [],
+        "had_public_reads": true,
+        "failure_recorded": true,
+        "orders": 0
+      },
+      "actual": {
+        "private_calls": [],
+        "had_public_reads": true,
+        "failure_recorded": true,
+        "orders": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "cron.lock-held",
+      "section": "اجرای هم‌زمان Cron",
+      "input": {
+        "lock": "held by another open descriptor"
+      },
+      "expected": {
+        "status": "BUSY",
+        "api_calls": 0
+      },
+      "actual": {
+        "status": "BUSY",
+        "api_calls": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "cron.duplicate-schedule",
+      "section": "تکرار Cron",
+      "input": {
+        "attempt": "same second as last attempt"
+      },
+      "expected": {
+        "status": "NOT_DUE",
+        "api_calls": 0
+      },
+      "actual": {
+        "status": "NOT_DUE",
+        "api_calls": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "storage.rejection-reason",
+      "section": "ذخیرهٔ ردها",
+      "input": {
+        "breakout_volume": 10,
+        "required_ratio": 1.5
+      },
+      "expected": {
+        "status": "REJECTED",
+        "reason_code": "break_volume",
+        "alerts": 0
+      },
+      "actual": {
+        "status": "REJECTED",
+        "reason_code": "break_volume",
+        "alerts": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "parity.availability-and-outage",
+      "section": "برابری بازپخش پس از بازیابی",
+      "input": {
+        "flow": [
+          "T missing candle",
+          "T+1 restored",
+          "T+2 transport error",
+          "T+900 retest",
+          "T+1800 confirm"
+        ],
+        "rule": "later recovery must not repair the historical missing observation"
+      },
+      "expected": {
+        "same_decisions": true,
+        "initial_status": "UNAVAILABLE",
+        "outage_status": "UNAVAILABLE",
+        "signals": 1
+      },
+      "actual": {
+        "same_decisions": true,
+        "initial_status": "UNAVAILABLE",
+        "outage_status": "UNAVAILABLE",
+        "signals": 1
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "limits.short-vwap-notional",
+      "section": "حداقل ارزش قابل‌اجرا",
+      "input": {
+        "direction": "synthetic SHORT",
+        "top_bid": 100,
+        "deeper_bid": 99,
+        "min_notional": 5.58,
+        "top_notional": 5.6,
+        "actual_notional": 5.545
+      },
+      "expected": {
+        "status": "REJECTED",
+        "reason_code": "position_size"
+      },
+      "actual": {
+        "status": "REJECTED",
+        "reason": "ارزش قابل‌اجرای سفارش از حداقل ارزش بازار کمتر است.",
+        "conditions": [
+          {
+            "id": "not_expired",
+            "status": "PASS",
+            "actual": 1728001800,
+            "required": {
+              "expires_at": 1728003600
+            }
+          },
+          {
+            "id": "market_identity",
+            "status": "PASS",
+            "actual": {
+              "provider": "wallex",
+              "symbol": "BTCUSDT",
+              "quote_asset": "USDT"
+            },
+            "required": {
+              "provider": "wallex",
+              "symbol": "BTCUSDT",
+              "quote_asset": "USDT"
+            }
+          },
+          {
+            "id": "instrument_support",
+            "status": "PASS",
+            "actual": "MARGIN",
+            "required": "SHORT"
+          },
+          {
+            "id": "market_limits",
+            "status": "PASS",
+            "actual": {
+              "step_size": 0.001,
+              "tick_size": 0.01,
+              "min_qty": 0.001,
+              "min_notional": 5.58
+            },
+            "required": "positive finite public market limits"
+          },
+          {
+            "id": "quote_freshness",
+            "status": "PASS",
+            "actual": {
+              "source_timestamp": 1728001800,
+              "received_at": 1728001800,
+              "trust": "VERIFIED"
+            },
+            "required": 10
+          },
+          {
+            "id": "orderbook",
+            "status": "PASS",
+            "actual": {
+              "bid": 100,
+              "ask": 100.01
+            },
+            "required": "ask > bid; validated price/base-quantity rows"
+          },
+          {
+            "id": "spread",
+            "status": "PASS",
+            "actual": 0.9999500025003866,
+            "required": 20
+          },
+          {
+            "id": "target_before_entry",
+            "status": "PASS",
+            "actual": {
+              "top": 100,
+              "checked_closed_from": 1728001800,
+              "through": 1728001800
+            },
+            "required": 70
+          },
+          {
+            "id": "plan_geometry",
+            "status": "PASS",
+            "actual": {
+              "entry_worst": 97.95100000000001,
+              "stop": 110,
+              "targets": [
+                70,
+                50
+              ]
+            },
+            "required": "directionally ordered positive prices"
+          },
+          {
+            "id": "executable_depth",
+            "status": "PASS",
+            "actual": 99.01785714285714,
+            "required": 0.056
+          },
+          {
+            "id": "position_size",
+            "status": "FAIL",
+            "actual": 5.545,
+            "required": 5.58
+          },
+          {
+            "id": "entry_range",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "risk_budget",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "net_rr",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          },
+          {
+            "id": "cost_model",
+            "status": "NOT_EVALUATED",
+            "actual": null,
+            "required": null
+          }
+        ],
+        "reason_code": "position_size"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "concurrency.six-processes",
+      "section": "تکرار و اجرای هم‌زمان",
+      "input": {
+        "processes": 6,
+        "barrier": "same pre-confirmation SQLite state",
+        "network": "disabled"
+      },
+      "expected": {
+        "signals": 1,
+        "alerts": 1,
+        "losers_discarded": 5
+      },
+      "actual": {
+        "signals": 1,
+        "alerts": 1,
+        "losers_discarded": 5
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "concurrency.restart",
+      "section": "راه‌اندازی مجدد و تنظیمات ثابت",
+      "input": {
+        "replays": [
+          "confirmation",
+          "entry+60",
+          "entry+60 repeated"
+        ],
+        "setting_change": "entry_fee_bps 10 -> 90"
+      },
+      "expected": {
+        "signals": 1,
+        "alerts": 1,
+        "trades": 1,
+        "paper_status": "OPEN",
+        "config_unchanged": true,
+        "recorded_entry_fee_bps": 10
+      },
+      "actual": {
+        "signals": 1,
+        "alerts": 1,
+        "trades": 1,
+        "config_unchanged": true,
+        "recorded_entry_fee_bps": 10,
+        "paper_status": "OPEN"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "concurrency.replay-after-duplicates",
+      "section": "بازپخش پس از تکرار درخواست",
+      "input": {
+        "repeated_observations": "confirmation and entry timestamps repeated across restart"
+      },
+      "expected": {
+        "signals": 1,
+        "observations": 4,
+        "open_status": "OPEN"
+      },
+      "actual": {
+        "signals": 1,
+        "observations": 4,
+        "open_status": "OPEN"
+      },
+      "status": "PASS"
+    }
+  ],
+  "summary": {
+    "total": 82,
+    "pass": 82,
+    "fail": 0
+  },
+  "network": "PHP curl_init, fsockopen, pfsockopen, stream_socket_client disabled; adapters are synthetic spies only"
+}

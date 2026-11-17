@@ -1,0 +1,35 @@
+{
+  "id": "capital.concurrent-entry-and-restart",
+  "input": {
+    "processes": 6,
+    "capital": 70,
+    "entry_fee_bps": 10
+  },
+  "expected": {
+    "discarded": 5,
+    "one_trade": true,
+    "reserve_matches": true,
+    "accounted": 70,
+    "unchanged_after_restart": true
+  },
+  "actual": {
+    "discarded": 5,
+    "one_trade": true,
+    "reserve_matches": true,
+    "accounted": 70,
+    "unchanged_after_restart": true
+  },
+  "status": "PASS",
+  "wallet": {
+    "balance_usdt": 69.9769816966,
+    "reserved_principal_usdt": 23.018303399999997,
+    "entry_fee_paid_usdt": 0.023018303399999995,
+    "available_cash_usdt": 46.95867829660001,
+    "position_locked": true,
+    "risk_budget_current_usdt": 0.699769816966,
+    "status": "OPEN",
+    "accounted": 70,
+    "reserve_matches": true,
+    "trades": 1
+  }
+}

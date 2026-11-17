@@ -45,6 +45,7 @@ def build(destination, hosts, username, password, public_access=False, require_h
         (destination / 'config' / 'sms.json').write_text(json.dumps(dict(enabled=True,api_key=sms_key,receptor='09135128163',owner_email='ashkufaraz@gmail.com',enabled_at=int(os.environ['SMS_ENABLED_AT']))),encoding='utf-8')
     shutil.copy2(ROOT / 'deploy' / 'HostingAccess.php', destination / 'src' / 'HostingAccess.php')
     shutil.copy2(ROOT / 'cron.php', destination / 'cron.php')
+    shutil.copy2(ROOT / 'scanner.php', destination / 'scanner.php')
     # JSON is read as data; secrets never become executable PHP source.
     config = {'public_access': public_access, 'hosts': hosts, 'username': username, 'password_hash': hashed, 'require_https': require_https}
     (destination / 'config' / 'hosting.php').write_text(

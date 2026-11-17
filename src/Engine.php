@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/Indicators.php';
+require_once __DIR__.'/ScannerPlan.php';
 final class Strategy {
  static ?Closure $signalFilter=null;
  static ?Closure $onCheck=null;
@@ -10,7 +11,8 @@ final class Strategy {
  const TIMEFRAMES=['4h'=>14400,'1h'=>3600,'15m'=>900];
  static function keys(array $a,array $required,array $optional=[]):void {foreach($required as $k) if(!array_key_exists($k,$a)) throw new InvalidArgumentException("Missing: $k"); foreach($a as $k=>$v) if(!in_array($k,array_merge($required,$optional),true)) throw new InvalidArgumentException("Unknown field: $k");}
  static function validate(array $s):array {
- self::keys($s,['strategy_version','id','name','symbol','enabled','action','initial_stage','max_setup_seconds','invalidation','stages'],['trade','cancellation','indicator_conditions','analysis_sources']);
+ self::keys($s,['strategy_version','id','name','symbol','enabled','action','initial_stage','max_setup_seconds','invalidation','stages'],['trade','cancellation','indicator_conditions','analysis_sources','scanner_plan']);
+ if(isset($s['scanner_plan']))ScannerPlan::validate($s);
  if(array_key_exists('analysis_sources',$s)) {
   if(!is_array($s['analysis_sources'])||!array_is_list($s['analysis_sources'])||count($s['analysis_sources'])>5)throw new InvalidArgumentException('Invalid analysis_sources');
   $seenSources=[];
@@ -85,6 +87,7 @@ final class Strategy {
  }
  static function fresh(array $s,int $now):array {return ['stage'=>$s['initial_stage'],'setup'=>null,'cursor'=>$now,'error'=>null,'last_check'=>null];}
  static function event(array $s,array &$state,string $event,int $time,array $ctx):bool {
+ if(isset($s['scanner_plan'])){$state['scanner_review']=ScannerPlan::review($s,$state,$time,(float)($ctx['price']??0));return false;}
  foreach($s['stages'] as $stage) if($stage['id']===$state['stage']) foreach($stage['transitions'] as $i=>$t) if($t['event']===$event) {
  self::trace('transition',$event,$t['when'],$ctx,['stage'=>$stage['id'],'rule'=>$i+1,'to'=>$t['to']??'signal']);
  if(!self::check($t['when'],$ctx))continue;

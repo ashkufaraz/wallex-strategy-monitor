@@ -69,10 +69,12 @@ final class BreakRetestScanner {
  static function export(array $p,float $quantity):array {
   $long=$p['direction']==='LONG';$entry=$p['entry_range'][$long?1:0];
   $s=['strategy_version'=>1,'id'=>'scan_'.$p['id'],'name'=>'اسکنر شکست و بازآزمایی BTCUSDT','symbol'=>'BTCUSDT','enabled'=>false,'action'=>$p['direction'],'initial_stage'=>'manual_review','max_setup_seconds'=>max(1,$p['expires_at']-$p['candle_close']),
-   'invalidation'=>['left'=>['price'=>true],'op'=>$long?'lte':'gte','right'=>$p['stop_loss']],
+   'invalidation'=>['left'=>['price'=>true],'op'=>$long?'lte':'gte','right'=>$p['invalidation_price']],
    'stages'=>[['id'=>'manual_review','transitions'=>[['event'=>'price','when'=>['all'=>[['left'=>['price'=>true],'op'=>'gte','right'=>$p['entry_range'][0]],['left'=>['price'=>true],'op'=>'lte','right'=>$p['entry_range'][1]]]],'signal'=>true]]]],
    'trade'=>['entry'=>['type'=>'LIMIT','price'=>$entry],'stop_loss'=>$p['stop_loss'],'take_profits'=>$p['targets'],'quantity'=>$quantity,'notes'=>'MANUAL_REVIEW_AVAILABLE · '.$p['strategy_version'].' · انقضا UTC: '.gmdate('c',$p['expires_at']).' · طرح آزمایشی؛ ثبت سفارش واقعی ندارد.']];
   // Compatibility export is an immutable manual-entry plan, NOT a dynamic JSON reimplementation of the scanner.
+  $s['trade']['entry']=['type'=>'MARKET'];$s['trade']['notes'].=' · ورود دستی شبیه‌سازی‌شده با VWAP مشاهدهٔ معتبر پس از تأخیر؛ LIMIT و تضمین پرشدن ندارد.';
+  $created=$p['created_at']??$p['candle_close'];$s['scanner_plan']=['model'=>ScannerPlan::ENTRY_MODEL,'candle_close'=>$p['candle_close'],'created_at'=>$created,'eligible_at'=>$created+$p['config_snapshot']['manual_delay_seconds'],'expires_at'=>$p['expires_at'],'invalidation_price'=>$p['invalidation_price'],'stop_loss'=>$p['stop_loss'],'entry_range'=>$p['entry_range'],'strategy_version'=>$p['strategy_version'],'rules_version'=>$p['rules_version'],'config_snapshot'=>$p['config_snapshot'],'exit_policy'=>$p['exit_policy']];
   $s['trade']['notes'].=' · خروج TP1: 100٪، TP2: 0٪؛ پس از TP1 کل موقعیت بسته است.';
   return Strategy::validate($s);
  }
