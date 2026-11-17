@@ -12,6 +12,7 @@ $deadline=microtime(true)+45;
 $checked=0;
 try {
  SmsFallback::dispatch(db(),time());
+ try{ScannerService::tick();}catch(Throwable $scannerError){systemLog('error','scanner.cron',$scannerError->getMessage());}
  do {
   $result=browserCheck(new Wallex($deadline));
   if($result['status']==='checked')$checked++;

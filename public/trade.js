@@ -11,6 +11,7 @@ const tradeDetails = {
   },
   title(payload) { if(payload.type==='entry_conditions_only')return 'فقط شرط‌های ورود بدون اندیکاتور تأیید شده'; if(payload.type==='binance_signal')return 'سیگنال بایننس شناسایی شد'; if(payload.type==='manual_review')return 'آماده بررسی برای ورود دستی'; if(payload.type==='execution_ready')return 'آمادگی مسیر تأییدشده'; return payload.type === 'cancelled' ? 'استراتژی لغو شد' : payload.action; },
   alertHtml(payload) {
+    if(payload.type==='scanner_manual_review'){const div=document.createElement('div');div.className='summary';div.textContent=this.notification(payload);return div.outerHTML+this.html(payload.trade,payload.action);}
     if(payload.type==='entry_conditions_only'){const div=document.createElement('div');div.className='summary entry-only-warning';div.textContent=this.entryOnlyMessage;return div.outerHTML+(payload.entry_evidence?.length?`<details><summary>مسیر و شرط‌های ثبت‌شده هنگام صدور هشدار</summary>${strategyDetails.rules(payload.entry_evidence,true)}</details>`:'<p class="small muted">برای این هشدار قدیمی، تصویر شرط‌های زمان صدور ذخیره نشده است.</p>');}
     if(['binance_signal','manual_review'].includes(payload.type)){const div=document.createElement('div');div.className='summary';div.textContent=this.notification(payload);return div.outerHTML;}
     if (payload.type !== 'cancelled') return this.html(payload.trade, payload.action);
@@ -45,6 +46,7 @@ const tradeDetails = {
     return '<div class="summary">' + this.lines(trade, action).map(line => `<div>${escape(line)}</div>`).join('') + '</div>';
   },
   notification(payload) {
+    if(payload.type==='scanner_manual_review')return `${payload.symbol} · ${payload.action} · MANUAL_REVIEW_AVAILABLE\n${payload.reason}\nنسخه: ${payload.scanner_version}\nانقضا UTC: ${new Date(payload.expires_at*1000).toISOString()}\nفقط بررسی دستی و معاملهٔ آزمایشی؛ سفارش واقعی ثبت نشده است.`;
     if(payload.type==='entry_conditions_only')return `${payload.name}\n${this.entryOnlyMessage}`;
     if(payload.type==='binance_signal')return `${payload.symbol} — سیگنال ${payload.action} شناسایی شد. قیمت بایننس ${payload.price}. بررسی شرایط ورود در والکس آغاز شد. این پیام دستور معامله نیست.`;
     if(payload.type==='manual_review')return `${payload.symbol} — شرایط تخمینی برای بررسی ورود ${payload.action} فراهم است. قیمت، کارمزد و امکان اجرا را در والکس بررسی کنید. تازگی دفتر تأیید نشده (UNVERIFIED)؛ این پیام دستور معامله نیست.`;

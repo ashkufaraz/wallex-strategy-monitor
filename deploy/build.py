@@ -28,6 +28,7 @@ def build(destination, hosts, username, password, public_access=False, require_h
     (destination / 'public' / 'guides').mkdir(exist_ok=True)
     shutil.copy2(ROOT / 'strategy-json-guide-fa.md', destination / 'public' / 'guides' / 'strategy.md')
     shutil.copy2(ROOT / 'docs' / 'live-indicators.md', destination / 'public' / 'guides' / 'indicators.md')
+    shutil.copy2(ROOT / 'docs' / 'scanner.md', destination / 'public' / 'guides' / 'scanner.md')
     owner_hash = os.environ.get('OWNER_BOOTSTRAP_HASH', '')
     if owner_hash and not re.fullmatch(r'[a-f0-9]{64}', owner_hash):
         raise ValueError('Invalid OWNER_BOOTSTRAP_HASH')
