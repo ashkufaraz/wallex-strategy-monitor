@@ -6,6 +6,7 @@ $host=$_SERVER['HTTP_HOST']??'';
 if(!in_array($host,['127.0.0.1:8080','localhost:8080','127.0.0.1:5078','localhost:5078'],true)) {http_response_code(403);exit('{"error":"Local access only"}');}
 session_start(['cookie_httponly'=>true,'cookie_samesite'=>'Strict','use_strict_mode'=>true]);$_SESSION['csrf']??=bin2hex(random_bytes(24));
 try {
+ if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['patterns'])){echo encode(PatternService::view());exit;}
  if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['scanner'])){echo encode(ScannerService::view());exit;}
  if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['mobile_feed'])){
   $userId=MobileAlerts::authenticate(db(),$_SERVER['HTTP_AUTHORIZATION']??'',time());
@@ -37,6 +38,7 @@ try {
  if(!hash_equals($_SESSION['csrf'],$_SERVER['HTTP_X_CSRF_TOKEN']??'')) {http_response_code(403);throw new RuntimeException('Invalid request token');}
  if((int)($_SERVER['CONTENT_LENGTH']??0)>100000) throw new RuntimeException('Request too large');$input=json_decode(file_get_contents('php://input'),true,64,JSON_THROW_ON_ERROR);$action=$input['action']??'';
  if(in_array($action,['login','register','logout','activate_owner'],true)){echo encode(accountAction($action,$input));exit;}
+ if(in_array($action,['pattern_settings','pattern_tick'],true)){requireSiteOwner();if($action==='pattern_settings')echo encode(['ok'=>true,'config'=>PatternService::save($input['config']??[])]);else{rateLimit('pattern_tick',1,60);echo encode(['ok'=>true,'result'=>PatternService::tick()]);}exit;}
  if(in_array($action,['scanner_settings','scanner_tick','scanner_backtest'],true)){
   requireSiteOwner();
   if($action==='scanner_settings')echo encode(['ok'=>true,'config'=>ScannerService::save($input['config']??[])]);

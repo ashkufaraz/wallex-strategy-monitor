@@ -46,6 +46,7 @@ def build(destination, hosts, username, password, public_access=False, require_h
     shutil.copy2(ROOT / 'deploy' / 'HostingAccess.php', destination / 'src' / 'HostingAccess.php')
     shutil.copy2(ROOT / 'cron.php', destination / 'cron.php')
     shutil.copy2(ROOT / 'scanner.php', destination / 'scanner.php')
+    shutil.copy2(ROOT / 'patterns.php', destination / 'patterns.php')
     # JSON is read as data; secrets never become executable PHP source.
     config = {'public_access': public_access, 'hosts': hosts, 'username': username, 'password_hash': hashed, 'require_https': require_https}
     (destination / 'config' / 'hosting.php').write_text(

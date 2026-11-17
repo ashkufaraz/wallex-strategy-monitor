@@ -1,0 +1,44 @@
+[
+  {
+    "id": "concurrency.six-processes",
+    "input": {
+      "processes": 6,
+      "same_confirmation": true,
+      "book": "unverified",
+      "fees": "unknown"
+    },
+    "expected": {
+      "events": 1,
+      "alerts": 1,
+      "signals": 1,
+      "no_manual": true
+    },
+    "actual": {
+      "events": 1,
+      "alerts": 1,
+      "signals": 1,
+      "no_manual": true
+    },
+    "status": "PASS"
+  },
+  {
+    "id": "restart.no-new-notice",
+    "input": {
+      "restart": "new PHP process",
+      "same_closed_candle": true
+    },
+    "expected": {
+      "events": 1,
+      "alerts": 1,
+      "signals": 1,
+      "no_manual": true
+    },
+    "actual": {
+      "events": 1,
+      "alerts": 1,
+      "signals": 1,
+      "no_manual": true
+    },
+    "status": "PASS"
+  }
+]

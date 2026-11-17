@@ -60,7 +60,8 @@ def run(browser=False):
             assert initial['user'] is None and initial['strategies'][0]['can_manage'] is False
             assert initial['logs']==[]
             scanner=guest.request(path='api.php?scanner=1');assert scanner['real_orders'] is False and not scanner['can_manage']
-            for action in ['scanner_settings','scanner_tick','scanner_backtest']:guest.request(dict(action=action),expected=401)
+            patterns=guest.request(path='api.php?patterns=1');assert patterns['real_orders'] is False and not patterns['can_manage'] and len(patterns['methods'])==2
+            for action in ['pattern_settings','pattern_tick','scanner_settings','scanner_tick','scanner_backtest']:guest.request(dict(action=action),expected=401)
             assert 'wallex-break-retest-v1' in guest.request(path='guide.php?name=scanner&download=1')
             guest.request(path='api.php?details=legacy')
             assert 'stages' in guest.request(path='guide.php?name=strategy&download=1')
@@ -80,7 +81,8 @@ def run(browser=False):
                 b.request(dict(action=action,id='alice',expected_version=alice['version']),expected=403)
             b.request(dict(action='save',json=json.dumps(first),expected_version=alice['version']),expected=403)
             a.request(dict(action='settings',interval=30),expected=403)
-            for action in ['scanner_settings','scanner_tick','scanner_backtest']:a.request(dict(action=action),expected=403)
+            patterns=guest.request(path='api.php?patterns=1');assert patterns['real_orders'] is False and not patterns['can_manage'] and len(patterns['methods'])==2
+            for action in ['pattern_settings','pattern_tick','scanner_settings','scanner_tick','scanner_backtest']:a.request(dict(action=action),expected=403)
             a.request(dict(action='order_flow_visibility',strategy_id='bob',visible=False),expected=403)
             a.request(dict(action='toggle',id='alice',expected_version=alice['version']))
             a.request(dict(action='save',json=json.dumps(first),expected_version=next(x for x in a.request()['strategies'] if x['config']['id']=='alice')['version']))

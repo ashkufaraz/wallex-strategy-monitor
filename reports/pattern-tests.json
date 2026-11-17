@@ -1,0 +1,880 @@
+{
+  "network": "disabled",
+  "cases": [
+    {
+      "id": "data.resume-higher-timeframe-pages",
+      "input": {
+        "first_attempt": "interrupted at third 4h history page",
+        "second_attempt": "same closed boundary"
+      },
+      "expected": {
+        "cached_pages": 2,
+        "recovered_4h_bars": 252,
+        "remaining_hour_requests": 4
+      },
+      "actual": {
+        "cached_pages": 2,
+        "recovered_4h_bars": 252,
+        "remaining_hour_requests": 4
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "mean.full.LONG",
+      "input": {
+        "bars": "independent Python fixture 98",
+        "direction": "LONG"
+      },
+      "expected": {
+        "direction": "LONG",
+        "pattern_status": "PATTERN_CONFIRMED",
+        "indicators": {
+          "previous": {
+            "close": 70,
+            "bands": {
+              "middle": 98.475,
+              "lower": 85.37356878047287,
+              "upper": 111.57643121952712,
+              "stddev_population": 6.550715609763563
+            },
+            "rsi": 14.726268609089573
+          },
+          "current": {
+            "close": 95,
+            "bands": {
+              "middle": 98.25,
+              "lower": 85.0723674356886,
+              "upper": 111.4276325643114,
+              "stddev_population": 6.588816282155696
+            },
+            "rsi": 47.796413746838766,
+            "adx": 0,
+            "atr": 80
+          }
+        }
+      },
+      "actual": {
+        "pattern_status": "PATTERN_CONFIRMED",
+        "direction": "LONG",
+        "reference_price": 95,
+        "reference_target": 98.25,
+        "suggested_invalidation": 40,
+        "indicators": {
+          "previous": {
+            "close": 70,
+            "bands": {
+              "middle": 98.475,
+              "lower": 85.37356878047287,
+              "upper": 111.57643121952712,
+              "stddev_population": 6.550715609763563
+            },
+            "rsi": 14.726268609089573
+          },
+          "current": {
+            "close": 95,
+            "bands": {
+              "middle": 98.25,
+              "lower": 85.0723674356886,
+              "upper": 111.4276325643114,
+              "stddev_population": 6.588816282155696
+            },
+            "rsi": 47.796413746838766,
+            "adx": 0,
+            "atr": 79.99999999999999
+          }
+        },
+        "conditions": [
+          {
+            "id": "previous_outside_band",
+            "status": "PASS",
+            "actual": 70,
+            "operator": "lt",
+            "required": 85.37356878047287
+          },
+          {
+            "id": "previous_rsi_extreme",
+            "status": "PASS",
+            "actual": 14.726268609089573,
+            "operator": "lt",
+            "required": 30
+          },
+          {
+            "id": "current_return_inside",
+            "status": "PASS",
+            "actual": 95,
+            "operator": "gt",
+            "required": 85.0723674356886
+          },
+          {
+            "id": "current_before_middle",
+            "status": "PASS",
+            "actual": 95,
+            "operator": "lt",
+            "required": 98.25
+          },
+          {
+            "id": "rsi_return",
+            "status": "PASS",
+            "actual": 47.796413746838766,
+            "operator": "gte",
+            "required": 30
+          },
+          {
+            "id": "low_trend_adx",
+            "status": "PASS",
+            "actual": 0,
+            "operator": "lt",
+            "required": 20
+          }
+        ],
+        "reason": "خروج کندل قبلی از باند و RSI افراطی، بازگشت کندل بسته‌شده به داخل باند، بازگشت RSI و ADX کم‌روند تأیید شدند."
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.LONG.previous_outside_band",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "previous",
+        "field": "close",
+        "value": 85.37356878047287
+      },
+      "expected": {
+        "failed": [
+          "previous_outside_band"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "previous_outside_band"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.LONG.previous_rsi_extreme",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "previous",
+        "field": "rsi",
+        "value": 30
+      },
+      "expected": {
+        "failed": [
+          "previous_rsi_extreme"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "previous_rsi_extreme"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.LONG.current_return_inside",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "current",
+        "field": "close",
+        "value": 85.0723674356886
+      },
+      "expected": {
+        "failed": [
+          "current_return_inside"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "current_return_inside"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.LONG.current_before_middle",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "current",
+        "field": "close",
+        "value": 98.25
+      },
+      "expected": {
+        "failed": [
+          "current_before_middle"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "current_before_middle"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.LONG.rsi_return",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "current",
+        "field": "rsi",
+        "value": 29.999
+      },
+      "expected": {
+        "failed": [
+          "rsi_return"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "rsi_return"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.LONG.low_trend_adx",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "current",
+        "field": "adx",
+        "value": 20
+      },
+      "expected": {
+        "failed": [
+          "low_trend_adx"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "low_trend_adx"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "mean.full.BEARISH",
+      "input": {
+        "bars": "independent Python fixture 98",
+        "direction": "BEARISH"
+      },
+      "expected": {
+        "direction": "BEARISH",
+        "pattern_status": "PATTERN_CONFIRMED",
+        "indicators": {
+          "previous": {
+            "close": 130,
+            "bands": {
+              "middle": 101.475,
+              "lower": 88.35069049435361,
+              "upper": 114.59930950564637,
+              "stddev_population": 6.562154752823192
+            },
+            "rsi": 84.50267622727142
+          },
+          "current": {
+            "close": 105,
+            "bands": {
+              "middle": 101.75,
+              "lower": 88.5723674356886,
+              "upper": 114.9276325643114,
+              "stddev_population": 6.588816282155696
+            },
+            "rsi": 52.19690159095792,
+            "adx": 0,
+            "atr": 80
+          }
+        }
+      },
+      "actual": {
+        "pattern_status": "PATTERN_CONFIRMED",
+        "direction": "BEARISH",
+        "reference_price": 105,
+        "reference_target": 101.75,
+        "suggested_invalidation": 160,
+        "indicators": {
+          "previous": {
+            "close": 130,
+            "bands": {
+              "middle": 101.475,
+              "lower": 88.35069049435361,
+              "upper": 114.59930950564637,
+              "stddev_population": 6.562154752823192
+            },
+            "rsi": 84.50267622727142
+          },
+          "current": {
+            "close": 105,
+            "bands": {
+              "middle": 101.75,
+              "lower": 88.5723674356886,
+              "upper": 114.9276325643114,
+              "stddev_population": 6.588816282155696
+            },
+            "rsi": 52.19690159095792,
+            "adx": 0,
+            "atr": 79.99999999999999
+          }
+        },
+        "conditions": [
+          {
+            "id": "previous_outside_band",
+            "status": "PASS",
+            "actual": 130,
+            "operator": "gt",
+            "required": 114.59930950564637
+          },
+          {
+            "id": "previous_rsi_extreme",
+            "status": "PASS",
+            "actual": 84.50267622727142,
+            "operator": "gt",
+            "required": 70
+          },
+          {
+            "id": "current_return_inside",
+            "status": "PASS",
+            "actual": 105,
+            "operator": "lt",
+            "required": 114.9276325643114
+          },
+          {
+            "id": "current_before_middle",
+            "status": "PASS",
+            "actual": 105,
+            "operator": "gt",
+            "required": 101.75
+          },
+          {
+            "id": "rsi_return",
+            "status": "PASS",
+            "actual": 52.19690159095792,
+            "operator": "lte",
+            "required": 70
+          },
+          {
+            "id": "low_trend_adx",
+            "status": "PASS",
+            "actual": 0,
+            "operator": "lt",
+            "required": 20
+          }
+        ],
+        "reason": "خروج کندل قبلی از باند و RSI افراطی، بازگشت کندل بسته‌شده به داخل باند، بازگشت RSI و ADX کم‌روند تأیید شدند."
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.BEARISH.previous_outside_band",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "previous",
+        "field": "close",
+        "value": 114.59930950564637
+      },
+      "expected": {
+        "failed": [
+          "previous_outside_band"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "previous_outside_band"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.BEARISH.previous_rsi_extreme",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "previous",
+        "field": "rsi",
+        "value": 70
+      },
+      "expected": {
+        "failed": [
+          "previous_rsi_extreme"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "previous_rsi_extreme"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.BEARISH.current_return_inside",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "current",
+        "field": "close",
+        "value": 114.9276325643114
+      },
+      "expected": {
+        "failed": [
+          "current_return_inside"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "current_return_inside"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.BEARISH.current_before_middle",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "current",
+        "field": "close",
+        "value": 101.75
+      },
+      "expected": {
+        "failed": [
+          "current_before_middle"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "current_before_middle"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.BEARISH.rsi_return",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "current",
+        "field": "rsi",
+        "value": 70.001
+      },
+      "expected": {
+        "failed": [
+          "rsi_return"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "rsi_return"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "reject.BEARISH.low_trend_adx",
+      "input": {
+        "predicate_input": "independent indicator bundle; one field changed",
+        "part": "current",
+        "field": "adx",
+        "value": 20
+      },
+      "expected": {
+        "failed": [
+          "low_trend_adx"
+        ]
+      },
+      "actual": {
+        "failed": [
+          "low_trend_adx"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "indicators.nonzero-ADX",
+      "input": {
+        "fixture": "nonzero directional movement; independent Python reference"
+      },
+      "expected": {
+        "indicators": {
+          "previous": {
+            "close": 103.22331492881989,
+            "bands": {
+              "middle": 102.13969537950564,
+              "lower": 101.17424696317838,
+              "upper": 103.1051437958329,
+              "stddev_population": 0.48272420816363226
+            },
+            "rsi": 75.61586730938866
+          },
+          "current": {
+            "close": 103.43306576515769,
+            "bands": {
+              "middle": 102.18069274992624,
+              "lower": 101.07837562909222,
+              "upper": 103.28300987076025,
+              "stddev_population": 0.5511585604170067
+            },
+            "rsi": 78.03540323598209,
+            "adx": 32.619156331722344,
+            "atr": 4
+          }
+        }
+      },
+      "actual": {
+        "indicators": {
+          "previous": {
+            "close": 103.22331492881989,
+            "bands": {
+              "middle": 102.13969537950564,
+              "lower": 101.17424696317838,
+              "upper": 103.1051437958329,
+              "stddev_population": 0.4827242081636323
+            },
+            "rsi": 75.61586730938866
+          },
+          "current": {
+            "close": 103.43306576515769,
+            "bands": {
+              "middle": 102.18069274992624,
+              "lower": 101.07837562909222,
+              "upper": 103.28300987076025,
+              "stddev_population": 0.5511585604170067
+            },
+            "rsi": 78.03540323598209,
+            "adx": 32.619156331722344,
+            "atr": 3.999999999999999
+          }
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.independent-mean",
+      "input": {
+        "1h": [],
+        "4h": [],
+        "book": "unverified",
+        "fees": "unknown"
+      },
+      "expected": {
+        "mean": "PATTERN_CONFIRMED",
+        "breakout": "UNAVAILABLE",
+        "execution": "NOT_EVALUATED",
+        "signals": 1
+      },
+      "actual": {
+        "mean": "PATTERN_CONFIRMED",
+        "breakout": "UNAVAILABLE",
+        "execution": "NOT_EVALUATED",
+        "signals": 1
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "quality.open",
+      "input": {
+        "mutation": "open"
+      },
+      "expected": {
+        "signals": 0
+      },
+      "actual": {
+        "signals": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "quality.missing",
+      "input": {
+        "mutation": "missing"
+      },
+      "expected": {
+        "signals": 0
+      },
+      "actual": {
+        "signals": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "quality.zero",
+      "input": {
+        "mutation": "zero"
+      },
+      "expected": {
+        "signals": 0
+      },
+      "actual": {
+        "signals": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "quality.conflicting",
+      "input": {
+        "mutation": "conflicting"
+      },
+      "expected": {
+        "signals": 0
+      },
+      "actual": {
+        "signals": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "quality.stale_receipt",
+      "input": {
+        "mutation": "stale_receipt"
+      },
+      "expected": {
+        "signals": 0
+      },
+      "actual": {
+        "signals": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "quality.late_publication",
+      "input": {
+        "mutation": "late_publication"
+      },
+      "expected": {
+        "signals": 0
+      },
+      "actual": {
+        "signals": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "quality.expired",
+      "input": {
+        "mutation": "expired"
+      },
+      "expected": {
+        "signals": 0
+      },
+      "actual": {
+        "signals": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "future.no-lookahead",
+      "input": {
+        "future_candle": "changed radically"
+      },
+      "expected": {
+        "same": true
+      },
+      "actual": {
+        "same": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "recovery.window",
+      "input": {
+        "before": "missing candle",
+        "after": "same window restored"
+      },
+      "expected": {
+        "before": 0,
+        "after": 1
+      },
+      "actual": {
+        "before": 0,
+        "after": 1
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "mean.no-repeat-inside",
+      "input": {
+        "observations": "same closed candle, then another close inside band"
+      },
+      "expected": {
+        "first": 1,
+        "repeat": 0,
+        "inside": 0
+      },
+      "actual": {
+        "first": 1,
+        "repeat": 0,
+        "inside": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "pattern.with-UNKNOWN",
+      "input": {
+        "legacy_position": "UNKNOWN",
+        "capital": "locked",
+        "fee_unverified": true
+      },
+      "expected": {
+        "alerts": 1,
+        "events": 1,
+        "status": "NOT_EVALUATED",
+        "legacy_status": "UNKNOWN"
+      },
+      "actual": {
+        "alerts": 1,
+        "events": 1,
+        "status": "NOT_EVALUATED",
+        "legacy_status": "UNKNOWN"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "spot.bearish-not-short",
+      "input": {
+        "instrument": "SPOT",
+        "confirmed": "BEARISH"
+      },
+      "expected": {
+        "direction": "BEARISH",
+        "short_claim": false,
+        "execution": "NOT_EVALUATED"
+      },
+      "actual": {
+        "direction": "BEARISH",
+        "short_claim": false,
+        "execution": "NOT_EVALUATED"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "breakout.chart-without-execution",
+      "input": {
+        "book": "UNVERIFIED",
+        "fees_verified": false
+      },
+      "expected": {
+        "signals": 1,
+        "event": "PATTERN_CONFIRMED",
+        "execution": "NOT_EVALUATED"
+      },
+      "actual": {
+        "signals": 1,
+        "event": "PATTERN_CONFIRMED",
+        "execution": "NOT_EVALUATED"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.independent-breakout",
+      "input": {
+        "mean_window": "missing older than breakout window",
+        "breakout_window": "complete"
+      },
+      "expected": {
+        "breakout": "PATTERN_CONFIRMED",
+        "mean": "UNAVAILABLE"
+      },
+      "actual": {
+        "breakout": "PATTERN_CONFIRMED",
+        "mean": "UNAVAILABLE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "source.revised-closed-candle",
+      "input": {
+        "first": "valid snapshot",
+        "later": "same closed candle revised"
+      },
+      "expected": {
+        "status": "UNAVAILABLE",
+        "signals": 0
+      },
+      "actual": {
+        "status": "UNAVAILABLE",
+        "signals": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "mean.new-exit-return-required",
+      "input": {
+        "sequence": "outside/inside, new outside, new inside"
+      },
+      "expected": {
+        "first": 1,
+        "outside": 0,
+        "fresh_return": 1,
+        "different_id": true,
+        "old_target_fixed": true
+      },
+      "actual": {
+        "first": 1,
+        "outside": 0,
+        "fresh_return": 1,
+        "different_id": true,
+        "old_target_fixed": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "notice.pattern-and-execution-once",
+      "input": {
+        "opportunity": "same breakout",
+        "sequence": "chart alert then executable gate passes"
+      },
+      "expected": {
+        "alerts": 1,
+        "type": "scanner_pattern",
+        "execution": "MANUAL_REVIEW_AVAILABLE"
+      },
+      "actual": {
+        "alerts": 1,
+        "type": "scanner_pattern",
+        "execution": "MANUAL_REVIEW_AVAILABLE"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "concurrency.six-processes",
+      "input": {
+        "processes": 6,
+        "same_confirmation": true,
+        "book": "unverified",
+        "fees": "unknown"
+      },
+      "expected": {
+        "events": 1,
+        "alerts": 1,
+        "signals": 1,
+        "no_manual": true
+      },
+      "actual": {
+        "events": 1,
+        "alerts": 1,
+        "signals": 1,
+        "no_manual": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "restart.no-new-notice",
+      "input": {
+        "restart": "new PHP process",
+        "same_closed_candle": true
+      },
+      "expected": {
+        "events": 1,
+        "alerts": 1,
+        "signals": 1,
+        "no_manual": true
+      },
+      "actual": {
+        "events": 1,
+        "alerts": 1,
+        "signals": 1,
+        "no_manual": true
+      },
+      "status": "PASS"
+    }
+  ],
+  "summary": {
+    "total": 36,
+    "pass": 36,
+    "fail": 0
+  }
+}

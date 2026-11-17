@@ -1,0 +1,407 @@
+{
+    "synthetic_examples_only": true,
+    "signals": {
+        "mean_LONG": {
+            "pattern_status": "PATTERN_CONFIRMED",
+            "direction": "LONG",
+            "reference_price": 95,
+            "reference_target": 98.25,
+            "suggested_invalidation": 40,
+            "indicators": {
+                "previous": {
+                    "close": 70,
+                    "bands": {
+                        "middle": 98.475,
+                        "lower": 85.37356878047287,
+                        "upper": 111.57643121952712,
+                        "stddev_population": 6.550715609763563
+                    },
+                    "rsi": 14.726268609089573
+                },
+                "current": {
+                    "close": 95,
+                    "bands": {
+                        "middle": 98.25,
+                        "lower": 85.0723674356886,
+                        "upper": 111.4276325643114,
+                        "stddev_population": 6.588816282155696
+                    },
+                    "rsi": 47.796413746838766,
+                    "adx": 0,
+                    "atr": 79.99999999999999
+                }
+            },
+            "conditions": [
+                {
+                    "id": "previous_outside_band",
+                    "status": "PASS",
+                    "actual": 70,
+                    "operator": "lt",
+                    "required": 85.37356878047287
+                },
+                {
+                    "id": "previous_rsi_extreme",
+                    "status": "PASS",
+                    "actual": 14.726268609089573,
+                    "operator": "lt",
+                    "required": 30
+                },
+                {
+                    "id": "current_return_inside",
+                    "status": "PASS",
+                    "actual": 95,
+                    "operator": "gt",
+                    "required": 85.0723674356886
+                },
+                {
+                    "id": "current_before_middle",
+                    "status": "PASS",
+                    "actual": 95,
+                    "operator": "lt",
+                    "required": 98.25
+                },
+                {
+                    "id": "rsi_return",
+                    "status": "PASS",
+                    "actual": 47.796413746838766,
+                    "operator": "gte",
+                    "required": 30
+                },
+                {
+                    "id": "low_trend_adx",
+                    "status": "PASS",
+                    "actual": 0,
+                    "operator": "lt",
+                    "required": 20
+                }
+            ],
+            "reason": "خروج کندل قبلی از باند و RSI افراطی، بازگشت کندل بسته‌شده به داخل باند، بازگشت RSI و ADX کم‌روند تأیید شدند.",
+            "id": "28b26c0b0aaeb4c6446d24060fe9c2fedbf9c4fd774e53296884e3cf7436cdd7",
+            "symbol": "BTCUSDT",
+            "strategy_id": "mean_reversion_v1",
+            "rules_version": "1.0.0",
+            "timeframe": "15m",
+            "confirmation_candle_close": 1728000000,
+            "candle_close": 1728000000,
+            "candle_utc": "2024-10-04T00:00:00Z",
+            "detected_at": 1728000000,
+            "sent_at": 1728000000,
+            "execution_status": "NOT_EVALUATED",
+            "execution_limitations": [
+                "ORDER_BOOK_FRESHNESS_NOT_CHECKED",
+                "FEES_DEPTH_CAPITAL_NOT_CHECKED",
+                "CHART_LEVELS_NOT_EXECUTABLE_PRICES"
+            ],
+            "expires_at": 1728000900,
+            "config_snapshot": {
+                "enabled": true,
+                "bb_period": 20,
+                "bb_stddev": 2,
+                "rsi_period": 14,
+                "rsi_lower": 30,
+                "rsi_upper": 70,
+                "adx_period": 14,
+                "adx_max": 20,
+                "atr_period": 14,
+                "invalidation_atr": 0.25,
+                "expiry_seconds": 900
+            },
+            "data_received_at": 1728000000,
+            "publication_delay_seconds": 0,
+            "level_kind": "CHART_REFERENCE_ONLY",
+            "notification_status": "QUEUED_EXISTING_ALERT_CHANNEL",
+            "message": "BTCUSDT — الگوی بازگشت به میانگین، جهت خرید، در کندل بسته‌شدهٔ ۱۵دقیقه UTC 2024-10-04T00:00:00Z تأیید شد. قیمت مرجع: 95 USDT. شرایط اجرای معامله بررسی نشده است."
+        },
+        "mean_BEARISH": {
+            "pattern_status": "PATTERN_CONFIRMED",
+            "direction": "BEARISH",
+            "reference_price": 105,
+            "reference_target": 101.75,
+            "suggested_invalidation": 160,
+            "indicators": {
+                "previous": {
+                    "close": 130,
+                    "bands": {
+                        "middle": 101.475,
+                        "lower": 88.35069049435361,
+                        "upper": 114.59930950564637,
+                        "stddev_population": 6.562154752823192
+                    },
+                    "rsi": 84.50267622727142
+                },
+                "current": {
+                    "close": 105,
+                    "bands": {
+                        "middle": 101.75,
+                        "lower": 88.5723674356886,
+                        "upper": 114.9276325643114,
+                        "stddev_population": 6.588816282155696
+                    },
+                    "rsi": 52.19690159095792,
+                    "adx": 0,
+                    "atr": 79.99999999999999
+                }
+            },
+            "conditions": [
+                {
+                    "id": "previous_outside_band",
+                    "status": "PASS",
+                    "actual": 130,
+                    "operator": "gt",
+                    "required": 114.59930950564637
+                },
+                {
+                    "id": "previous_rsi_extreme",
+                    "status": "PASS",
+                    "actual": 84.50267622727142,
+                    "operator": "gt",
+                    "required": 70
+                },
+                {
+                    "id": "current_return_inside",
+                    "status": "PASS",
+                    "actual": 105,
+                    "operator": "lt",
+                    "required": 114.9276325643114
+                },
+                {
+                    "id": "current_before_middle",
+                    "status": "PASS",
+                    "actual": 105,
+                    "operator": "gt",
+                    "required": 101.75
+                },
+                {
+                    "id": "rsi_return",
+                    "status": "PASS",
+                    "actual": 52.19690159095792,
+                    "operator": "lte",
+                    "required": 70
+                },
+                {
+                    "id": "low_trend_adx",
+                    "status": "PASS",
+                    "actual": 0,
+                    "operator": "lt",
+                    "required": 20
+                }
+            ],
+            "reason": "خروج کندل قبلی از باند و RSI افراطی، بازگشت کندل بسته‌شده به داخل باند، بازگشت RSI و ADX کم‌روند تأیید شدند.",
+            "id": "dccdf9a2a87bd59a9917b6c61237e0e54b9a8e808a4f36d7c4634b1eb8ab65a9",
+            "symbol": "BTCUSDT",
+            "strategy_id": "mean_reversion_v1",
+            "rules_version": "1.0.0",
+            "timeframe": "15m",
+            "confirmation_candle_close": 1728000000,
+            "candle_close": 1728000000,
+            "candle_utc": "2024-10-04T00:00:00Z",
+            "detected_at": 1728000000,
+            "sent_at": null,
+            "execution_status": "NOT_EVALUATED",
+            "execution_limitations": [
+                "ORDER_BOOK_FRESHNESS_NOT_CHECKED",
+                "FEES_DEPTH_CAPITAL_NOT_CHECKED",
+                "CHART_LEVELS_NOT_EXECUTABLE_PRICES",
+                "SPOT_BEARISH_IS_NOT_EXECUTABLE_SHORT"
+            ],
+            "expires_at": 1728000900,
+            "config_snapshot": {
+                "enabled": true,
+                "bb_period": 20,
+                "bb_stddev": 2,
+                "rsi_period": 14,
+                "rsi_lower": 30,
+                "rsi_upper": 70,
+                "adx_period": 14,
+                "adx_max": 20,
+                "atr_period": 14,
+                "invalidation_atr": 0.25,
+                "expiry_seconds": 900
+            },
+            "data_received_at": 1728000000,
+            "publication_delay_seconds": 0,
+            "level_kind": "CHART_REFERENCE_ONLY",
+            "message": "BTCUSDT — الگوی بازگشت به میانگین، الگوی نزولی، در کندل بسته‌شدهٔ ۱۵دقیقه UTC 2024-10-04T00:00:00Z تأیید شد. قیمت مرجع: 105 USDT. شرایط اجرای معامله بررسی نشده است. این الگوی نموداری، امکان بازکردن شورت در بازار نقدی را تأیید نمی‌کند."
+        },
+        "breakout": {
+            "id": "ff47bab17d3bc6717da6f59199abf349feaca61eddf1e31018d75d81fcc560af",
+            "direction": "LONG",
+            "symbol": "BTCUSDT",
+            "strategy_version": "wallex-break-retest-v1:1.2.0:aea57a123d24ee8f",
+            "candle_close": 1728001800,
+            "candle_utc": "2024-10-04T00:30:00Z",
+            "break_at": 1728000000,
+            "retest_at": 1728000900,
+            "level": 100,
+            "atr": 1.3624999999999954,
+            "reference_price": 101.6,
+            "entry_range": [
+                101.19125,
+                102.00874999999999
+            ],
+            "stop_loss": 99.2275,
+            "targets": [
+                108.71749999999996,
+                111.08999999999995
+            ],
+            "expires_at": 1728003600,
+            "conditions": [
+                {
+                    "id": "trend_4h",
+                    "status": "PASS",
+                    "actual": {
+                        "direction": "LONG",
+                        "ema_fast": 98.69999999999999,
+                        "ema_slow": 98.6,
+                        "previous_fast": 98.5,
+                        "close": 98.8
+                    },
+                    "required": "EMA fast\/slow + slope + close"
+                },
+                {
+                    "id": "level_1h",
+                    "status": "PASS",
+                    "actual": {
+                        "level": 100,
+                        "touches": 3
+                    },
+                    "required": 2
+                },
+                {
+                    "id": "breakout_15m",
+                    "status": "PASS",
+                    "actual": 100.8,
+                    "required": 100.125
+                },
+                {
+                    "id": "break_volume",
+                    "status": "PASS",
+                    "actual": 3,
+                    "required": 1.5
+                },
+                {
+                    "id": "trend_4h",
+                    "status": "PASS",
+                    "actual": {
+                        "direction": "LONG",
+                        "ema_fast": 98.69999999999999,
+                        "ema_slow": 98.6,
+                        "previous_fast": 98.5,
+                        "close": 98.8
+                    },
+                    "required": "EMA fast\/slow + slope + close"
+                },
+                {
+                    "id": "retest_15m",
+                    "status": "PASS",
+                    "actual": 100,
+                    "required": [
+                        99.6875,
+                        100.3125
+                    ]
+                },
+                {
+                    "id": "trend_4h",
+                    "status": "PASS",
+                    "actual": {
+                        "direction": "LONG",
+                        "ema_fast": 98.69999999999999,
+                        "ema_slow": 98.6,
+                        "previous_fast": 98.5,
+                        "close": 98.8
+                    },
+                    "required": "EMA fast\/slow + slope + close"
+                },
+                {
+                    "id": "confirmation_15m",
+                    "status": "PASS",
+                    "actual": 101.6,
+                    "required": 101.068125
+                },
+                {
+                    "id": "confirmation_volume",
+                    "status": "PASS",
+                    "actual": 1.4285714285714286,
+                    "required": 1
+                },
+                {
+                    "id": "structural_atr_stop",
+                    "status": "PASS",
+                    "actual": 1.741284403669722,
+                    "required": 3
+                }
+            ],
+            "reason": "روند ۴ساعته، سطح ۱ساعته و شکست، بازآزمایی و تأیید روی سه کندل بسته‌شدهٔ متمایز ۱۵دقیقه.",
+            "config_snapshot": {
+                "enabled": true,
+                "symbol": "BTCUSDT",
+                "capital": 70,
+                "risk_pct": 1,
+                "ema_fast": 2,
+                "ema_slow": 3,
+                "atr_period": 2,
+                "level_lookback": 5,
+                "level_touches": 2,
+                "touch_separation": 2,
+                "level_tolerance_atr": 0.25,
+                "break_buffer_atr": 0.1,
+                "retest_tolerance_atr": 0.25,
+                "confirm_buffer_atr": 0.05,
+                "volume_period": 2,
+                "break_volume_ratio": 1.5,
+                "confirm_volume_ratio": 1,
+                "setup_bars": 8,
+                "entry_expiry_seconds": 1800,
+                "manual_delay_seconds": 60,
+                "entry_band_atr": 0.3,
+                "structure_buffer_atr": 0.2,
+                "stop_atr": 1.5,
+                "max_stop_atr": 3,
+                "tp1_r": 3,
+                "tp2_r": 4,
+                "min_net_rr": 2,
+                "max_spread_bps": 20,
+                "tp1_exit_pct": 100,
+                "tp2_exit_pct": 0,
+                "stop_after_tp1": "POSITION_CLOSED",
+                "entry_fee_bps": 10,
+                "exit_fee_bps": 10,
+                "slippage_bps": 5,
+                "fixed_cost_usdt": 0,
+                "financing_bps_day": null,
+                "quote_max_age_seconds": 10,
+                "max_paper_seconds": 86400,
+                "fees_verified": true,
+                "fee_reference": "SYNTHETIC_FIXTURE_ONLY",
+                "observation_interval_seconds": 60,
+                "evaluation_id": "btc-v1-001"
+            },
+            "rules_version": "1.2.0",
+            "invalidation_price": 99.6875,
+            "exit_policy": {
+                "tp1_exit_pct": 100,
+                "tp2_exit_pct": 0,
+                "stop_after_tp1": "POSITION_CLOSED"
+            },
+            "strategy_id": "wallex-break-retest-v1",
+            "timeframe": "15m",
+            "confirmation_candle_close": 1728001800,
+            "detected_at": 1728001810,
+            "sent_at": 1728001810,
+            "pattern_status": "PATTERN_CONFIRMED",
+            "execution_status": "NOT_EVALUATED",
+            "execution_limitations": [
+                "ORDER_BOOK_FRESHNESS_NOT_CHECKED",
+                "FEES_DEPTH_CAPITAL_NOT_CHECKED",
+                "CHART_LEVELS_NOT_EXECUTABLE_PRICES"
+            ],
+            "data_received_at": 1728001810,
+            "publication_delay_seconds": 10,
+            "level_kind": "CHART_REFERENCE_ONLY",
+            "reference_target": 108.71749999999996,
+            "suggested_invalidation": 99.6875,
+            "notification_status": "QUEUED_EXISTING_ALERT_CHANNEL",
+            "message": "BTCUSDT — الگوی شکست و بازآزمایی، جهت خرید، در کندل بسته‌شدهٔ ۱۵دقیقه UTC 2024-10-04T00:30:00Z تأیید شد. قیمت مرجع: 101.6 USDT. شرایط اجرای معامله بررسی نشده است."
+        }
+    }
+}

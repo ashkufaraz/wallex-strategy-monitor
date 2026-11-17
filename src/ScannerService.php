@@ -7,6 +7,7 @@ require_once __DIR__.'/ScannerExecution.php';
 require_once __DIR__.'/ScannerPaper.php';
 require_once __DIR__.'/ScannerRunner.php';
 require_once __DIR__.'/ScannerReadiness.php';
+require_once __DIR__.'/PatternService.php';
 
 final class ScannerService {
  static function migrate(PDO $db):void {
@@ -50,7 +51,7 @@ final class ScannerService {
    $update=db()->prepare('UPDATE scanner_runs SET state=?,last_checked=?,last_result=? WHERE version=? AND state=?');$update->execute([encode($state),$now,encode($r),$version,$row['state']]);
    if(!$update->rowCount()){db()->rollBack();return ['status'=>'CONCURRENT_UPDATE_DISCARDED'];}
    $q=db()->prepare('SELECT payload FROM scanner_totals WHERE version=?');$q->execute([$version]);$total=json_decode($q->fetchColumn()?:'[]',true);$total=ScannerReadiness::tally($total,$snapshot,$stages,$r,$c['observation_interval_seconds']);db()->prepare('INSERT OR REPLACE INTO scanner_totals VALUES(?,?)')->execute([$version,encode($total)]);
-   $decision=$r['decision'];$key=hash('sha256',encode([$version,$decision['candle_close']??intdiv($now,900)*900,$decision['status'],$decision['reason'],$decision['candidate']['id']??null]));
+   $decision=$r['decision'];if(isset($decision['candidate']))PatternService::recordExecution($decision['candidate'],$decision,$now);$key=hash('sha256',encode([$version,$decision['candle_close']??intdiv($now,900)*900,$decision['status'],$decision['reason'],$decision['candidate']['id']??null]));
    if($decision['status']!=='DUPLICATE')db()->prepare('INSERT OR IGNORE INTO scanner_checks(version,observed,status,reason,payload,dedupe) VALUES(?,?,?,?,?,?)')->execute([$version,$now,$decision['status'],$decision['reason'],encode($decision),$key]);
    if($r['signal']){
     $p=$r['signal'];$q=db()->prepare('INSERT OR IGNORE INTO scanner_signals VALUES(?,?,?,?)');$q->execute([$p['id'],$version,$now,encode($p)]);
@@ -59,7 +60,7 @@ final class ScannerService {
      db()->prepare('INSERT OR IGNORE INTO strategy_owners VALUES(?,?)')->execute([$id,$owner]);
      $alert=['type'=>'scanner_manual_review','strategy_id'=>$id,'name'=>'اسکنر شکست و بازآزمایی BTCUSDT','symbol'=>'BTCUSDT','action'=>$p['direction'],'price'=>$p['entry'],'event'=>'scanner:manual_review','event_time'=>$p['candle_close'],'status'=>'MANUAL_REVIEW_AVAILABLE','scanner_signal_id'=>$p['id'],'scanner_version'=>$version,'reason'=>$p['reason'],'expires_at'=>$p['expires_at'],'analysis_sources'=>[],'trade'=>$p['json_strategy']['trade']];
      $alert['scanner_plan']=$p['json_strategy']['scanner_plan'];$alert['invalidation_price']=$p['invalidation_price'];$alert['entry_model']=$p['entry_model'];$alert['config_snapshot']=$p['config_snapshot'];$alert['rules_version']=$p['rules_version'];$alert['exit_policy']=$p['exit_policy'];$alert['cost_assumptions']=$p['cost_assumptions'];
-     db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute(['scanner:'.$p['id'],$now,encode($alert)]);
+     db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute(['scanner:opportunity:'.PatternConfig::opportunity($p['symbol'],PatternConfig::BREAKOUT,$p['direction'],$p['candle_close']),$now,encode($alert)]);
     }
    }
    foreach($r['trade_events'] as $trade)db()->prepare('INSERT OR REPLACE INTO scanner_trades VALUES(?,?,?,?)')->execute([$trade['id'],$version,$trade['status'],encode($trade)]);
@@ -86,6 +87,7 @@ final class ScannerService {
   $oldest=(int)(db()->query('SELECT min(observed) FROM scanner_observations')->fetchColumn()?:$snapshot['observed_at']);db()->prepare('DELETE FROM scanner_candles WHERE opened<?')->execute([$oldest-ScannerConfig::counts($snapshot['config_snapshot'])['4h']*14400-14400]);
  }
  static function tick(?Wallex $api=null,?int $at=null,?string $lockPath=null):array {
+  if(!defined('TEST_DATABASE')){try{PatternService::tick($api,$at);}catch(Throwable $e){systemLog('warning','pattern.unavailable',$e->getMessage());}}
   $now=$at??time();self::migrate(db());$c=self::config();$row=self::row($c);$state=json_decode($row['state'],true);
   if(!$c['enabled']&&$state['paper']===null)return ['status'=>'DISABLED'];
   $lock=fopen($lockPath??dirname(__DIR__).'/data/scanner.lock','c');if(!$lock)throw new RuntimeException('Scanner lock unavailable');if(!flock($lock,LOCK_EX|LOCK_NB)){fclose($lock);return ['status'=>'BUSY'];}
