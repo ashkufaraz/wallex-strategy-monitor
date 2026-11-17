@@ -1,0 +1,78 @@
+{
+  "verified_at_utc": "2026-11-17T10:40:25.032485+00:00",
+  "code_commit": "13fabbe",
+  "workflow_run": "https://github.com/ashkufaraz/wallex-strategy-monitor/actions/runs/44066308365",
+  "public_api": {
+    "config": {
+      "enabled": true,
+      "interval_seconds": 120,
+      "receipt_max_age_seconds": 180,
+      "publication_max_delay_seconds": 300,
+      "methods": {
+        "wallex-break-retest-v1": {
+          "enabled": true
+        },
+        "mean_reversion_v1": {
+          "enabled": true,
+          "bb_period": 20,
+          "bb_stddev": 2,
+          "rsi_period": 14,
+          "rsi_lower": 30,
+          "rsi_upper": 70,
+          "adx_period": 14,
+          "adx_max": 20,
+          "atr_period": 14,
+          "invalidation_atr": 0.25,
+          "expiry_seconds": 900
+        }
+      }
+    },
+    "methods": {
+      "wallex-break-retest-v1": {
+        "strategy_id": "wallex-break-retest-v1",
+        "name": "شکست و بازآزمایی",
+        "enabled": true,
+        "data_status": "INSUFFICIENT",
+        "pattern_status": "UNAVAILABLE",
+        "execution_status": "NOT_EVALUATED",
+        "reason": "UNAVAILABLE: missing or stale 3600s candle at 2026-11-16T23:00:00+00:00",
+        "last_signal": null
+      },
+      "mean_reversion_v1": {
+        "strategy_id": "mean_reversion_v1",
+        "name": "بازگشت به میانگین",
+        "enabled": true,
+        "data_status": "INSUFFICIENT",
+        "pattern_status": "UNAVAILABLE",
+        "execution_status": "NOT_EVALUATED",
+        "reason": "UNAVAILABLE: missing or stale 900s candle at 2026-11-16T10:30:00+00:00",
+        "last_signal": null
+      }
+    },
+    "signals": [],
+    "last_checked": 1794912002,
+    "can_manage": false,
+    "real_orders": false,
+    "scope": "CHART_PATTERN_ALERTS_ONLY"
+  },
+  "pattern_script_matches_deployed_commit": true,
+  "ui": [
+    {
+      "width": 390,
+      "cards": 2,
+      "advanced_closed": true,
+      "overflow": false,
+      "js_errors": [],
+      "all_post_requests_blocked": true
+    },
+    {
+      "width": 1440,
+      "cards": 2,
+      "advanced_closed": true,
+      "overflow": false,
+      "js_errors": [],
+      "all_post_requests_blocked": true
+    }
+  ],
+  "real_orders": false
+}
