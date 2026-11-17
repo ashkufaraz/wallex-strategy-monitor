@@ -1,0 +1,1314 @@
+{
+    "suite": "Deterministic scanner audit",
+    "fixture": "tests\/scanner-fixture.php; synthetic, not Wallex performance evidence",
+    "anchor_utc": "2024-10-04T00:00:00+00:00",
+    "config": {
+        "enabled": true,
+        "symbol": "BTCUSDT",
+        "capital": 70,
+        "risk_pct": 1,
+        "ema_fast": 2,
+        "ema_slow": 3,
+        "atr_period": 2,
+        "level_lookback": 5,
+        "level_touches": 2,
+        "touch_separation": 2,
+        "level_tolerance_atr": 0.25,
+        "break_buffer_atr": 0.1,
+        "retest_tolerance_atr": 0.25,
+        "confirm_buffer_atr": 0.05,
+        "volume_period": 2,
+        "break_volume_ratio": 1.5,
+        "confirm_volume_ratio": 1,
+        "setup_bars": 8,
+        "entry_expiry_seconds": 1800,
+        "manual_delay_seconds": 60,
+        "entry_band_atr": 0.3,
+        "structure_buffer_atr": 0.2,
+        "stop_atr": 1.5,
+        "max_stop_atr": 3,
+        "tp1_r": 3,
+        "tp2_r": 4,
+        "min_net_rr": 2,
+        "max_spread_bps": 20,
+        "entry_fee_bps": 10,
+        "exit_fee_bps": 10,
+        "slippage_bps": 5,
+        "fixed_cost_usdt": 0,
+        "financing_bps_day": 0,
+        "quote_max_age_seconds": 10,
+        "max_paper_seconds": 86400
+    },
+    "cases": [
+        {
+            "id": "closed.open-reversal",
+            "section": "کندل بسته‌شده",
+            "input": {
+                "fixture": "base",
+                "observation": "T-1,T",
+                "break_close": 99.4
+            },
+            "expected": {
+                "before": "REJECTED",
+                "after": "REJECTED",
+                "signals": 0
+            },
+            "actual": {
+                "before": "REJECTED",
+                "after": "REJECTED",
+                "signals": 0
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "closed.boundary",
+            "section": "کندل بسته‌شده",
+            "input": {
+                "observations": [
+                    "T-1",
+                    "T",
+                    "T+1"
+                ]
+            },
+            "expected": {
+                "before": "REJECTED",
+                "at": "WAITING_RETEST",
+                "repeat": "DUPLICATE"
+            },
+            "actual": {
+                "before": "REJECTED",
+                "at": "WAITING_RETEST",
+                "repeat": "DUPLICATE"
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "future.mutation",
+            "section": "اطلاعات آینده",
+            "input": {
+                "mutate": "all timeframes strictly beyond final observation"
+            },
+            "expected": {
+                "same_signals": true,
+                "same_decisions": true
+            },
+            "actual": {
+                "same_signals": true,
+                "same_decisions": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "level.cutoff",
+            "section": "اطلاعات آینده",
+            "input": {
+                "level_bars": "hours ending before breakout open",
+                "mutation": "hour ending T high=1000000; must not alter level tolerance"
+            },
+            "expected": {
+                "same_level_condition": true
+            },
+            "actual": {
+                "same_level_condition": false
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "pattern.complete",
+            "section": "مسیر کامل",
+            "input": {
+                "fixture": "base; TP1=3R, TP2=4R"
+            },
+            "expected": {
+                "count": 1,
+                "direction": "LONG",
+                "close": 1728001800,
+                "level": 100,
+                "atr": 1.3625,
+                "stop": 99.22,
+                "targets": [
+                    108.71,
+                    111.09
+                ],
+                "entry_range": [
+                    101.19125,
+                    102.00875
+                ],
+                "created": 1728001800
+            },
+            "actual": {
+                "count": 1,
+                "direction": "LONG",
+                "close": 1728001800,
+                "level": 100,
+                "atr": 1.3624999999999954,
+                "stop": 99.22,
+                "targets": [
+                    108.71000000000001,
+                    111.08
+                ],
+                "entry_range": [
+                    101.19125,
+                    102.00874999999999
+                ],
+                "created": 1728001800
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "reject.trend",
+            "section": "رد تک‌شرط",
+            "input": {
+                "fixture": "base",
+                "only_violation": "trend"
+            },
+            "expected": {
+                "failed": [
+                    "trend_4h"
+                ],
+                "reason_code": "trend_4h"
+            },
+            "actual": {
+                "failed": [
+                    "trend_4h"
+                ],
+                "reason_code": null
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "reject.volume",
+            "section": "رد تک‌شرط",
+            "input": {
+                "fixture": "base",
+                "only_violation": "volume"
+            },
+            "expected": {
+                "failed": [
+                    "break_volume"
+                ],
+                "reason_code": "break_volume"
+            },
+            "actual": {
+                "failed": [
+                    "break_volume"
+                ],
+                "reason_code": null
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "reject.breakout",
+            "section": "رد تک‌شرط",
+            "input": {
+                "fixture": "base",
+                "only_violation": "breakout"
+            },
+            "expected": {
+                "failed": [
+                    "breakout_15m"
+                ],
+                "reason_code": "breakout_15m"
+            },
+            "actual": {
+                "failed": [
+                    "breakout_15m"
+                ],
+                "reason_code": null
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "reject.retest",
+            "section": "رد تک‌شرط",
+            "input": {
+                "fixture": "base",
+                "only_violation": "retest"
+            },
+            "expected": {
+                "failed": [
+                    "retest_15m"
+                ],
+                "reason_code": "retest_15m"
+            },
+            "actual": {
+                "failed": [
+                    "retest_15m"
+                ],
+                "reason_code": null
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "setup.invalidated",
+            "section": "انقضا و ابطال",
+            "input": {
+                "retest_close": 99,
+                "then": "return to base at T+1800"
+            },
+            "expected": {
+                "invalidated": true,
+                "revived": false
+            },
+            "actual": {
+                "invalidated": true,
+                "revived": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "setup.late-retest",
+            "section": "انقضا و ابطال",
+            "input": {
+                "setup_bars": 2,
+                "retests": "none until third bar"
+            },
+            "expected": {
+                "expired": true,
+                "candidate": false
+            },
+            "actual": {
+                "expired": false,
+                "candidate": false
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "data.missing",
+            "section": "شکاف و بازیابی",
+            "input": {
+                "fixture": "base",
+                "mutation": "missing"
+            },
+            "expected": {
+                "blocked": true,
+                "recovered": true
+            },
+            "actual": {
+                "blocked": true,
+                "recovered": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "data.zero",
+            "section": "شکاف و بازیابی",
+            "input": {
+                "fixture": "base",
+                "mutation": "zero"
+            },
+            "expected": {
+                "blocked": true,
+                "recovered": true
+            },
+            "actual": {
+                "blocked": true,
+                "recovered": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "data.stale",
+            "section": "شکاف و بازیابی",
+            "input": {
+                "fixture": "base",
+                "mutation": "stale"
+            },
+            "expected": {
+                "blocked": true,
+                "recovered": true
+            },
+            "actual": {
+                "blocked": true,
+                "recovered": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "data.shuffled",
+            "section": "شکاف و بازیابی",
+            "input": {
+                "fixture": "base",
+                "mutation": "shuffled"
+            },
+            "expected": {
+                "blocked": false,
+                "recovered": true
+            },
+            "actual": {
+                "blocked": false,
+                "recovered": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "book.missing",
+            "section": "تازگی دفتر",
+            "input": {
+                "source_delta_seconds": null,
+                "allowed_age": 10
+            },
+            "expected": {
+                "status": "UNAVAILABLE",
+                "condition": "UNAVAILABLE"
+            },
+            "actual": {
+                "status": "UNAVAILABLE",
+                "condition": "UNAVAILABLE"
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "book.stale",
+            "section": "تازگی دفتر",
+            "input": {
+                "source_delta_seconds": -11,
+                "allowed_age": 10
+            },
+            "expected": {
+                "status": "UNAVAILABLE",
+                "condition": "UNAVAILABLE"
+            },
+            "actual": {
+                "status": "UNAVAILABLE",
+                "condition": "UNAVAILABLE"
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "book.future",
+            "section": "تازگی دفتر",
+            "input": {
+                "source_delta_seconds": 1,
+                "allowed_age": 10
+            },
+            "expected": {
+                "status": "UNAVAILABLE",
+                "condition": "UNAVAILABLE"
+            },
+            "actual": {
+                "status": "MANUAL_REVIEW_AVAILABLE",
+                "condition": "PASS"
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "execution.side.LONG",
+            "section": "قیمت قابل‌اجرا",
+            "input": {
+                "direction": "LONG",
+                "bids": [
+                    [
+                        99,
+                        1
+                    ],
+                    [
+                        98,
+                        2
+                    ]
+                ],
+                "asks": [
+                    [
+                        101,
+                        1
+                    ],
+                    [
+                        102,
+                        2
+                    ]
+                ],
+                "quantity": 2
+            },
+            "expected": {
+                "entry_vwap": 101.5,
+                "exit_vwap": 98.5
+            },
+            "actual": {
+                "entry_vwap": 101.5,
+                "exit_vwap": 98.5
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "execution.side.SHORT",
+            "section": "قیمت قابل‌اجرا",
+            "input": {
+                "direction": "SHORT",
+                "bids": [
+                    [
+                        99,
+                        1
+                    ],
+                    [
+                        98,
+                        2
+                    ]
+                ],
+                "asks": [
+                    [
+                        101,
+                        1
+                    ],
+                    [
+                        102,
+                        2
+                    ]
+                ],
+                "quantity": 2
+            },
+            "expected": {
+                "entry_vwap": 98.5,
+                "exit_vwap": 101.5
+            },
+            "actual": {
+                "entry_vwap": 98.5,
+                "exit_vwap": 101.5
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "execution.depth",
+            "section": "قیمت قابل‌اجرا",
+            "input": {
+                "ask_quantity": 1.0e-5
+            },
+            "expected": {
+                "status": "UNAVAILABLE",
+                "failed": "executable_depth"
+            },
+            "actual": {
+                "status": "UNAVAILABLE",
+                "failed": "executable_depth"
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "boundary.spread.-1",
+            "section": "مرز تنظیمات",
+            "input": {
+                "spread_formula": "10000*(101.70-101.66)\/((101.70+101.66)\/2)",
+                "limit_offset": -1.0e-6
+            },
+            "expected": {
+                "spread_pass": false
+            },
+            "actual": {
+                "spread_pass": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "boundary.rr.-1",
+            "section": "مرز تنظیمات",
+            "input": {
+                "limit": "computed net RR",
+                "limit_offset": -1.0e-6
+            },
+            "expected": {
+                "rr_pass": true
+            },
+            "actual": {
+                "rr_pass": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "boundary.expiry.-1",
+            "section": "مرز تنظیمات",
+            "input": {
+                "observed_at": "expiry + -1"
+            },
+            "expected": {
+                "expired": false
+            },
+            "actual": {
+                "expired": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "boundary.spread.0",
+            "section": "مرز تنظیمات",
+            "input": {
+                "spread_formula": "10000*(101.70-101.66)\/((101.70+101.66)\/2)",
+                "limit_offset": 0
+            },
+            "expected": {
+                "spread_pass": true
+            },
+            "actual": {
+                "spread_pass": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "boundary.rr.0",
+            "section": "مرز تنظیمات",
+            "input": {
+                "limit": "computed net RR",
+                "limit_offset": 0
+            },
+            "expected": {
+                "rr_pass": true
+            },
+            "actual": {
+                "rr_pass": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "boundary.expiry.0",
+            "section": "مرز تنظیمات",
+            "input": {
+                "observed_at": "expiry + 0"
+            },
+            "expected": {
+                "expired": true
+            },
+            "actual": {
+                "expired": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "boundary.spread.1",
+            "section": "مرز تنظیمات",
+            "input": {
+                "spread_formula": "10000*(101.70-101.66)\/((101.70+101.66)\/2)",
+                "limit_offset": 1.0e-6
+            },
+            "expected": {
+                "spread_pass": true
+            },
+            "actual": {
+                "spread_pass": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "boundary.rr.1",
+            "section": "مرز تنظیمات",
+            "input": {
+                "limit": "computed net RR",
+                "limit_offset": 1.0e-6
+            },
+            "expected": {
+                "rr_pass": false
+            },
+            "actual": {
+                "rr_pass": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "boundary.expiry.1",
+            "section": "مرز تنظیمات",
+            "input": {
+                "observed_at": "expiry + 1"
+            },
+            "expected": {
+                "expired": true
+            },
+            "actual": {
+                "expired": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "risk.budget",
+            "section": "محاسبات ریسک",
+            "input": {
+                "capital": 70,
+                "risk_pct": 1,
+                "fees_bps": [
+                    10,
+                    10
+                ],
+                "slippage_bps_per_side": 5,
+                "step": 0.001
+            },
+            "expected": {
+                "budget": 0.7,
+                "within_budget": true,
+                "step_valid": true,
+                "capital_valid": true
+            },
+            "actual": {
+                "budget": null,
+                "within_budget": true,
+                "step_valid": true,
+                "capital_valid": true
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "limits.min_notional",
+            "section": "محدودیت سفارش",
+            "input": {
+                "violation": "min_notional"
+            },
+            "expected": {
+                "accepted": false
+            },
+            "actual": {
+                "accepted": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "limits.min_qty",
+            "section": "محدودیت سفارش",
+            "input": {
+                "violation": "min_qty"
+            },
+            "expected": {
+                "accepted": false
+            },
+            "actual": {
+                "accepted": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "limits.capital",
+            "section": "محدودیت سفارش",
+            "input": {
+                "violation": "capital"
+            },
+            "expected": {
+                "accepted": false
+            },
+            "actual": {
+                "accepted": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "costs.manual",
+            "section": "هزینه‌ها",
+            "input": {
+                "qty": 2,
+                "raw_entry": 100,
+                "raw_exit": 110,
+                "entry_bps": 10,
+                "exit_bps": 20,
+                "slippage_bps_per_side": 5,
+                "financing_bps_day": 30,
+                "fixed_usdt": 0.1,
+                "duration": 86400
+            },
+            "expected": {
+                "entry": 100.05,
+                "exit": 109.945,
+                "entry_fee": 0.3001,
+                "exit_fee": 0.43978,
+                "financing_cost": 0.6003,
+                "slippage_cost": 0.21,
+                "costs": 1.55018,
+                "gross_pnl": 20,
+                "net_pnl": 18.44982,
+                "balance_after": 88.44982
+            },
+            "actual": {
+                "id": "audit",
+                "status": "CLOSED",
+                "candidate": {
+                    "id": "706e6813765f1d8935286b7e55bbb849",
+                    "direction": "LONG",
+                    "symbol": "BTCUSDT",
+                    "strategy_version": "wallex-break-retest-v1:90f3c914b8655291",
+                    "candle_close": 1728001800,
+                    "candle_utc": "2024-10-04T00:30:00Z",
+                    "break_at": 1728000000,
+                    "retest_at": 1728000900,
+                    "level": 100,
+                    "atr": 1.3624999999999954,
+                    "reference_price": 101.6,
+                    "entry_range": [
+                        101.19125,
+                        102.00874999999999
+                    ],
+                    "stop_loss": 99.22,
+                    "targets": [
+                        108.71000000000001,
+                        111.08
+                    ],
+                    "expires_at": 1728003600,
+                    "conditions": [
+                        {
+                            "id": "trend_4h",
+                            "status": "PASS",
+                            "actual": {
+                                "direction": "LONG",
+                                "ema_fast": 98.69999999999999,
+                                "ema_slow": 98.6,
+                                "previous_fast": 98.5,
+                                "close": 98.8
+                            },
+                            "required": "EMA fast\/slow + slope + close"
+                        },
+                        {
+                            "id": "level_1h",
+                            "status": "PASS",
+                            "actual": {
+                                "level": 100,
+                                "touches": 3
+                            },
+                            "required": 2
+                        },
+                        {
+                            "id": "breakout_15m",
+                            "status": "PASS",
+                            "actual": 100.8,
+                            "required": 100.125
+                        },
+                        {
+                            "id": "break_volume",
+                            "status": "PASS",
+                            "actual": 3,
+                            "required": 1.5
+                        },
+                        {
+                            "id": "trend_4h",
+                            "status": "PASS",
+                            "actual": {
+                                "direction": "LONG",
+                                "ema_fast": 98.69999999999999,
+                                "ema_slow": 98.6,
+                                "previous_fast": 98.5,
+                                "close": 98.8
+                            },
+                            "required": "EMA fast\/slow + slope + close"
+                        },
+                        {
+                            "id": "retest_15m",
+                            "status": "PASS",
+                            "actual": 100,
+                            "required": [
+                                99.6875,
+                                100.3125
+                            ]
+                        },
+                        {
+                            "id": "trend_4h",
+                            "status": "PASS",
+                            "actual": {
+                                "direction": "LONG",
+                                "ema_fast": 98.69999999999999,
+                                "ema_slow": 98.6,
+                                "previous_fast": 98.5,
+                                "close": 98.8
+                            },
+                            "required": "EMA fast\/slow + slope + close"
+                        },
+                        {
+                            "id": "confirmation_15m",
+                            "status": "PASS",
+                            "actual": 101.6,
+                            "required": 101.068125
+                        },
+                        {
+                            "id": "confirmation_volume",
+                            "status": "PASS",
+                            "actual": 1.4285714285714286,
+                            "required": 1
+                        },
+                        {
+                            "id": "structural_atr_stop",
+                            "status": "PASS",
+                            "actual": 1.741284403669722,
+                            "required": 3
+                        },
+                        {
+                            "id": "instrument_support",
+                            "status": "PASS",
+                            "actual": "SPOT",
+                            "required": "LONG"
+                        },
+                        {
+                            "id": "quote_freshness",
+                            "status": "PASS",
+                            "actual": {
+                                "source_timestamp": 1728001800,
+                                "received_at": 1728001800,
+                                "trust": "VERIFIED"
+                            },
+                            "required": 10
+                        },
+                        {
+                            "id": "spread",
+                            "status": "PASS",
+                            "actual": 3.9339103068456187,
+                            "required": 20
+                        },
+                        {
+                            "id": "executable_depth",
+                            "status": "PASS",
+                            "actual": 101.7,
+                            "required": 0.226
+                        },
+                        {
+                            "id": "entry_range",
+                            "status": "PASS",
+                            "actual": 101.7,
+                            "required": [
+                                101.19125,
+                                102.00874999999999
+                            ]
+                        },
+                        {
+                            "id": "risk_budget",
+                            "status": "PASS",
+                            "actual": 0.6286033721000002,
+                            "required": 0.7
+                        },
+                        {
+                            "id": "net_rr",
+                            "status": "PASS",
+                            "actual": 2.4067951033188573,
+                            "required": 2
+                        },
+                        {
+                            "id": "cost_model",
+                            "status": "PASS",
+                            "actual": {
+                                "entry_fee_bps": 10,
+                                "exit_fee_bps": 10,
+                                "slippage_bps": 5,
+                                "fixed_cost_usdt": 0,
+                                "financing_bps_day": 0
+                            },
+                            "required": null
+                        },
+                        {
+                            "id": "market_identity",
+                            "status": "PASS",
+                            "actual": null,
+                            "required": null
+                        },
+                        {
+                            "id": "market_limits",
+                            "status": "PASS",
+                            "actual": null,
+                            "required": null
+                        },
+                        {
+                            "id": "orderbook",
+                            "status": "PASS",
+                            "actual": null,
+                            "required": null
+                        },
+                        {
+                            "id": "target_before_entry",
+                            "status": "PASS",
+                            "actual": null,
+                            "required": null
+                        },
+                        {
+                            "id": "plan_geometry",
+                            "status": "PASS",
+                            "actual": null,
+                            "required": null
+                        },
+                        {
+                            "id": "position_size",
+                            "status": "PASS",
+                            "actual": null,
+                            "required": null
+                        }
+                    ],
+                    "reason": "روند ۴ساعته، سطح ۱ساعته و شکست، بازآزمایی و تأیید روی سه کندل بسته‌شدهٔ متمایز ۱۵دقیقه.",
+                    "status": "MANUAL_REVIEW_AVAILABLE",
+                    "entry": 101.75085,
+                    "raw_entry": 101.7,
+                    "quantity": 0.226,
+                    "risk_usdt": 0.6286033721000002,
+                    "net_reward_usdt": 1.512919517900002,
+                    "net_rr": 2.4067951033188573,
+                    "spread_bps": 3.9339103068456187,
+                    "quote_source_time": 1728001800,
+                    "quote_received_at": 1728001800,
+                    "execution_confirmed": false,
+                    "created_at": 1728001800,
+                    "json_strategy": {
+                        "strategy_version": 1,
+                        "id": "scan_706e6813765f1d8935286b7e55bbb849",
+                        "name": "اسکنر شکست و بازآزمایی BTCUSDT",
+                        "symbol": "BTCUSDT",
+                        "enabled": false,
+                        "action": "LONG",
+                        "initial_stage": "manual_review",
+                        "max_setup_seconds": 1800,
+                        "invalidation": {
+                            "left": {
+                                "price": true
+                            },
+                            "op": "lte",
+                            "right": 99.22
+                        },
+                        "stages": [
+                            {
+                                "id": "manual_review",
+                                "transitions": [
+                                    {
+                                        "event": "price",
+                                        "when": {
+                                            "all": [
+                                                {
+                                                    "left": {
+                                                        "price": true
+                                                    },
+                                                    "op": "gte",
+                                                    "right": 101.19125
+                                                },
+                                                {
+                                                    "left": {
+                                                        "price": true
+                                                    },
+                                                    "op": "lte",
+                                                    "right": 102.00874999999999
+                                                }
+                                            ]
+                                        },
+                                        "signal": true
+                                    }
+                                ]
+                            }
+                        ],
+                        "trade": {
+                            "entry": {
+                                "type": "LIMIT",
+                                "price": 102.00874999999999
+                            },
+                            "stop_loss": 99.22,
+                            "take_profits": [
+                                108.71000000000001,
+                                111.08
+                            ],
+                            "quantity": 0.226,
+                            "notes": "MANUAL_REVIEW_AVAILABLE · wallex-break-retest-v1:90f3c914b8655291 · انقضا UTC: 2024-10-04T01:00:00+00:00 · طرح آزمایشی؛ ثبت سفارش واقعی ندارد."
+                        }
+                    }
+                },
+                "quantity": 2,
+                "raw_entry": 100,
+                "entry": 100.05,
+                "entry_fee": 0.30010000000000003,
+                "entry_at": 1728000000,
+                "last_bar": 1727999100,
+                "stop_loss": 90,
+                "targets": [
+                    110,
+                    120
+                ],
+                "quality": "AVAILABLE",
+                "exit_at": 1728086400,
+                "raw_exit": 110,
+                "exit": 109.94500000000001,
+                "exit_reason": "TEST",
+                "ambiguous": false,
+                "exit_fee": 0.43978,
+                "financing_cost": 0.6003,
+                "slippage_cost": 0.20999999999997954,
+                "costs": 1.5501799999999797,
+                "gross_pnl": 20,
+                "net_pnl": 18.44982000000002,
+                "balance_after": 88.44982000000002,
+                "exit_model": "CONSERVATIVE_CLOSED_OHLC_WITH_CONFIGURED_COSTS"
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "costs.unknown-financing",
+            "section": "هزینه‌ها",
+            "input": {
+                "instrument": "MARGIN",
+                "financing_bps_day": null
+            },
+            "expected": {
+                "status": "UNAVAILABLE"
+            },
+            "actual": {
+                "status": "MANUAL_REVIEW_AVAILABLE"
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "delay.59",
+            "section": "تأخیر ورود",
+            "input": {
+                "seconds_after_signal": 59
+            },
+            "expected": {
+                "status": "PENDING"
+            },
+            "actual": {
+                "status": "PENDING"
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "delay.60",
+            "section": "تأخیر ورود",
+            "input": {
+                "seconds_after_signal": 60
+            },
+            "expected": {
+                "status": "OPEN"
+            },
+            "actual": {
+                "status": "OPEN"
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "delay.outside-range",
+            "section": "تأخیر ورود",
+            "input": {
+                "ask": 105,
+                "time": "signal+60"
+            },
+            "expected": {
+                "opened": false
+            },
+            "actual": {
+                "opened": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "delay.invalidated-no-revival",
+            "section": "تأخیر ورود",
+            "input": {
+                "after_signal": "quote=99 below stop, then return to 101.7"
+            },
+            "expected": {
+                "cancelled": true,
+                "revived": false
+            },
+            "actual": {
+                "cancelled": false,
+                "revived": true
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "exit.stop",
+            "section": "خروج و ابهام",
+            "input": {
+                "bar": "stop",
+                "SL": 90,
+                "TP1": 110,
+                "entry": 100
+            },
+            "expected": {
+                "reason": "STOP_LOSS",
+                "raw_exit": 90,
+                "win": false
+            },
+            "actual": {
+                "reason": "STOP_LOSS",
+                "raw_exit": 90,
+                "win": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "exit.target",
+            "section": "خروج و ابهام",
+            "input": {
+                "bar": "target",
+                "SL": 90,
+                "TP1": 110,
+                "entry": 100
+            },
+            "expected": {
+                "reason": "TARGET_1",
+                "raw_exit": 110,
+                "win": true
+            },
+            "actual": {
+                "reason": "TARGET_1",
+                "raw_exit": 110,
+                "win": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "exit.gap",
+            "section": "خروج و ابهام",
+            "input": {
+                "bar": "gap",
+                "SL": 90,
+                "TP1": 110,
+                "entry": 100
+            },
+            "expected": {
+                "reason": "STOP_LOSS",
+                "raw_exit": 85,
+                "win": false
+            },
+            "actual": {
+                "reason": "STOP_LOSS",
+                "raw_exit": 85,
+                "win": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "exit.ambiguous",
+            "section": "خروج و ابهام",
+            "input": {
+                "bar": "ambiguous",
+                "SL": 90,
+                "TP1": 110,
+                "entry": 100
+            },
+            "expected": {
+                "reason": "AMBIGUOUS_STOP_FIRST",
+                "raw_exit": 90,
+                "win": false
+            },
+            "actual": {
+                "reason": "AMBIGUOUS_STOP_FIRST",
+                "raw_exit": 90,
+                "win": false
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "exit.time-stop",
+            "section": "خروج معامله",
+            "input": {
+                "age": 900,
+                "bid": 99,
+                "ask": 101,
+                "SL": 90,
+                "TP1": 110
+            },
+            "expected": {
+                "reason": "TIME_STOP",
+                "raw_exit": 99
+            },
+            "actual": {
+                "reason": "TIME_STOP",
+                "raw_exit": 99
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "exit.allocations",
+            "section": "اهداف چندگانه",
+            "input": {
+                "current_policy": "100% TP1 \/ 0% TP2; no remaining stop"
+            },
+            "expected": {
+                "tp1": 100,
+                "tp2": 0,
+                "sum": 100,
+                "stop_after": "POSITION_CLOSED"
+            },
+            "actual": {
+                "tp1": null,
+                "tp2": null,
+                "sum": 0,
+                "stop_after": null
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "history.config-copy",
+            "section": "نسخه و تنظیمات",
+            "input": {
+                "after_signal_change": "entry fee 90 bps"
+            },
+            "expected": {
+                "snapshot_present": true,
+                "unchanged": true,
+                "version_present": true
+            },
+            "actual": {
+                "snapshot_present": false,
+                "unchanged": false,
+                "version_present": false
+            },
+            "status": "FAIL"
+        },
+        {
+            "id": "parity.runner-replay",
+            "section": "برابری اجرای تاریخی و آزمایشی",
+            "input": {
+                "fixture": "same observations and books; fresh paper state"
+            },
+            "expected": {
+                "same_signals": true,
+                "same_decisions": true,
+                "same_trades": true
+            },
+            "actual": {
+                "same_signals": true,
+                "same_decisions": true,
+                "same_trades": true
+            },
+            "status": "PASS"
+        },
+        {
+            "id": "report.manual",
+            "section": "گزارش عملکرد",
+            "input": {
+                "net_results": [
+                    10,
+                    -5,
+                    0,
+                    5
+                ],
+                "equity": [
+                    70,
+                    80,
+                    75,
+                    75,
+                    80
+                ],
+                "costs": [
+                    1,
+                    2,
+                    0.5,
+                    1.5
+                ]
+            },
+            "expected": {
+                "closed_trades": 4,
+                "win_rate_pct": 50,
+                "net_profit_usdt": 10,
+                "expectancy_usdt": 2.5,
+                "profit_factor": 3,
+                "max_drawdown_usdt": 5,
+                "max_drawdown_pct": 6.25,
+                "total_costs_usdt": 5
+            },
+            "actual": {
+                "closed_trades": 4,
+                "wins": 2,
+                "win_rate_pct": 50,
+                "net_profit_usdt": 10,
+                "expectancy_usdt": 2.5,
+                "profit_factor": 3,
+                "profit_factor_note": null,
+                "max_drawdown_usdt": 5,
+                "max_drawdown_pct": 6.25,
+                "drawdown_status": "AVAILABLE_AT_OBSERVATION_TIMES",
+                "unavailable_equity_points": 0,
+                "total_costs_usdt": 5,
+                "ambiguous_stop_first": 0,
+                "evaluation": "UNVALIDATED_PAPER_SAMPLE",
+                "real_orders": false
+            },
+            "status": "PASS"
+        }
+    ],
+    "summary": {
+        "total": 49,
+        "pass": 36,
+        "fail": 13
+    }
+}

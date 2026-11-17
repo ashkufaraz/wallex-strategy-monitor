@@ -4,6 +4,13 @@ declare(strict_types=1);
 final class BreakRetestScanner {
  static function condition(string $id,string $status,mixed $actual=null,mixed $required=null):array {return compact('id','status','actual','required');}
  static function evaluate(array &$state,array $bars,array $c,int $now):array {
+  $expired=isset($state['setup'])&&end($bars['15m'])['time']+900>$state['setup']['expires'];
+  $r=self::evaluatePattern($state,$bars,$c,$now);$failed=array_values(array_unique(array_column(array_filter($r['conditions'],fn($v)=>$v['status']==='FAIL'),'id')));$r['failed_conditions']=$failed;if($expired)$r['reason_code']='SETUP_EXPIRED';
+  $r['reason_code']??=$failed[0]??$r['status'];
+  $labels=['trend_4h'=>'روند ۴ساعته تأیید نیست.','level_1h'=>'تعداد برخوردهای سطح ۱ساعته کافی نیست.','breakout_15m'=>'عبور قیمت بسته‌شده از آستانهٔ شکست تأیید نیست.','break_volume'=>'حجم کندل شکست کافی نیست.','retest_15m'=>'قیمت در محدودهٔ مجاز بازآزمایی بسته نشده است.','confirmation_15m'=>'قیمت کندل تأیید از آستانه عبور نکرده است.','confirmation_volume'=>'حجم کندل تأیید کافی نیست.'];
+  if(isset($labels[$r['reason_code']]))$r['reason']=$labels[$r['reason_code']];return $r;
+ }
+ private static function evaluatePattern(array &$state,array $bars,array $c,int $now):array {
   $f=$bars['15m'];$last=end($f);$close=$last['time']+900;$conditions=[];
   if($close<=($state['last_close']??0))return ['status'=>'DUPLICATE','reason'=>'کندل جدیدی بسته نشده است.','conditions'=>[],'candle_close'=>$close];
   if(isset($state['setup'])&&$close>($state['last_close']??0)+900){unset($state['setup']);$state['last_close']=$close;return ['status'=>'UNAVAILABLE','reason'=>'میان بررسی‌های ستاپ کندل بسته‌شده‌ای از دست رفته است؛ ستاپ کنار گذاشته شد.','conditions'=>[self::condition('continuous_observation','UNAVAILABLE')],'candle_close'=>$close];}
@@ -22,7 +29,8 @@ final class BreakRetestScanner {
    // A level uses only hours fully closed before this 15m candle OPENED.
    $hours=array_values(array_filter($bars['1h'],fn($b)=>$b['time']+3600<=$last['time']));$hours=array_slice($hours,-$c['level_lookback']);
    if(count($hours)!==$c['level_lookback'])throw new RuntimeException('UNAVAILABLE: insufficient pre-breakout 1h history');
-   $atrHour=Indicators::value('ATR',$c['atr_period'],'value',$bars['1h']);
+   $atrHours=array_values(array_filter($bars['1h'],fn($b)=>$b['time']+3600<=$last['time']));
+   $atrHour=Indicators::value('ATR',$c['atr_period'],'value',$atrHours);
    $field=$direction==='LONG'?'high':'low';$level=$direction==='LONG'?max(array_column($hours,$field)):min(array_column($hours,$field));
    $touches=0;$lastTouch=-10000;foreach($hours as $i=>$b)if(abs($b[$field]-$level)<=$atrHour*$c['level_tolerance_atr']&&$i-$lastTouch>=$c['touch_separation']){$touches++;$lastTouch=$i;}
    $previous=$f[count($f)-2];$threshold=$level+$sign*$atr*$c['break_buffer_atr'];
@@ -54,6 +62,8 @@ final class BreakRetestScanner {
   if(!$stopValid){unset($state['setup']);$result['reason']='فاصلهٔ حد ضرر ساختاری از سقف ATR بیشتر است.';return $result;}
   $version=ScannerConfig::version($c);$id=substr(hash('sha256',$version.':'.$direction.':'.$setup['break_at'].':'.$setup['retest_at'].':'.$close),0,32);
   $candidate=['id'=>$id,'direction'=>$direction,'symbol'=>'BTCUSDT','strategy_version'=>$version,'candle_close'=>$close,'candle_utc'=>gmdate('Y-m-d\TH:i:s\Z',$close),'break_at'=>$setup['break_at'],'retest_at'=>$setup['retest_at'],'level'=>$level,'atr'=>$atr,'reference_price'=>$last['close'],'entry_range'=>[$last['close']-$atr*$c['entry_band_atr'],$last['close']+$atr*$c['entry_band_atr']],'stop_loss'=>$stop,'targets'=>[$last['close']+$sign*$risk*$c['tp1_r'],$last['close']+$sign*$risk*$c['tp2_r']],'expires_at'=>$close+$c['entry_expiry_seconds'],'conditions'=>$conditions,'reason'=>'روند ۴ساعته، سطح ۱ساعته و شکست، بازآزمایی و تأیید روی سه کندل بسته‌شدهٔ متمایز ۱۵دقیقه.'];
+  $candidate['config_snapshot']=$c;$candidate['rules_version']=ScannerConfig::RULES_VERSION;$candidate['invalidation_price']=$level-$sign*$anchorAtr*$c['retest_tolerance_atr'];
+  $candidate['exit_policy']=['tp1_exit_pct'=>$c['tp1_exit_pct'],'tp2_exit_pct'=>$c['tp2_exit_pct'],'stop_after_tp1'=>$c['stop_after_tp1']];
   $state['candidate']=$candidate;unset($state['setup']);$result['candidate']=$candidate;$result['status']='PATTERN_CONFIRMED';$result['reason']=$candidate['reason'];return $result;
  }
  static function export(array $p,float $quantity):array {
@@ -63,6 +73,7 @@ final class BreakRetestScanner {
    'stages'=>[['id'=>'manual_review','transitions'=>[['event'=>'price','when'=>['all'=>[['left'=>['price'=>true],'op'=>'gte','right'=>$p['entry_range'][0]],['left'=>['price'=>true],'op'=>'lte','right'=>$p['entry_range'][1]]]],'signal'=>true]]]],
    'trade'=>['entry'=>['type'=>'LIMIT','price'=>$entry],'stop_loss'=>$p['stop_loss'],'take_profits'=>$p['targets'],'quantity'=>$quantity,'notes'=>'MANUAL_REVIEW_AVAILABLE · '.$p['strategy_version'].' · انقضا UTC: '.gmdate('c',$p['expires_at']).' · طرح آزمایشی؛ ثبت سفارش واقعی ندارد.']];
   // Compatibility export is an immutable manual-entry plan, NOT a dynamic JSON reimplementation of the scanner.
+  $s['trade']['notes'].=' · خروج TP1: 100٪، TP2: 0٪؛ پس از TP1 کل موقعیت بسته است.';
   return Strategy::validate($s);
  }
 }

@@ -18,7 +18,8 @@ final class ScannerService {
    CREATE TABLE IF NOT EXISTS scanner_observations(id INTEGER PRIMARY KEY AUTOINCREMENT,version TEXT NOT NULL,observed INTEGER NOT NULL,payload TEXT NOT NULL);
    CREATE TABLE IF NOT EXISTS scanner_backtests(id INTEGER PRIMARY KEY AUTOINCREMENT,created INTEGER NOT NULL,version TEXT NOT NULL,payload TEXT NOT NULL);
    CREATE INDEX IF NOT EXISTS scanner_checks_version ON scanner_checks(version,id);
-   CREATE INDEX IF NOT EXISTS scanner_observations_version ON scanner_observations(version,id);");
+   CREATE INDEX IF NOT EXISTS scanner_observations_version ON scanner_observations(version,id);
+   CREATE INDEX IF NOT EXISTS scanner_observations_time ON scanner_observations(version,observed);");
  }
  static function config():array {return ScannerConfig::validate(json_decode(setting('scanner_config','{}'),true,64,JSON_THROW_ON_ERROR));}
  static function row(array $c):array {
@@ -35,6 +36,7 @@ final class ScannerService {
   $snapshot['runtime_enabled']=$c['enabled'];
   $state=json_decode($row['state'],true);$version=ScannerConfig::version($c);$now=$snapshot['observed_at'];
   $r=ScannerRunner::step($state,$snapshot,$c);
+  if(($r['decision']['reason_code']??null)==='observation_order'&&$r['decision']['status']==='DUPLICATE')return $r;
   db()->beginTransaction();
   try{
    // The state transition, signal, ownership and notification all commit together.
@@ -48,13 +50,14 @@ final class ScannerService {
      $owner=(int)db()->query("SELECT id FROM users WHERE email='ashkufaraz@gmail.com'")->fetchColumn();$id=$p['json_strategy']['id'];
      db()->prepare('INSERT OR IGNORE INTO strategy_owners VALUES(?,?)')->execute([$id,$owner]);
      $alert=['type'=>'scanner_manual_review','strategy_id'=>$id,'name'=>'اسکنر شکست و بازآزمایی BTCUSDT','symbol'=>'BTCUSDT','action'=>$p['direction'],'price'=>$p['entry'],'event'=>'scanner:manual_review','event_time'=>$p['candle_close'],'status'=>'MANUAL_REVIEW_AVAILABLE','scanner_signal_id'=>$p['id'],'scanner_version'=>$version,'reason'=>$p['reason'],'expires_at'=>$p['expires_at'],'analysis_sources'=>[],'trade'=>$p['json_strategy']['trade']];
+     $alert['config_snapshot']=$p['config_snapshot'];$alert['rules_version']=$p['rules_version'];$alert['exit_policy']=$p['exit_policy'];$alert['cost_assumptions']=$p['cost_assumptions'];
      db()->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute(['scanner:'.$p['id'],$now,encode($alert)]);
     }
    }
    foreach($r['trade_events'] as $trade)db()->prepare('INSERT OR REPLACE INTO scanner_trades VALUES(?,?,?,?)')->execute([$trade['id'],$version,$trade['status'],encode($trade)]);
    if($state['paper'])db()->prepare('INSERT OR REPLACE INTO scanner_trades VALUES(?,?,?,?)')->execute([$state['paper']['id'],$version,$state['paper']['status'],encode($state['paper'])]);
    db()->prepare('INSERT INTO scanner_equity(version,observed,equity) VALUES(?,?,?)')->execute([$version,$now,$r['equity']]);
-   self::storeObservation($version,$snapshot);
+   if(($r['decision']['reason_code']??null)!=='observation_order')self::storeObservation($version,$snapshot);
    db()->commit();
   }catch(Throwable $e){if(db()->inTransaction())db()->rollBack();throw $e;}
   if($r['signal'])systemLog('success','scanner.manual_review','فرصت اسکنر برای بررسی دستی ثبت شد؛ فقط معامله آزمایشی.',['signal_id'=>$r['signal']['id'],'version'=>$version]);
@@ -66,8 +69,9 @@ final class ScannerService {
    $find->execute([$v,$tf,$bar['time']]);$old=$find->fetchColumn();$serialized=encode($bar);if($old!==false&&json_decode($old,true)!=$bar)throw new RuntimeException('UNAVAILABLE: previously stored closed candle revised by source');
    $put->execute([$v,$tf,$bar['time'],$serialized]);
   }
-  $slim=$snapshot;unset($slim['bars'],$slim['boundaries']);
-  db()->prepare('INSERT INTO scanner_observations(version,observed,payload) VALUES(?,?,?)')->execute([$v,$snapshot['observed_at'],encode($slim)]);
+  $slim=$snapshot;unset($slim['bars'],$slim['boundaries']);$slim['available_candles']=[];
+  foreach($snapshot['bars']??[] as $tf=>$bars)$slim['available_candles'][$tf]=array_values(array_map(fn($b)=>$b['time'],array_filter($bars,fn($b)=>is_int($b['time']??null)&&$b['time']+ScannerData::SECONDS[$tf]<=$snapshot['observed_at'])));
+  db()->prepare('INSERT INTO scanner_observations(version,observed,payload) SELECT ?,?,? WHERE NOT EXISTS(SELECT 1 FROM scanner_observations WHERE version=? AND observed=?)')->execute([$v,$snapshot['observed_at'],encode($slim),$v,$snapshot['observed_at']]);
   db()->prepare('DELETE FROM scanner_observations WHERE version=? AND id NOT IN (SELECT id FROM scanner_observations WHERE version=? ORDER BY id DESC LIMIT 10000)')->execute([$v,$v]);
  }
  static function tick(?Wallex $api=null,?int $at=null,?string $lockPath=null):array {
@@ -80,11 +84,7 @@ final class ScannerService {
    if(!$c['enabled']&&($state['paper']['status']??null)==='PENDING')return self::persist($c,['observed_at'=>$now,'provider'=>'wallex','symbol'=>'BTCUSDT','bars'=>[]],$row);
    try{$snapshot=ScannerData::fetch($api??new Wallex(microtime(true)+12),$c,$now,$cache);setSetting('scanner_cache',encode(['bars'=>$snapshot['bars'],'boundaries'=>$snapshot['boundaries'],'version'=>ScannerConfig::version($c)]));return self::persist($c,$snapshot,$row);}
    catch(Throwable $e){
-    $failed=json_decode($row['state'],true);if($failed['paper']){$failed['paper']['quality']='UNAVAILABLE';$failed['paper']['reason']=$e->getMessage();}
-    $result=['observed_at'=>$now,'strategy_version'=>ScannerConfig::version($c),'decision'=>['status'=>'UNAVAILABLE','reason'=>$e->getMessage(),'conditions'=>[BreakRetestScanner::condition('data_quality','UNAVAILABLE',$e->getMessage())]],'signal'=>null];
-    db()->prepare('UPDATE scanner_runs SET state=?,last_checked=?,last_result=? WHERE version=? AND state=?')->execute([encode($failed),$now,encode($result),ScannerConfig::version($c),$row['state']]);
-    db()->prepare('INSERT INTO scanner_equity(version,observed,equity) VALUES(?,?,?)')->execute([ScannerConfig::version($c),$now,$failed['paper']&&$failed['paper']['status']==='OPEN'?null:$failed['balance']]);
-    $key=hash('sha256',encode([ScannerConfig::version($c),intdiv($now,900),$e->getMessage()]));db()->prepare('INSERT OR IGNORE INTO scanner_checks(version,observed,status,reason,payload,dedupe) VALUES(?,?,?,?,?,?)')->execute([ScannerConfig::version($c),$now,'UNAVAILABLE',$e->getMessage(),encode($result['decision']),$key]);
+    $result=self::persist($c,['observed_at'=>$now,'provider'=>'wallex','symbol'=>'BTCUSDT','bars'=>[],'data_error'=>$e->getMessage()],$row);
     systemLog('warning','scanner.unavailable',$e->getMessage());return $result;
    }
   }finally{flock($lock,LOCK_UN);fclose($lock);}

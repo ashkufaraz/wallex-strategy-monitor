@@ -3,9 +3,15 @@ declare(strict_types=1);
 
 final class ScannerPaper {
  static function fresh(array $c):array {return ['balance'=>$c['capital'],'pattern'=>[],'paper'=>null,'last_signal'=>null];}
+ static function financingRate(array $p,array $c):float {
+  if(isset($p['financing_rate_bps_day']))return (float)$p['financing_rate_bps_day'];
+  if($c['financing_bps_day']!==null)return (float)$c['financing_bps_day'];
+  if(($p['instrument']??$p['candidate']['instrument']??null)==='SPOT'&&$p['candidate']['direction']==='LONG')return 0.0;
+  throw new RuntimeException('UNAVAILABLE: financing cost is unknown');
+ }
  static function close(array &$state,float $rawExit,string $reason,int $at,array $c,bool $ambiguous=false):array {
-  $p=$state['paper'];$sign=$p['candidate']['direction']==='LONG'?1:-1;$qty=$p['quantity'];$exit=$rawExit*(1-$sign*$c['slippage_bps']/10000);
-  $exitFee=$qty*$exit*$c['exit_fee_bps']/10000;$financing=$qty*$p['entry']*$c['financing_bps_day']/10000*max(0,$at-$p['entry_at'])/86400;
+  $p=$state['paper'];$c=$p['config_snapshot']??$c;$sign=$p['candidate']['direction']==='LONG'?1:-1;$qty=$p['quantity'];$exit=$rawExit*(1-$sign*$c['slippage_bps']/10000);
+  $exitFee=$qty*$exit*$c['exit_fee_bps']/10000;$financing=$qty*$p['entry']*self::financingRate($p,$c)/10000*max(0,$at-$p['entry_at'])/86400;
   $grossAfterSlip=$sign*($exit-$p['entry'])*$qty;$slip=$qty*(abs($p['entry']-$p['raw_entry'])+abs($exit-$rawExit));$fees=$p['entry_fee']+$exitFee+$financing;
   $state['balance']+=$grossAfterSlip-$exitFee-$financing;
   $trade=array_replace($p,['status'=>'CLOSED','exit_at'=>$at,'raw_exit'=>$rawExit,'exit'=>$exit,'exit_reason'=>$reason,'ambiguous'=>$ambiguous,'exit_fee'=>$exitFee,'financing_cost'=>$financing,'slippage_cost'=>$slip,'costs'=>$fees+$slip,'gross_pnl'=>$grossAfterSlip+$slip,'net_pnl'=>$grossAfterSlip-$fees,'balance_after'=>$state['balance'],'exit_model'=>'CONSERVATIVE_CLOSED_OHLC_WITH_CONFIGURED_COSTS']);
@@ -13,15 +19,16 @@ final class ScannerPaper {
  }
  static function monitor(array &$state,array $snapshot,array $c):array {
   $events=[];$p=$state['paper']??null;if(!$p)return $events;$now=$snapshot['observed_at'];
+  $enabled=$c['enabled'];$c=$p['config_snapshot']??$p['candidate']['config_snapshot']??$c;$c['enabled']=$enabled;
   if($p['status']==='PENDING'){
    if(!$c['enabled']){$events[]=array_replace($p,['status'=>'CANCELLED','reason'=>'ورود آزمایشی در انتظار، با توقف اسکنر لغو شد.']);$state['paper']=null;return $events;}
    if($now>=$p['candidate']['expires_at']){$events[]=array_replace($p,['status'=>'EXPIRED','reason'=>'ورود آزمایشی تا انقضا انجام نشد.']);$state['paper']=null;return $events;}
-   if($now<$p['eligible_at'])return $events;
    try{ScannerData::context($snapshot,$c);}catch(Throwable $e){$state['paper']['quality']='UNAVAILABLE';$state['paper']['reason']=$e->getMessage();return $events;}
    $gate=ScannerExecution::check($p['candidate'],$snapshot,$c,$state['balance']);
-   if($gate['status']!=='MANUAL_REVIEW_AVAILABLE'){$state['paper']['quality']=$gate['status'];$state['paper']['reason']=$gate['reason'];if(str_contains($gate['reason'],'هدف اول')){$events[]=array_replace($p,['status'=>'CANCELLED','reason'=>$gate['reason']]);$state['paper']=null;}return $events;}
+   if($gate['status']!=='MANUAL_REVIEW_AVAILABLE'){$state['paper']['quality']=$gate['status'];$state['paper']['reason']=$gate['reason'];if($gate['terminal']??false){$events[]=array_replace($p,['status'=>'CANCELLED','reason'=>$gate['reason'],'reason_code'=>$gate['reason_code']]);$state['paper']=null;}return $events;}
+   if($now<$p['eligible_at'])return $events;
    $fee=$gate['quantity']*$gate['entry']*$c['entry_fee_bps']/10000+$c['fixed_cost_usdt'];$state['balance']-=$fee;
-   $state['paper']=array_replace($p,$gate,['status'=>'OPEN','entry_at'=>$now,'entry_fee'=>$fee,'last_bar'=>intdiv($now,900)*900-900,'quality'=>'AVAILABLE']);
+   $state['paper']=array_replace($p,$gate,['status'=>'OPEN','entry_at'=>$now,'entry_fee'=>$fee,'last_bar'=>intdiv($now,900)*900-900,'quality'=>'AVAILABLE','config_snapshot'=>$c,'rules_version'=>ScannerConfig::RULES_VERSION]);
    return $events;
   }
   $bars=[];foreach($snapshot['bars']['15m']??[] as $bar)if(isset($bar['time'])&&is_int($bar['time'])){if(isset($bars[$bar['time']])&&$bars[$bar['time']]!==$bar){$state['paper']['quality']='UNAVAILABLE';$state['paper']['reason']='Conflicting paper candle';return $events;}$bars[$bar['time']]=$bar;}
@@ -49,9 +56,9 @@ final class ScannerPaper {
   try{$q=WallexExecutionMarketProvider::estimate($b,$p['candidate']['direction']==='LONG'?'SHORT':'LONG',$p['quantity']);return $q['depth_sufficient']?(float)$q['vwap']:null;}catch(Throwable $e){return null;}
  }
  static function equity(array $state,array $snapshot,array $c):?float {
-  $p=$state['paper']??null;if(!$p||$p['status']==='PENDING')return $state['balance'];if(($p['quality']??null)==='UNAVAILABLE')return null;
+  $p=$state['paper']??null;if(!$p||$p['status']==='PENDING')return $state['balance'];if(($p['quality']??null)==='UNAVAILABLE')return null;$c=$p['config_snapshot']??$c;
   $raw=self::liquidation($p,$snapshot,$c);if($raw===null)return null;
-  $sign=$p['candidate']['direction']==='LONG'?1:-1;$exit=$raw*(1-$sign*$c['slippage_bps']/10000);$fin=$p['quantity']*$p['entry']*$c['financing_bps_day']/10000*max(0,$snapshot['observed_at']-$p['entry_at'])/86400;
+  $sign=$p['candidate']['direction']==='LONG'?1:-1;$exit=$raw*(1-$sign*$c['slippage_bps']/10000);try{$rate=self::financingRate($p,$c);}catch(Throwable $e){return null;}$fin=$p['quantity']*$p['entry']*$rate/10000*max(0,$snapshot['observed_at']-$p['entry_at'])/86400;
   return $state['balance']+$sign*($exit-$p['entry'])*$p['quantity']-$exit*$p['quantity']*$c['exit_fee_bps']/10000-$fin;
  }
  static function report(array $trades,array $equity,float $capital):array {

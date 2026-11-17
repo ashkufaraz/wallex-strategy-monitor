@@ -5,14 +5,17 @@ final class ScannerRunner {
  static function step(array &$state,array $snapshot,array $c):array {
   $now=$snapshot['observed_at']??0;$version=ScannerConfig::version($c);$events=[];$signal=null;
   if(!is_int($now)||$now<1)return ['observed_at'=>null,'strategy_version'=>$version,'decision'=>['status'=>'UNAVAILABLE','reason'=>'Observation timestamp missing','conditions'=>[BreakRetestScanner::condition('observation_time','UNAVAILABLE')]],'signal'=>null,'trade_events'=>[],'equity'=>null];
+  if($now<=($state['last_observation']??0))return ['observed_at'=>$now,'strategy_version'=>$version,'decision'=>['status'=>$now===($state['last_observation']??0)?'DUPLICATE':'UNAVAILABLE','reason'=>'Duplicate or out-of-order observation; state not changed','reason_code'=>'observation_order','conditions'=>[BreakRetestScanner::condition('observation_order',$now===($state['last_observation']??0)?'NOT_EVALUATED':'UNAVAILABLE')]],'signal'=>null,'trade_events'=>[],'equity'=>null];
+  $state['last_observation']=$now;
   try{$events=ScannerPaper::monitor($state,$snapshot,$c);}catch(Throwable $e){if($state['paper']){$state['paper']['quality']='UNAVAILABLE';$state['paper']['reason']=$e->getMessage();}return ['observed_at'=>$now,'strategy_version'=>$version,'decision'=>['status'=>'UNAVAILABLE','reason'=>$e->getMessage(),'conditions'=>[BreakRetestScanner::condition('paper_monitor','UNAVAILABLE')]],'signal'=>null,'trade_events'=>[],'equity'=>null];}
+  if(isset($snapshot['data_error']))return ['observed_at'=>$now,'strategy_version'=>$version,'decision'=>['status'=>'UNAVAILABLE','reason'=>(string)$snapshot['data_error'],'reason_code'=>'data_quality','conditions'=>[BreakRetestScanner::condition('data_quality','UNAVAILABLE',$snapshot['data_error'])]],'signal'=>null,'trade_events'=>$events,'equity'=>ScannerPaper::equity($state,$snapshot,$c)];
   if(!$c['enabled']){unset($state['pattern']['setup'],$state['pattern']['candidate']);return ['observed_at'=>$now,'strategy_version'=>$version,'decision'=>['status'=>'DISABLED','reason'=>'ورود جدید متوقف است؛ معاملهٔ آزمایشی باز همچنان بررسی می‌شود.','conditions'=>[]],'signal'=>null,'trade_events'=>$events,'equity'=>ScannerPaper::equity($state,$snapshot,$c)];}
   try{
    $bars=ScannerData::context($snapshot,$c);$pattern=$state['pattern'];
    $decision=isset($pattern['candidate'])?['status'=>'PATTERN_PENDING_EXECUTION','reason'=>'الگوی ثبت‌شده منتظر کنترل اجرا است.','conditions'=>[],'candle_close'=>$pattern['candidate']['candle_close']]:BreakRetestScanner::evaluate($pattern,$bars,$c,$now);$state['pattern']=$pattern;
    if(isset($state['pattern']['candidate'])){
     $candidate=$state['pattern']['candidate'];$gate=ScannerExecution::check($candidate,$snapshot,$c,$state['balance']);$decision=array_replace($decision,$gate);$decision['candidate']=$candidate;$decision['conditions']=array_merge($candidate['conditions'],$gate['conditions']);
-    if($now>=$candidate['expires_at']||str_contains($gate['reason'],'هدف اول'))unset($state['pattern']['candidate']);
+    if($now>=$candidate['expires_at']||($gate['terminal']??false))unset($state['pattern']['candidate']);
     if($gate['status']==='MANUAL_REVIEW_AVAILABLE'&&$c['enabled']){
      if($state['paper']!==null){$decision['status']='REJECTED';$decision['reason']='یک معاملهٔ آزمایشی باز یا در انتظار ورود وجود دارد.';}
      elseif($candidate['id']!==($state['last_signal']??null)){
@@ -33,6 +36,7 @@ final class ScannerRunner {
   foreach($dataset['observations']??[] as $observation){
    $now=$observation['observed_at']??null;if(!is_int($now)||$now<=$last)throw new InvalidArgumentException('Backtest observations must have unique increasing timestamps');$last=$now;
    $snapshot=$observation+['bars'=>$dataset['bars']??[],'market'=>$dataset['market']??[],'provider'=>'wallex','symbol'=>'BTCUSDT'];
+   if(isset($observation['available_candles']))foreach(ScannerData::SECONDS as $tf=>$seconds){$keys=array_fill_keys($observation['available_candles'][$tf]??[],true);$snapshot['bars'][$tf]=array_values(array_filter($snapshot['bars'][$tf]??[],fn($b)=>isset($keys[$b['time']])));}
    $runtime=$c;if(isset($observation['runtime_enabled'])&&is_bool($observation['runtime_enabled']))$runtime['enabled']=$observation['runtime_enabled'];
    $r=self::step($state,$snapshot,$runtime);$decisions[]=$r['decision']+['observed_at'=>$now];if($r['signal'])$signals[]=$r['signal'];array_push($trades,...$r['trade_events']);$equity[]=['time'=>$now,'equity'=>$r['equity']];
   }
