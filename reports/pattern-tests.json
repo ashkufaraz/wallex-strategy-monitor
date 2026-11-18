@@ -830,6 +830,129 @@
       "status": "PASS"
     },
     {
+      "id": "data.classify.no_data",
+      "input": {
+        "API": "no_data"
+      },
+      "expected": {
+        "code": "NO_TRADES",
+        "evidence": true,
+        "recovered": 98
+      },
+      "actual": {
+        "code": "NO_TRADES",
+        "evidence": true,
+        "recovered": 98
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.classify.zero",
+      "input": {
+        "API": "zero"
+      },
+      "expected": {
+        "code": "NO_TRADES",
+        "evidence": true,
+        "recovered": 98
+      },
+      "actual": {
+        "code": "NO_TRADES",
+        "evidence": true,
+        "recovered": 98
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.classify.incomplete",
+      "input": {
+        "API": "incomplete"
+      },
+      "expected": {
+        "code": "INCOMPLETE_RESPONSE",
+        "evidence": true,
+        "recovered": 98
+      },
+      "actual": {
+        "code": "INCOMPLETE_RESPONSE",
+        "evidence": true,
+        "recovered": 98
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "data.classify.malformed",
+      "input": {
+        "API": "malformed"
+      },
+      "expected": {
+        "code": "PROCESSING_ERROR",
+        "evidence": true,
+        "recovered": 98
+      },
+      "actual": {
+        "code": "PROCESSING_ERROR",
+        "evidence": true,
+        "recovered": 98
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "health.window-rolls-past-gap",
+      "input": {
+        "gap": "older than new required window"
+      },
+      "expected": {
+        "before": 0,
+        "after": 98,
+        "gap": null
+      },
+      "actual": {
+        "before": 0,
+        "after": 98,
+        "gap": null
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "evaluation.same-candle-keeps-details",
+      "input": {
+        "checks": 2
+      },
+      "expected": {
+        "same": true,
+        "present": true
+      },
+      "actual": {
+        "same": true,
+        "present": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "notification.test-isolated",
+      "input": {
+        "channel": "existing alerts; no network"
+      },
+      "expected": {
+        "signal_delta": 0,
+        "execution_delta": 0,
+        "type": "notification_test",
+        "owner": 1,
+        "message": true,
+        "queued": true
+      },
+      "actual": {
+        "signal_delta": 0,
+        "execution_delta": 0,
+        "type": "notification_test",
+        "owner": 1,
+        "message": true,
+        "queued": true
+      },
+      "status": "PASS"
+    },
+    {
       "id": "concurrency.six-processes",
       "input": {
         "processes": 6,
@@ -873,8 +996,8 @@
     }
   ],
   "summary": {
-    "total": 36,
-    "pass": 36,
+    "total": 43,
+    "pass": 43,
     "fail": 0
   }
 }

@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/MarketData.php';
 
 final class SmsFallback {
  static function config():array {
@@ -35,7 +36,9 @@ final class SmsFallback {
   if(!is_array($entry)||empty($entry['messageid']))throw new RuntimeException('SMS acceptance unknown; not retried automatically');
   return ['message_id'=>(string)$entry['messageid'],'status'=>(int)($entry['status']??0)];
  }
- static function message(array $p):string {
+ static function message(array $p):string {return MarketScope::label($p['exchange']??'wallex').' / '.self::messageBody($p);}
+ static function messageBody(array $p):string {
+  if(($p['type']??'')==='notification_test')return 'آزمون اعلان؛ سیگنال معاملاتی نیست';
   if(($p['type']??'')==='scanner_pattern')return ($p['message']??'تأیید الگوی نموداری')."\nashkufaraz.ir/public/";
   $type=($p['type']??'')==='entry_conditions_only'?'فقط شرط‌های ورود؛ اندیکاتورها تأیید نشده‌اند':(($p['type']??'')==='cancelled'?'لغو استراتژی':'هشدار استراتژی');
   return "پایش والکس\n".$type."\n".implode('',array_slice(preg_split('//u',(string)($p['name']??''),-1,PREG_SPLIT_NO_EMPTY)?:[],0,100))."\n".($p['symbol']??'').' '.($p['action']??'')."\nقیمت: ".($p['price']??'')."\nزمان UTC: ".gmdate('Y-m-d H:i',(int)($p['event_time']??time()))."\nashkufaraz.ir/public/";

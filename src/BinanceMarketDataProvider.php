@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 // Public market-data only. Inherits the existing scheduler contract, never its HTTP routing.
 class BinanceMarketDataProvider extends Wallex {
+ function exchange():string {return 'binance_spot';}
  private array $responses=[];private array $responseTimes=[];private ?float $budget=null;
  function __construct(private ?Closure $transport=null,private ?Closure $clock=null,?float $deadline=null){parent::__construct();$this->budget=$deadline;}
  function now():int{return $this->clock?(int)($this->clock)():time();}

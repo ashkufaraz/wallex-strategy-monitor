@@ -1,6 +1,8 @@
 {
   "suite": "Readiness follow-up; synthetic offline only",
   "config_operational": {
+    "exchange": "wallex",
+    "account_id": 0,
     "enabled": true,
     "symbol": "BTCUSDT",
     "capital": 70,

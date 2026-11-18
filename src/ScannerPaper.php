@@ -56,7 +56,7 @@ final class ScannerPaper {
  }
  static function liquidation(array $p,array $snapshot,array $c):?float {
   $b=$snapshot['book']??[];$now=$snapshot['observed_at'];$at=$b['source_timestamp']??null;$received=$b['received_at']??null;
-  if(($b['provider']??null)!=='wallex'||($b['symbol']??null)!=='BTCUSDT'||($b['trust_status']??null)!=='VERIFIED'||!is_int($at)||!is_int($received)||$now-$at<0||$now-$at>$c['quote_max_age_seconds']||$now-$received<0||$now-$received>$c['quote_max_age_seconds'])return null;
+  if(($b['provider']??null)!==($c['exchange']??'wallex')||($b['symbol']??null)!==$c['symbol']||($b['trust_status']??null)!=='VERIFIED'||!is_int($at)||!is_int($received)||$now-$at<0||$now-$at>$c['quote_max_age_seconds']||$now-$received<0||$now-$received>$c['quote_max_age_seconds'])return null;
   try{$q=WallexExecutionMarketProvider::estimate($b,$p['candidate']['direction']==='LONG'?'SHORT':'LONG',$p['quantity']);return $q['depth_sufficient']?(float)$q['vwap']:null;}catch(Throwable $e){return null;}
  }
  static function equity(array $state,array $snapshot,array $c):?float {

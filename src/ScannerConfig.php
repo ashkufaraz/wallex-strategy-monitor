@@ -5,7 +5,7 @@ final class ScannerConfig {
  const STRATEGY='wallex-break-retest-v1';
  const RULES_VERSION='1.2.0';
  static function defaults():array {return [
-  'enabled'=>true,'symbol'=>'BTCUSDT','capital'=>70.0,'risk_pct'=>1.0,
+  'exchange'=>MarketScope::current()['exchange'],'account_id'=>MarketScope::current()['account_id'],'enabled'=>true,'symbol'=>MarketScope::current()['symbol'],'capital'=>70.0,'risk_pct'=>1.0,
   'ema_fast'=>20,'ema_slow'=>50,'atr_period'=>14,'level_lookback'=>20,'level_touches'=>2,'touch_separation'=>2,
   'level_tolerance_atr'=>0.25,'break_buffer_atr'=>0.10,'retest_tolerance_atr'=>0.25,'confirm_buffer_atr'=>0.05,
   'volume_period'=>20,'break_volume_ratio'=>1.5,'confirm_volume_ratio'=>1.0,
@@ -20,7 +20,7 @@ final class ScannerConfig {
  static function validate(array $input):array {
   $default=self::defaults();foreach($input as $k=>$v)if(!array_key_exists($k,$default))throw new InvalidArgumentException('Unknown scanner setting: '.$k);
   $c=array_replace($default,$input);
-  if(!is_bool($c['enabled'])||$c['symbol']!=='BTCUSDT')throw new InvalidArgumentException('Scanner v1 supports BTCUSDT only');
+  MarketScope::validate($c);if(!is_bool($c['enabled']))throw new InvalidArgumentException('Invalid scanner enabled flag');
   if(!is_bool($c['fees_verified'])||!is_string($c['fee_reference'])||strlen($c['fee_reference'])>300||($c['fees_verified']&&trim($c['fee_reference'])==='')||!is_int($c['observation_interval_seconds'])||$c['observation_interval_seconds']<55||$c['observation_interval_seconds']>3600||!is_string($c['evaluation_id'])||!preg_match('/^[a-zA-Z0-9_-]{1,64}$/D',$c['evaluation_id']))throw new InvalidArgumentException('Invalid scanner fee evidence, cadence or evaluation id');
   if(!is_numeric($c['tp1_exit_pct'])||!is_numeric($c['tp2_exit_pct'])||(float)$c['tp1_exit_pct']!==100.0||(float)$c['tp2_exit_pct']!==0.0||$c['stop_after_tp1']!=='POSITION_CLOSED')throw new InvalidArgumentException('Scanner v1 exits 100% at TP1 and 0% at informational TP2; partial exits are not implemented');
   $c['tp1_exit_pct']=100.0;$c['tp2_exit_pct']=0.0;

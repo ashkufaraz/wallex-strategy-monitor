@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 final class ScannerData {
  const SECONDS=['15m'=>900,'1h'=>3600,'4h'=>14400];
- static function closed(array $source,int $seconds,int $now,int $count,bool $allowZero=false):array {
-  $bars=[];$end=intdiv($now,$seconds)*$seconds;
+ static function closed(array $source,int $seconds,int $now,int $count,bool $allowZero=false,int $phase=0):array {
+  $bars=[];$end=intdiv($now-$phase,$seconds)*$seconds+$phase;
   foreach($source as $bar){
-   if(!is_array($bar)||!isset($bar['time'])||!is_int($bar['time'])||$bar['time']<0||$bar['time']%$seconds)throw new RuntimeException('UNAVAILABLE: invalid candle timestamp');
+   if(!is_array($bar)||!isset($bar['time'])||!is_int($bar['time'])||$bar['time']<0||($bar['time']-$phase)%$seconds)throw new RuntimeException('UNAVAILABLE: invalid candle timestamp');
    $t=$bar['time'];if($t+$seconds>$end)continue;
    foreach(['open','high','low','close','volume'] as $field)if(!isset($bar[$field])||!is_numeric($bar[$field])||!is_finite((float)$bar[$field]))throw new RuntimeException('UNAVAILABLE: invalid OHLCV');
    if(min($bar['open'],$bar['high'],$bar['low'],$bar['close'])<=0||$bar['volume']<0||$bar['high']<max($bar['open'],$bar['low'],$bar['close'])||$bar['low']>min($bar['open'],$bar['high'],$bar['close']))throw new RuntimeException('UNAVAILABLE: invalid OHLCV range');
@@ -26,37 +26,42 @@ final class ScannerData {
   }return $out;
  }
  static function context(array $snapshot,array $c):array {
+  if(isset($snapshot['provider'])&&($snapshot['provider']!==($c['exchange']??'wallex')||($snapshot['symbol']??null)!==$c['symbol']))throw new RuntimeException('UNAVAILABLE: candle exchange/symbol mismatch');
   $now=$snapshot['observed_at']??null;if(!is_int($now)||$now<1)throw new RuntimeException('UNAVAILABLE: observation timestamp missing');$out=[];
-  foreach(ScannerConfig::counts($c) as $tf=>$n)$out[$tf]=self::closed($snapshot['bars'][$tf]??[],self::SECONDS[$tf],$now,$n);
+  foreach(ScannerConfig::counts($c) as $tf=>$n)$out[$tf]=self::closed($snapshot['bars'][$tf]??[],self::SECONDS[$tf],$now,$n,false,MarketData::phase($c['exchange']??'wallex',self::SECONDS[$tf]));
   return $out;
  }
  static function udf(array $data):array {
-  if(($data['s']??null)!=='ok'||!is_array($data['t']??null)||!array_is_list($data['t']))throw new RuntimeException('UNAVAILABLE: Wallex candle response');
-  foreach(['o','h','l','c','v'] as $f)if(!is_array($data[$f]??null)||!array_is_list($data[$f])||count($data[$f])!==count($data['t']))throw new RuntimeException('UNAVAILABLE: incomplete Wallex candle arrays');
+  if(($data['s']??null)!=='ok'||!is_array($data['t']??null)||!array_is_list($data['t']))throw new RuntimeException('UNAVAILABLE: provider candle response');
+  foreach(['o','h','l','c','v'] as $f)if(!is_array($data[$f]??null)||!array_is_list($data[$f])||count($data[$f])!==count($data['t']))throw new RuntimeException('UNAVAILABLE: incomplete provider candle arrays');
   $out=[];foreach($data['t'] as $i=>$t){if(!is_int($t)||$t<0||$t>=100000000000)throw new RuntimeException('UNAVAILABLE: candle timestamp must be UTC seconds, not milliseconds');$out[]=['time'=>$t,'open'=>$data['o'][$i],'high'=>$data['h'][$i],'low'=>$data['l'][$i],'close'=>$data['c'][$i],'volume'=>$data['v'][$i]];}return $out;
  }
  static function fetch(Wallex $api,array $c,int $now,?array $cached=null):array {
-  $snapshot=['observed_at'=>$now,'received_at'=>$now,'symbol'=>'BTCUSDT','provider'=>'wallex','bars'=>[],'fetch_errors'=>[],'source_issues'=>[]];
+  $exchange=$c['exchange']??'wallex';$symbol=$c['symbol'];if($api->exchange()!==$exchange)throw new RuntimeException('Provider/config mismatch');
+  if($api instanceof NobitexMarketDataProvider){$pc=PatternService::config();$pc['methods'][PatternConfig::BREAKOUT]['enabled']=true;$shared=json_decode(MarketScope::setting('pattern_cache','{}'),true);if(($shared['provider']??null)===$exchange&&($shared['symbol']??null)===$symbol)$cached=$shared;$snapshot=MarketScope::run($c,fn()=>PatternData::fetch($api,$pc,$c,$now,$cached??[]));try{$snapshot['market']=$api->limits($symbol);}catch(Throwable $e){$snapshot['fetch_errors']['market']=$e->getMessage();}try{$snapshot['book']=$api->book($symbol,time());}catch(Throwable $e){$snapshot['fetch_errors']['book']=$e->getMessage();}return $snapshot;}
+  $snapshot=['exchange'=>$exchange,'observed_at'=>$now,'received_at'=>$now,'symbol'=>$symbol,'provider'=>$exchange,'bars'=>[],'fetch_errors'=>[],'source_issues'=>[]];
   try{
-  $m=$api->markets()['BTCUSDT']??throw new RuntimeException('UNAVAILABLE: BTCUSDT market metadata');
+  $m=$api->markets()[$symbol]??throw new RuntimeException('UNAVAILABLE: exact market metadata');
   $step=$m['stepSize']??null;$tick=$m['tickSize']??null;$proof=['source'=>'/v1/markets','raw_stepSize'=>$step,'raw_tickSize'=>$tick];
   if(is_int($step)&&is_int($tick)){
-   $modern=$api->get('/hector/web/v1/markets')['result']['markets']??[];$match=array_values(array_filter($modern,fn($x)=>($x['symbol']??null)==='BTCUSDT'))[0]??[];
+   $modern=$api->get('/hector/web/v1/markets')['result']['markets']??[];$match=array_values(array_filter($modern,fn($x)=>($x['symbol']??null)===$symbol))[0]??[];
    if(($match['amount_precision']??null)!==$step||($match['price_precision']??null)!==$tick||$step<0||$step>18||$tick<0||$tick>18||($match['is_spot']??null)!==true)throw new RuntimeException('UNAVAILABLE: market precision corroboration failed');
    $proof['corroboration_source']='/hector/web/v1/markets';$proof['amount_precision']=$step;$proof['price_precision']=$tick;$step=10**(-$step);$tick=10**(-$tick);
   }
-  $snapshot['market']=['limits_evidence'=>$proof,'symbol'=>$m['symbol']??null,'quote_asset'=>$m['quoteAsset']??null,'step_size'=>$step,'tick_size'=>$tick,'min_qty'=>$m['minQty']??null,'min_notional'=>$m['minNotional']??null,'instrument'=>'SPOT','supports_long'=>true,'supports_short'=>false,'provider'=>'wallex'];
+  $snapshot['market']=['limits_evidence'=>$proof,'symbol'=>$m['symbol']??null,'quote_asset'=>$m['quoteAsset']??null,'step_size'=>$step,'tick_size'=>$tick,'min_qty'=>$m['minQty']??null,'min_notional'=>$m['minNotional']??null,'instrument'=>'SPOT','supports_long'=>true,'supports_short'=>false,'provider'=>$exchange];
   }catch(Throwable $e){$snapshot['fetch_errors']['market']=$e->getMessage();}
-  try{$snapshot['book']=(new WallexExecutionMarketProvider($api,[]))->snapshot('BTCUSDT',time());}catch(Throwable $e){$snapshot['fetch_errors']['book']=$e->getMessage();}
+  try{$snapshot['book']=(new WallexExecutionMarketProvider($api,[]))->snapshot($symbol,time());}catch(Throwable $e){$snapshot['fetch_errors']['book']=$e->getMessage();}
+  $shared=json_decode(MarketScope::setting('pattern_cache','{}'),true);
   foreach(ScannerConfig::counts($c) as $tf=>$count){$seconds=self::SECONDS[$tf];$end=intdiv($now,$seconds)*$seconds;
    try{
-   if(isset($cached['bars'][$tf])&&($cached['boundaries'][$tf]??null)===$end)$snapshot['bars'][$tf]=$cached['bars'][$tf];
+   if(($shared['provider']??null)===$exchange&&($shared['symbol']??null)===$symbol&&($shared['latest_close'][$tf]??null)===$end&&isset($shared['bars'][$tf])&&!isset($shared['fetch_errors'][$tf])&&($tf!=='15m'||$now-($shared['frame_received_at'][$tf]??0)<=180)){$snapshot['bars'][$tf]=$shared['bars'][$tf];foreach($shared['source_issues']??[] as $key=>$issue)if(str_starts_with($key,$tf.':'))$snapshot['source_issues'][$key]=$issue;}
+   elseif(isset($cached['bars'][$tf])&&($cached['boundaries'][$tf]??null)===$end)$snapshot['bars'][$tf]=$cached['bars'][$tf];
    else {
     // Wallex currently maps resolution=15 to minutes and 240 to hours.
     // Request the verified base granularity, then aggregate complete UTC buckets.
     $base=$tf==='15m'?60:3600;
     $raw=[];$chunk=$base===60?21600:604800;
-    for($start=$end-$count*$seconds;$start<$end;$start+=$chunk){$response=$api->get('/v1/udf/history',['symbol'=>'BTCUSDT','resolution'=>$base===60?'1':'60','from'=>$start,'to'=>min($end,$start+$chunk)]);$part=($response['s']??null)==='no_data'?[]:self::udf($response);array_push($raw,...$part);}
+    for($start=$end-$count*$seconds;$start<$end;$start+=$chunk){$response=MarketData::history($api,['symbol'=>$symbol,'resolution'=>$base===60?'1':'60','from'=>$start,'to'=>min($end,$start+$chunk)]);$part=($response['s']??null)==='no_data'?[]:self::udf($response);array_push($raw,...$part);}
     $snapshot['bars'][$tf]=[];
     for($t=$end-$count*$seconds;$t<$end;$t+=$seconds){try{
      $subset=array_values(array_filter($raw,fn($b)=>$b['time']>=$t&&$b['time']<$t+$seconds));

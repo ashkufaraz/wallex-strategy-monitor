@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 final class ScannerRunner {
  static function step(array &$state,array $snapshot,array $c):array {
+  $exchange=$c['exchange']??'wallex';if(isset($snapshot['provider'])&&($snapshot['provider']!==$exchange||($snapshot['symbol']??null)!==$c['symbol']))return ['observed_at'=>$snapshot['observed_at']??null,'strategy_version'=>ScannerConfig::version($c),'decision'=>['status'=>'UNAVAILABLE','reason'=>'Exchange/symbol mismatch','reason_code'=>'market_identity','conditions'=>[]],'signal'=>null,'trade_events'=>[],'equity'=>null];
   $now=$snapshot['observed_at']??0;$version=ScannerConfig::version($c);$events=[];$signal=null;
   if(!is_int($now)||$now<1)return ['observed_at'=>null,'strategy_version'=>$version,'decision'=>['status'=>'UNAVAILABLE','reason'=>'Observation timestamp missing','conditions'=>[BreakRetestScanner::condition('observation_time','UNAVAILABLE')]],'signal'=>null,'trade_events'=>[],'equity'=>null];
   if($now<=($state['last_observation']??0))return ['observed_at'=>$now,'strategy_version'=>$version,'decision'=>['status'=>$now===($state['last_observation']??0)?'DUPLICATE':'UNAVAILABLE','reason'=>'Duplicate or out-of-order observation; state not changed','reason_code'=>'observation_order','conditions'=>[BreakRetestScanner::condition('observation_order',$now===($state['last_observation']??0)?'NOT_EVALUATED':'UNAVAILABLE')]],'signal'=>null,'trade_events'=>[],'equity'=>null];
@@ -22,7 +23,7 @@ final class ScannerRunner {
      elseif($candidate['id']!==($state['last_signal']??null)){
       $candidate['stop_loss']=$gate['stop_loss'];$candidate['targets']=$gate['targets'];
       $candidate['created_at']=$now;$signal=$candidate+$gate;$signal['conditions']=$decision['conditions'];$signal['created_at']=$now;$signal['entry_model']=ScannerPlan::ENTRY_MODEL;$signal['json_strategy']=BreakRetestScanner::export($candidate,$gate['quantity']);
-      $state['last_signal']=$candidate['id'];$state['paper']=['id'=>$candidate['id'],'status'=>'PENDING','candidate'=>$candidate,'eligible_at'=>$now+$c['manual_delay_seconds'],'quality'=>'WAITING_MANUAL_DELAY'];
+      $state['last_signal']=$candidate['id'];$state['paper']=['exchange'=>$c['exchange']??'wallex','symbol'=>$c['symbol'],'account_id'=>$c['account_id']??0,'id'=>$candidate['id'],'status'=>'PENDING','candidate'=>$candidate,'eligible_at'=>$now+$c['manual_delay_seconds'],'quality'=>'WAITING_MANUAL_DELAY'];
       unset($state['pattern']['candidate']);
      }
     }
@@ -33,15 +34,15 @@ final class ScannerRunner {
  }
  static function backtest(array $dataset,array $config):array {
   $c=ScannerConfig::validate($config);$state=$dataset['initial_state']??ScannerPaper::fresh($c);$comparisons=[];$trades=[];$signals=[];$decisions=[];$equity=[['time'=>0,'equity'=>$c['capital']]];$last=0;
-  if(($dataset['provider']??null)!=='wallex'||($dataset['symbol']??null)!=='BTCUSDT')throw new InvalidArgumentException('Backtest requires explicit Wallex BTCUSDT provenance');
+  if(($dataset['provider']??null)!==($c['exchange']??'wallex')||($dataset['symbol']??null)!==$c['symbol'])throw new InvalidArgumentException('Backtest requires matching exchange and symbol provenance');
   foreach($dataset['observations']??[] as $observation){
    if(isset($observation['code_version'])&&$observation['code_version']!==ScannerReadiness::codeVersion())throw new RuntimeException('REPLAY_CODE_VERSION_MISMATCH: use the archived code revision; historical evaluation is immutable');
    $now=$observation['observed_at']??null;if(!is_int($now)||$now<=$last)throw new InvalidArgumentException('Backtest observations must have unique increasing timestamps');$last=$now;
-   $snapshot=$observation+['bars'=>$dataset['bars']??[],'market'=>$dataset['market']??[],'provider'=>'wallex','symbol'=>'BTCUSDT'];
+   $snapshot=$observation+['bars'=>$dataset['bars']??[],'market'=>$dataset['market']??[],'provider'=>$c['exchange']??'wallex','exchange'=>$c['exchange']??'wallex','symbol'=>$c['symbol']];
    if(isset($observation['available_candles']))foreach(ScannerData::SECONDS as $tf=>$seconds){$keys=array_fill_keys($observation['available_candles'][$tf]??[],true);$snapshot['bars'][$tf]=array_values(array_filter($snapshot['bars'][$tf]??[],fn($b)=>isset($keys[$b['time']])));}
    $runtime=$c;if(isset($observation['runtime_enabled'])&&is_bool($observation['runtime_enabled']))$runtime['enabled']=$observation['runtime_enabled'];
    $r=self::step($state,$snapshot,$runtime);$decisions[]=$r['decision']+['observed_at'=>$now];if($r['signal'])$signals[]=$r['signal'];array_push($trades,...$r['trade_events']);$equity[]=['time'=>$now,'equity'=>$r['equity']];if(isset($observation['result']))$comparisons[]=['observed_at'=>$now,'result_equal'=>$r==$observation['result'],'state_equal'=>$state==($observation['state_after']??[])];
   }
-  return ['replay_comparisons'=>$comparisons,'replay_match'=>$comparisons?count(array_filter($comparisons,fn($r)=>!$r['result_equal']||!$r['state_equal']))===0:null,'final_state'=>$state,'mode'=>'BACKTEST_REPLAY','strategy_version'=>ScannerConfig::version($c),'config'=>$c,'signals'=>$signals,'decisions'=>$decisions,'trades'=>$trades,'open_paper'=>$state['paper'],'equity'=>$equity,'report'=>ScannerPaper::report($trades,$equity,$c['capital']),'notes'=>['No invented historical order books. Missing source-fresh quotes remain UNAVAILABLE.','Entries use observations after the manual delay, never a guaranteed candle-close fill.','Targets inside the partial entry candle are UNAVAILABLE; same-bar stop/target resolves stop first.']];
+  return ['replay_comparisons'=>$comparisons,'replay_match'=>$comparisons?count(array_filter($comparisons,fn($r)=>!$r['result_equal']||!$r['state_equal']))===0:null,'final_state'=>$state,'exchange'=>$c['exchange']??'wallex','symbol'=>$c['symbol'],'account_id'=>$c['account_id']??0,'mode'=>'BACKTEST_REPLAY','strategy_version'=>ScannerConfig::version($c),'config'=>$c,'signals'=>$signals,'decisions'=>$decisions,'trades'=>$trades,'open_paper'=>$state['paper'],'equity'=>$equity,'report'=>ScannerPaper::report($trades,$equity,$c['capital']),'notes'=>['No invented historical order books. Missing source-fresh quotes remain UNAVAILABLE.','Entries use observations after the manual delay, never a guaranteed candle-close fill.','Targets inside the partial entry candle are UNAVAILABLE; same-bar stop/target resolves stop first.']];
  }
 }

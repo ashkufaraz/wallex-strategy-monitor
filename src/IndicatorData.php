@@ -11,7 +11,7 @@ final class IndicatorData {
  private function fetchPart(array $params,string $symbol,int $base,int $start,int $until):array {
   for($attempt=0;$attempt<2;$attempt++){
    try{
-    $bars=self::parse($this->api->get('/v1/udf/history',$params),$symbol,$base,$start,$until);
+    $bars=self::parse(MarketData::history($this->api,$params),$symbol,$base,$start,$until);
     for($t=$start;$t<$until;$t+=$base)if(!isset($bars[$t]))throw new RuntimeException('Delayed or missing closed candle at '.$t);
     return $bars;
    }catch(Throwable $e){if($attempt===1)throw $e;usleep(200000);}
@@ -19,6 +19,7 @@ final class IndicatorData {
   throw new RuntimeException('Indicator history unavailable');
  }
  private function cached(string $key,int $now,Closure $compute):mixed {
+  $key=$this->api->exchange().':'.$key;
   if(isset($this->memory[$key]))return $this->memory[$key];
   db()->exec('CREATE TABLE IF NOT EXISTS indicator_cache(k TEXT PRIMARY KEY, expires INTEGER NOT NULL, payload TEXT NOT NULL)');
   $q=db()->prepare('SELECT payload FROM indicator_cache WHERE k=? AND expires>?');$q->execute([$key,$now]);$raw=$q->fetchColumn();
@@ -61,12 +62,13 @@ final class IndicatorData {
  }
 
  function history(string $symbol,string $tf,int $count,int $asOf,int $now):array {
-  $seconds=Indicators::TIMEFRAMES[$tf];$end=intdiv($asOf,$seconds)*$seconds;$from=$end-$count*$seconds;
+  $seconds=Indicators::TIMEFRAMES[$tf];$end=MarketData::boundary($asOf,$seconds,$this->api->exchange());$from=$end-$count*$seconds;
   if($this->api instanceof BinanceMarketDataProvider)return $this->cached("binance_spot:native:v1:$symbol:$tf:$from:$end",$now,fn()=>$this->api->candles($symbol,$tf,$from,$end));
+  if($this->api instanceof NobitexMarketDataProvider)return $this->cached("native:$symbol:$tf:$from:$end",$now,fn()=>$this->api->candles($symbol,$tf,$from,$end));
   if($from<0)throw new RuntimeException('Insufficient history before Unix epoch');
   $base=$seconds>=3600?3600:60;
   // Reuse a larger history fetched by another strategy with a different period.
-  $prefix="h:v3_continuous:$symbol:$tf:$end:";
+  $prefix=$this->api->exchange().":h:v3_continuous:$symbol:$tf:$end:";
   db()->exec('CREATE TABLE IF NOT EXISTS indicator_cache(k TEXT PRIMARY KEY, expires INTEGER NOT NULL, payload TEXT NOT NULL)');
   $q=db()->prepare('SELECT payload FROM indicator_cache WHERE k LIKE ? AND expires>?');$q->execute([$prefix.'%',$now]);
   foreach($q->fetchAll(PDO::FETCH_COLUMN) as $raw){$candidate=json_decode($raw,true,512,JSON_THROW_ON_ERROR);$valid=true;
@@ -93,23 +95,24 @@ final class IndicatorData {
   return $this->api->withBudget(12,fn()=>$this->evaluateWithinBudget($s,$asOf,$now));
  }
  private function evaluateWithinBudget(array $s,int $asOf,int $now):array {
+  if(($s['exchange']??'wallex')!==$this->api->exchange()&&!$this->api instanceof BinanceMarketDataProvider)throw new RuntimeException('Indicator exchange/provider mismatch');
   $conditions=$s['indicator_conditions']['conditions'];$needs=[];$histories=[];$errors=[];
   foreach($conditions as $c)$needs[$c['timeframe']]=max($needs[$c['timeframe']]??0,Indicators::needed($c));
   foreach($needs as $tf=>$count)try{$histories[$tf]=$this->history($s['symbol'],$tf,$count,$asOf,$now);}catch(Throwable $e){$errors[$tf]=$e->getMessage();}
   $results=[];
-  foreach($conditions as $c){$seconds=Indicators::TIMEFRAMES[$c['timeframe']];$end=intdiv($asOf,$seconds)*$seconds;
-   $row=$c+['symbol'=>$s['symbol'],'candle_open'=>$end-$seconds,'candle_close'=>$end,'duration'=>$seconds,'as_of'=>$asOf,'observed'=>null,'status'=>'UNAVAILABLE'];
+  foreach($conditions as $c){$seconds=Indicators::TIMEFRAMES[$c['timeframe']];$end=MarketData::boundary($asOf,$seconds,$this->api->exchange());
+   $row=$c+['exchange'=>$s['exchange']??$this->api->exchange(),'symbol'=>$s['symbol'],'candle_open'=>$end-$seconds,'candle_close'=>$end,'duration'=>$seconds,'as_of'=>$asOf,'observed'=>null,'status'=>'UNAVAILABLE'];
    try{
     if(isset($errors[$c['timeframe']]))throw new RuntimeException($errors[$c['timeframe']]);
     $bars=array_slice(array_values($histories[$c['timeframe']]),-Indicators::needed($c));
     $row['zero_trade_intervals']=count(array_filter($bars,fn($bar)=>isset($bar['continuity'])));
-    $row['history_policy']=$this->api instanceof BinanceMarketDataProvider?'native_binance':'last_traded_close_for_empty_intervals';
+    $row['history_policy']=$this->api instanceof NobitexMarketDataProvider?'native_nobitex_no_fill':($this->api instanceof BinanceMarketDataProvider?'native_binance':'last_traded_close_for_empty_intervals');
     $key=implode(':',[$this->api instanceof BinanceMarketDataProvider?'binance_spot:v1':'v3_continuous',$s['symbol'],$c['timeframe'],$c['indicator'],$c['period'],$c['metric'],$end]);
     $v=$this->cached($key,$now,fn()=>Indicators::value($c['indicator'],$c['period'],$c['metric'],$bars));
     $row['observed']=$v;$row['status']=Indicators::passes($v,$c)?'PASS':'FAIL';
    }catch(Throwable $e){$row['error']=$e->getMessage();}
    $results[]=$row;
   }
-  return ['logic'=>'all','as_of'=>$asOf,'passed'=>count(array_filter($results,fn($r)=>$r['status']!=='PASS'))===0,'conditions'=>$results];
+  return ['exchange'=>$s['exchange']??$this->api->exchange(),'logic'=>'all','as_of'=>$asOf,'passed'=>count(array_filter($results,fn($r)=>$r['status']!=='PASS'))===0,'conditions'=>$results];
  }
 }

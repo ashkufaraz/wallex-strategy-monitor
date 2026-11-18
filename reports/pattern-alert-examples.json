@@ -76,7 +76,9 @@
                 }
             ],
             "reason": "خروج کندل قبلی از باند و RSI افراطی، بازگشت کندل بسته‌شده به داخل باند، بازگشت RSI و ADX کم‌روند تأیید شدند.",
-            "id": "28b26c0b0aaeb4c6446d24060fe9c2fedbf9c4fd774e53296884e3cf7436cdd7",
+            "id": "f37a9150096f67051e514fbc90152e1a9b3cea6717691cb7a418bc7ce9a281e3",
+            "exchange": "wallex",
+            "account_id": 0,
             "symbol": "BTCUSDT",
             "strategy_id": "mean_reversion_v1",
             "rules_version": "1.0.0",
@@ -110,7 +112,7 @@
             "publication_delay_seconds": 0,
             "level_kind": "CHART_REFERENCE_ONLY",
             "notification_status": "QUEUED_EXISTING_ALERT_CHANNEL",
-            "message": "BTCUSDT — الگوی بازگشت به میانگین، جهت خرید، در کندل بسته‌شدهٔ ۱۵دقیقه UTC 2024-10-04T00:00:00Z تأیید شد. قیمت مرجع: 95 USDT. شرایط اجرای معامله بررسی نشده است."
+            "message": "والکس \/ BTCUSDT — الگوی بازگشت به میانگین، جهت خرید، در کندل بسته‌شدهٔ ۱۵دقیقه UTC 2024-10-04T00:00:00Z تأیید شد. قیمت مرجع: 95 USDT. شرایط اجرای معامله بررسی نشده است."
         },
         "mean_BEARISH": {
             "pattern_status": "PATTERN_CONFIRMED",
@@ -187,7 +189,9 @@
                 }
             ],
             "reason": "خروج کندل قبلی از باند و RSI افراطی، بازگشت کندل بسته‌شده به داخل باند، بازگشت RSI و ADX کم‌روند تأیید شدند.",
-            "id": "dccdf9a2a87bd59a9917b6c61237e0e54b9a8e808a4f36d7c4634b1eb8ab65a9",
+            "id": "de9219a49b58b1dd9c94c2f29cf61c6a9883ede3206681f4e42b35cd373283c4",
+            "exchange": "wallex",
+            "account_id": 0,
             "symbol": "BTCUSDT",
             "strategy_id": "mean_reversion_v1",
             "rules_version": "1.0.0",
@@ -221,13 +225,15 @@
             "data_received_at": 1728000000,
             "publication_delay_seconds": 0,
             "level_kind": "CHART_REFERENCE_ONLY",
-            "message": "BTCUSDT — الگوی بازگشت به میانگین، الگوی نزولی، در کندل بسته‌شدهٔ ۱۵دقیقه UTC 2024-10-04T00:00:00Z تأیید شد. قیمت مرجع: 105 USDT. شرایط اجرای معامله بررسی نشده است. این الگوی نموداری، امکان بازکردن شورت در بازار نقدی را تأیید نمی‌کند."
+            "message": "والکس \/ BTCUSDT — الگوی بازگشت به میانگین، الگوی نزولی، در کندل بسته‌شدهٔ ۱۵دقیقه UTC 2024-10-04T00:00:00Z تأیید شد. قیمت مرجع: 105 USDT. شرایط اجرای معامله بررسی نشده است. این الگوی نموداری، امکان بازکردن شورت در بازار نقدی را تأیید نمی‌کند."
         },
         "breakout": {
-            "id": "ff47bab17d3bc6717da6f59199abf349feaca61eddf1e31018d75d81fcc560af",
+            "id": "ba97c0ffa4087304da4c0d13bd7abd6cfab345dd1f2246f312ff335515c07ba5",
             "direction": "LONG",
+            "exchange": "wallex",
+            "account_id": 0,
             "symbol": "BTCUSDT",
-            "strategy_version": "wallex-break-retest-v1:1.2.0:aea57a123d24ee8f",
+            "strategy_version": "wallex-break-retest-v1:1.2.0:531ebe9c31ef66a4",
             "candle_close": 1728001800,
             "candle_utc": "2024-10-04T00:30:00Z",
             "break_at": 1728000000,
@@ -333,6 +339,8 @@
             ],
             "reason": "روند ۴ساعته، سطح ۱ساعته و شکست، بازآزمایی و تأیید روی سه کندل بسته‌شدهٔ متمایز ۱۵دقیقه.",
             "config_snapshot": {
+                "exchange": "wallex",
+                "account_id": 0,
                 "enabled": true,
                 "symbol": "BTCUSDT",
                 "capital": 70,
@@ -401,7 +409,7 @@
             "reference_target": 108.71749999999996,
             "suggested_invalidation": 99.6875,
             "notification_status": "QUEUED_EXISTING_ALERT_CHANNEL",
-            "message": "BTCUSDT — الگوی شکست و بازآزمایی، جهت خرید، در کندل بسته‌شدهٔ ۱۵دقیقه UTC 2024-10-04T00:30:00Z تأیید شد. قیمت مرجع: 101.6 USDT. شرایط اجرای معامله بررسی نشده است."
+            "message": "والکس \/ BTCUSDT — الگوی شکست و بازآزمایی، جهت خرید، در کندل بسته‌شدهٔ ۱۵دقیقه UTC 2024-10-04T00:30:00Z تأیید شد. قیمت مرجع: 101.6 USDT. شرایط اجرای معامله بررسی نشده است."
         }
     }
 }

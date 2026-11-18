@@ -28,14 +28,14 @@ final class ScannerExecution {
   $market=$snapshot['market']??[];$book=$snapshot['book']??[];
   $financing=$c['financing_bps_day'];
   if($financing===null){if(($market['instrument']??null)==='SPOT'&&$p['direction']==='LONG')$c['financing_bps_day']=0.0;else{$add('financing_cost','UNAVAILABLE');return $fail('UNAVAILABLE','هزینهٔ تأمین مالی این ابزار مشخص نیست.');}}
-  if(($snapshot['provider']??null)!=='wallex'||($market['provider']??null)!=='wallex'||($market['symbol']??null)!=='BTCUSDT'||($market['quote_asset']??null)!=='USDT'){$add('market_identity','UNAVAILABLE');return $fail('UNAVAILABLE','مشخصات بازار والکس قابل تأیید نیست.');}
-  $add('market_identity','PASS',array_intersect_key($market,array_flip(['provider','symbol','quote_asset'])),['provider'=>'wallex','symbol'=>'BTCUSDT','quote_asset'=>'USDT']);
-  if(($market[$p['direction']==='LONG'?'supports_long':'supports_short']??false)!==true){$add('instrument_support','UNAVAILABLE',$market['instrument']??null,$p['direction']);return $fail('UNAVAILABLE','امکان جهت معامله در ابزار والکس تأیید نیست؛ فروش دارایی با بازکردن شورت یکسان نیست.');}
+  if(($snapshot['provider']??null)!==($c['exchange']??'wallex')||($market['provider']??null)!==($c['exchange']??'wallex')||($market['symbol']??null)!==$c['symbol']||($market['quote_asset']??null)!=='USDT'){$add('market_identity','UNAVAILABLE');return $fail('UNAVAILABLE','مشخصات بازار صرافی قابل تأیید نیست.');}
+  $add('market_identity','PASS',array_intersect_key($market,array_flip(['provider','symbol','quote_asset'])),['provider'=>$c['exchange']??'wallex','symbol'=>$c['symbol'],'quote_asset'=>'USDT']);
+  if(($market[$p['direction']==='LONG'?'supports_long':'supports_short']??false)!==true){$add('instrument_support','UNAVAILABLE',$market['instrument']??null,$p['direction']);return $fail('UNAVAILABLE','امکان جهت معامله در ابزار صرافی تأیید نیست؛ فروش دارایی با بازکردن شورت یکسان نیست.');}
   $add('instrument_support','PASS',$market['instrument'],$p['direction']);
   foreach(['step_size','tick_size','min_qty','min_notional'] as $field)if(!isset($market[$field])||!is_numeric($market[$field])||!is_finite((float)$market[$field])||$market[$field]<=0){$add('market_limits','UNAVAILABLE',$field);return $fail('UNAVAILABLE','حداقل سفارش، گام حجم یا گام قیمت بازار موجود نیست.');}
   $add('market_limits','PASS',array_intersect_key($market,array_flip(['step_size','tick_size','min_qty','min_notional'])),'positive finite public market limits');
   $source=$book['source_timestamp']??null;$received=$book['received_at']??null;
-  $fresh=($book['provider']??null)==='wallex'&&($book['symbol']??null)==='BTCUSDT'&&($book['trust_status']??null)==='VERIFIED'&&is_int($source)&&is_int($received)&&$source<=$now&&$received<=$now&&$now-$source<=$c['quote_max_age_seconds']&&$now-$received<=$c['quote_max_age_seconds'];
+  $fresh=($book['provider']??null)===($c['exchange']??'wallex')&&($book['symbol']??null)===$c['symbol']&&($book['trust_status']??null)==='VERIFIED'&&is_int($source)&&is_int($received)&&$source<=$now&&$received<=$now&&$now-$source<=$c['quote_max_age_seconds']&&$now-$received<=$c['quote_max_age_seconds'];
   $add('quote_freshness',$fresh?'PASS':'UNAVAILABLE',['source_timestamp'=>$source,'received_at'=>$received,'trust'=>$book['trust_status']??null],$c['quote_max_age_seconds']);
   if(!$fresh)return $fail('UNAVAILABLE','تازگی منبع دفتر سفارش قابل تأیید نیست؛ زمان دریافت محلی جای timestamp منبع استفاده نمی‌شود.');
   try{$levels=WallexExecutionMarketProvider::levels($book['bids']??[],$book['asks']??[]);}catch(Throwable $e){$add('orderbook','UNAVAILABLE');return $fail('UNAVAILABLE','دفتر سفارش ناقص یا نامعتبر است.');}
@@ -57,7 +57,7 @@ final class ScannerExecution {
   $add('plan_geometry','PASS',['entry_worst'=>$entryWorst,'stop'=>$stop,'targets'=>$targets],'directionally ordered positive prices');
   $budget=$capital*$c['risk_pct']/100;$fixed=$c['fixed_cost_usdt'];$step=(float)$market['step_size'];
   $qty=self::quantize(min(max(0,$budget-$fixed)/$unitRisk,max(0,$capital-$fixed)/($entryWorst*(1+$c['entry_fee_bps']/10000))),$step);
-  if($qty<(float)$market['min_qty']||$qty*$top<(float)$market['min_notional']){$add('position_size','FAIL',$qty,['min_qty'=>$market['min_qty'],'min_notional'=>$market['min_notional']]);return $fail('REJECTED','حجم مجاز مدیریت ریسک از حداقل سفارش والکس کمتر است.');}
+  if($qty<(float)$market['min_qty']||$qty*$top<(float)$market['min_notional']){$add('position_size','FAIL',$qty,['min_qty'=>$market['min_qty'],'min_notional'=>$market['min_notional']]);return $fail('REJECTED','حجم مجاز مدیریت ریسک از حداقل سفارش صرافی کمتر است.');}
   try{$estimate=WallexExecutionMarketProvider::estimate($book,$p['direction'],$qty);}catch(Throwable $e){$add('executable_depth','UNAVAILABLE');return $fail('UNAVAILABLE','عمق قابل استفاده برای حجم سفارش موجود نیست.');}
   $add('executable_depth',$estimate['depth_sufficient']?'PASS':'UNAVAILABLE',$estimate['vwap'],$qty);
   if(!$estimate['depth_sufficient'])return $fail('UNAVAILABLE','عمق مرئی برای حجم معامله کافی نیست.');

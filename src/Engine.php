@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/MarketData.php';
 require_once __DIR__.'/Indicators.php';
 require_once __DIR__.'/ScannerPlan.php';
 final class Strategy {
@@ -11,7 +12,8 @@ final class Strategy {
  const TIMEFRAMES=['4h'=>14400,'1h'=>3600,'15m'=>900];
  static function keys(array $a,array $required,array $optional=[]):void {foreach($required as $k) if(!array_key_exists($k,$a)) throw new InvalidArgumentException("Missing: $k"); foreach($a as $k=>$v) if(!in_array($k,array_merge($required,$optional),true)) throw new InvalidArgumentException("Unknown field: $k");}
  static function validate(array $s):array {
- self::keys($s,['strategy_version','id','name','symbol','enabled','action','initial_stage','max_setup_seconds','invalidation','stages'],['trade','cancellation','indicator_conditions','analysis_sources','scanner_plan']);
+ self::keys($s,['strategy_version','id','name','symbol','enabled','action','initial_stage','max_setup_seconds','invalidation','stages'],['trade','cancellation','indicator_conditions','analysis_sources','scanner_plan','exchange']);
+ MarketScope::exchange(array_key_exists('exchange',$s)?$s['exchange']:'wallex');
  if(isset($s['scanner_plan']))ScannerPlan::validate($s);
  if(array_key_exists('analysis_sources',$s)) {
   if(!is_array($s['analysis_sources'])||!array_is_list($s['analysis_sources'])||count($s['analysis_sources'])>5)throw new InvalidArgumentException('Invalid analysis_sources');

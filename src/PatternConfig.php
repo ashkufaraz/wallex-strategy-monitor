@@ -16,5 +16,5 @@ final class PatternConfig {
  }
  static function meanCount(array $p):int {return max($p['bb_period']+1,5*$p['rsi_period']+2,7*$p['adx_period'],5*$p['atr_period']+2);}
  static function name(string $id):string {return $id===self::MEAN?'بازگشت به میانگین':'شکست و بازآزمایی';}
- static function opportunity(string $symbol,string $id,string $direction,int $close):string {return hash('sha256',implode('|',[$symbol,$id,$direction==='SHORT'?'BEARISH':$direction,$close]));}
+ static function opportunity(string $symbol,string $id,string $direction,int $close,string $exchange='wallex',int $accountId=0):string {return hash('sha256',implode('|',[$accountId,MarketScope::exchange($exchange),$symbol,$id,$direction==='SHORT'?'BEARISH':$direction,$close]));}
 }

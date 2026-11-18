@@ -25,6 +25,7 @@ __pycache__/
 
 /config/owner-bootstrap.php
 /config/sms.json
+/config/najva.json
 /android/.gradle/
 /android/build/
 /android/app/build/

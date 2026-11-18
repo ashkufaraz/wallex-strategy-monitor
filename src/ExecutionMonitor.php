@@ -7,7 +7,7 @@ final class ExecutionMonitor {
  }
  static function run(BinanceMarketDataProvider $api,int $now,array $c,?ExecutionQuoteProvider $execution=null):void {
   $db=db();ExecutionGate::migrate($db);$execution??=new WallexExecutionMarketProvider(new Wallex(microtime(true)+8),$c);
-  $symbols=[];foreach($db->query('SELECT config FROM strategies')->fetchAll(PDO::FETCH_COLUMN) as $raw){$s=json_decode($raw,true);if($s['enabled'])$symbols[$s['symbol']]=true;}
+  $symbols=[];foreach($db->query('SELECT config FROM strategies')->fetchAll(PDO::FETCH_COLUMN) as $raw){$s=json_decode($raw,true);if($s['enabled']&&($s['exchange']??'wallex')==='wallex')$symbols[$s['symbol']]=true;}
   $pending=$db->query("SELECT * FROM execution_signals WHERE status NOT IN ('CANCELLED_STOP_LOSS','CANCELLED_INVALIDATION','EXPIRED_TP1_REACHED','EXPIRED_TIMEOUT','MANUALLY_EXECUTED')")->fetchAll(PDO::FETCH_ASSOC);
   foreach($pending as $row)$symbols[json_decode($row['payload'],true)['symbol']]=true;
   $markets=[];

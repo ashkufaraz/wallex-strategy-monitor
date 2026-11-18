@@ -19,6 +19,7 @@ $suites[]='order-flow-integration.php';
 $suites[]='sms-fallback.php';
 $suites[]='mobile-alerts.php';
 $suites[]='scanner.php';
+$suites[]='exchanges.php';
 foreach($suites as $suite){
  passthru(escapeshellarg(PHP_BINARY).' -d error_reporting=32767 '.escapeshellarg(__DIR__.'/'.$suite),$code);
  if($code!==0)exit($code);

@@ -2,7 +2,7 @@
 
 دادهٔ مصنوعی، شبکهٔ PHP غیرفعال، مرجع مستقل Python برای BB/RSI/ADX/ATR. آزمون تک‌شرط روی ورودی اندیکاتورها جدا از آزمون مسیر کامل OHLC است.
 
-{'total': 36, 'pass': 36, 'fail': 0}
+{'total': 43, 'pass': 43, 'fail': 0}
 
 | آزمون | ورودی | انتظار | واقعی | نتیجه |
 |---|---|---|---|---|
@@ -40,5 +40,12 @@
 | "source.revised-closed-candle" | {"first":"valid snapshot","later":"same closed candle revised"} | {"status":"UNAVAILABLE","signals":0} | {"status":"UNAVAILABLE","signals":0} | "PASS" |
 | "mean.new-exit-return-required" | {"sequence":"outside/inside, new outside, new inside"} | {"first":1,"outside":0,"fresh_return":1,"different_id":true,"old_target_fixed":true} | {"first":1,"outside":0,"fresh_return":1,"different_id":true,"old_target_fixed":true} | "PASS" |
 | "notice.pattern-and-execution-once" | {"opportunity":"same breakout","sequence":"chart alert then executable gate passes"} | {"alerts":1,"type":"scanner_pattern","execution":"MANUAL_REVIEW_AVAILABLE"} | {"alerts":1,"type":"scanner_pattern","execution":"MANUAL_REVIEW_AVAILABLE"} | "PASS" |
+| "data.classify.no_data" | {"API":"no_data"} | {"code":"NO_TRADES","evidence":true,"recovered":98} | {"code":"NO_TRADES","evidence":true,"recovered":98} | "PASS" |
+| "data.classify.zero" | {"API":"zero"} | {"code":"NO_TRADES","evidence":true,"recovered":98} | {"code":"NO_TRADES","evidence":true,"recovered":98} | "PASS" |
+| "data.classify.incomplete" | {"API":"incomplete"} | {"code":"INCOMPLETE_RESPONSE","evidence":true,"recovered":98} | {"code":"INCOMPLETE_RESPONSE","evidence":true,"recovered":98} | "PASS" |
+| "data.classify.malformed" | {"API":"malformed"} | {"code":"PROCESSING_ERROR","evidence":true,"recovered":98} | {"code":"PROCESSING_ERROR","evidence":true,"recovered":98} | "PASS" |
+| "health.window-rolls-past-gap" | {"gap":"older than new required window"} | {"before":0,"after":98,"gap":null} | {"before":0,"after":98,"gap":null} | "PASS" |
+| "evaluation.same-candle-keeps-details" | {"checks":2} | {"same":true,"present":true} | {"same":true,"present":true} | "PASS" |
+| "notification.test-isolated" | {"channel":"existing alerts; no network"} | {"signal_delta":0,"execution_delta":0,"type":"notification_test","owner":1,"message":true,"queued":true} | {"signal_delta":0,"execution_delta":0,"type":"notification_test","owner":1,"message":true,"queued":true} | "PASS" |
 | "concurrency.six-processes" | {"processes":6,"same_confirmation":true,"book":"unverified","fees":"unknown"} | {"events":1,"alerts":1,"signals":1,"no_manual":true} | {"events":1,"alerts":1,"signals":1,"no_manual":true} | "PASS" |
 | "restart.no-new-notice" | {"restart":"new PHP process","same_closed_candle":true} | {"events":1,"alerts":1,"signals":1,"no_manual":true} | {"events":1,"alerts":1,"signals":1,"no_manual":true} | "PASS" |
