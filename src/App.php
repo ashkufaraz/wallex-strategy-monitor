@@ -42,7 +42,8 @@ function strategyLastSignal(array $row):?array {
  return null;
 }
 
-function lookback(mixed $x):int {if(!is_array($x)) return 0;$n=0;if(isset($x['candle'])&&is_array($x['candle'])) $n=$x['candle']['offset']*Strategy::TIMEFRAMES[$x['candle']['timeframe']];foreach($x as $v) $n=max($n,lookback($v));return $n;}
+function lookback(mixed $x,?string $timeframe=null):int {if(!is_array($x)) return 0;$n=0;if(isset($x['candle'])&&is_array($x['candle'])&&($timeframe===null||$x['candle']['timeframe']===$timeframe)) $n=$x['candle']['offset']*Strategy::TIMEFRAMES[$x['candle']['timeframe']];foreach($x as $v) $n=max($n,lookback($v,$timeframe));return $n;}
+function nativeEntryFrom(array $s,string $tf,int $cursor,int $now,string $exchange):int {$sec=Strategy::TIMEFRAMES[$tf];return max(0,min(MarketData::boundary($cursor,$sec,$exchange),MarketData::boundary($now,$sec,$exchange)-$sec)-max(0,lookback($s,$tf)-$sec));}
 function strategyTimeframes(array $s):array {
  $used=[];
  $rules=$s['cancellation']??[];
@@ -126,7 +127,7 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
    }catch(Throwable $e){if($attempt===1)throw $e;$api->invalidateMinuteCache();usleep(200000);}
    throw new RuntimeException('Entry history unavailable');
   });
- }$bars=[];foreach($timeframes as $tf=>$seconds)$bars[$tf]=($api instanceof BinanceMarketDataProvider||$api instanceof NobitexMarketDataProvider)?$api->candles($s['symbol'],$tf,MarketData::boundary($from,$seconds,$exchange),MarketData::boundary($now,$seconds,$exchange)):Wallex::aggregate($minutes,$seconds);
+ }$bars=[];foreach($timeframes as $tf=>$seconds)$bars[$tf]=($api instanceof BinanceMarketDataProvider||$api instanceof NobitexMarketDataProvider)?$api->candles($s['symbol'],$tf,$api instanceof NobitexMarketDataProvider?nativeEntryFrom($s,$tf,$st['cursor'],$now,$exchange):MarketData::boundary($from,$seconds,$exchange),MarketData::boundary($now,$seconds,$exchange)):Wallex::aggregate($minutes,$seconds);
  // Only events after activation/cursor. Each expected closed candle must exist.
  $timeline=[];foreach($timeframes as $tf=>$sec) for($close=MarketData::boundary($st['cursor'],$sec,$exchange)+$sec;$close<=$now;$close+=$sec) {$timeline[]=['time'=>$close,'tf'=>$tf,'seconds'=>$sec];}
  usort($timeline,fn($a,$b)=>($a['time']<=>$b['time'])?:($b['seconds']<=>$a['seconds']));
