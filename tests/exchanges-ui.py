@@ -40,7 +40,12 @@ with sync_playwright() as pw:
                     r.fulfill(json=dict(exchange=q['exchange'][0],symbol=q['symbol'][0],**{'from':1794973500,'to':1794977100},gaps=[],bars=[dict(time=1794973500,open=200,high=202,low=199,close=201,volume=2)]));return
                 r.fulfill(json=base);return
             file=ROOT/'public'/(parsed.path.lstrip('/') or 'index.html');r.fulfill(body=file.read_bytes(),content_type={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8'}.get(file.suffix,'application/octet-stream'))
-        page.route('**/*',route);page.goto('http://127.0.0.1:5078/');page.wait_for_selector('#patternCards article')
+        page.route('**/*',route);page.goto('http://127.0.0.1:5078/');page.wait_for_selector('#patternCards article',state='attached')
+        assert not page.locator('#patternPanel').evaluate('(p)=>p.open')
+        assert not page.locator('#patternCards').is_visible()
+        assert page.evaluate("document.getElementById('patternPanel').nextElementSibling===document.getElementById('alerts').closest('section')")
+        page.locator('#patternPanel > summary').click()
+        page.wait_for_selector('#patternCards article')
         assert page.locator('#patternCards article').count()==8
         before=json.dumps(base['strategies'],sort_keys=True)
         page.locator('#exchangeFilter').select_option('nobitex');page.wait_for_function("document.querySelectorAll('#patternCards article').length===4")

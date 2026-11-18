@@ -26,7 +26,12 @@ with sync_playwright() as p:
                     r.fulfill(json=dict(ok=True));return
                 r.fulfill(json=fixture if '?patterns=' in url else base);return
             file=root/'public'/(url.split('?',1)[0] or 'index.html');r.fulfill(body=file.read_bytes(),content_type={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8'}.get(file.suffix,'application/octet-stream'))
-        page.route('**/*',route);page.goto('http://127.0.0.1:5078/');page.wait_for_selector('#patternCards article')
+        page.route('**/*',route);page.goto('http://127.0.0.1:5078/');page.wait_for_selector('#patternCards article',state='attached')
+        assert not page.locator('#patternPanel').evaluate('(p)=>p.open')
+        assert not page.locator('#patternCards').is_visible()
+        assert page.evaluate("document.getElementById('patternPanel').nextElementSibling===document.getElementById('alerts').closest('section')")
+        page.locator('#patternPanel > summary').click()
+        page.wait_for_selector('#patternCards article')
         assert page.locator('#patternCards').inner_text().count('98 / 98')==2
         assert page.locator('#patternCards article').count()==2;assert page.locator('#patternSignals article').count()==3
         assert not page.locator('#scannerReport').is_visible();assert not page.locator('#patternCards details').first.get_attribute('open')
