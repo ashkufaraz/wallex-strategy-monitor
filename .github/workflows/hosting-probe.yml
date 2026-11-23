@@ -16,4 +16,5 @@ jobs:
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/public_html' }}
           SITE_URL: ${{ vars.SITE_URL || 'https://ashkufaraz.ir/' }}
-        run: python3 deploy/probe.py
+          CANDLE_PROXY_SUBSCRIPTION: ${{ secrets.CANDLE_PROXY_SUBSCRIPTION }}
+        run: python3 deploy/candle_proxy.py
