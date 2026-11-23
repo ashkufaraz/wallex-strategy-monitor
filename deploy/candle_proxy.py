@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import os
+from pathlib import Path
 import ssl
 import time
 import urllib.parse
@@ -119,6 +120,7 @@ def provision():
         ftp.retrbinary('RETR config/.htaccess', protection.write)
         if b'Require all denied' not in protection.getvalue():
             raise RuntimeError('Private config directory is not protected')
+        put('src/CandleProxy.php', (Path(__file__).resolve().parents[1] / 'src/CandleProxy.php').read_bytes(), '644')
         try:
             ftp.mkd('config/candle-proxy')
         except ftplib.error_perm:
