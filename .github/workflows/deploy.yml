@@ -27,6 +27,7 @@ jobs:
           node tests/mobile-notifications.js
           node tests/sms-notifications.js
           node tests/trade.js
+          node tests/outcomes.js
           node tests/details.js
           node tests/execution-gate.js
           node tests/manual-advisory.js

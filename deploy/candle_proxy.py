@@ -183,6 +183,25 @@ try {
         ftp.retrbinary('RETR ' + candidate_state, state.write)
         put('data/candle-proxy-state.json', state.getvalue(), '600')
         put('config/candle-downloader.local.php', b"<?php return ['managed_proxy'=>true];\n", '600')
+        # Verify the main strategy provider against live data using an isolated in-memory DB.
+        if (Path(__file__).resolve().parents[1] / 'src/BinanceFuturesMarketDataProvider.php').is_file():
+            integration = ("<?php if(!hash_equals('" + token + "',$_SERVER['HTTP_X_PROBE_TOKEN']??'')){http_response_code(404);exit;} " + r"""
+header('Content-Type: application/json');
+function db():PDO {static $db;return $db??=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);}
+function encode($v):string{return json_encode($v,JSON_THROW_ON_ERROR);}
+require __DIR__.'/src/MarketData.php';require __DIR__.'/src/Wallex.php';require __DIR__.'/src/Indicators.php';
+require __DIR__.'/src/BinanceMarketDataProvider.php';require __DIR__.'/src/BinanceFuturesMarketDataProvider.php';
+try{$api=new BinanceFuturesMarketDataProvider(null,null,microtime(true)+30);$price=$api->price('BTCUSDT');$counts=[];
+foreach(['15m'=>900,'1h'=>3600,'4h'=>14400] as $tf=>$step){$end=intdiv(time(),$step)*$step;$counts[$tf]=count($api->candles('BTCUSDT',$tf,$end-3*$step,$end));}
+echo encode(['ok'=>$price>0&&$api->exchange()==='binance','provider'=>$api->exchange(),'candles'=>$counts]);
+}catch(Throwable $e){http_response_code(502);echo encode(['ok'=>false,'error'=>$e->getMessage()]);}
+""").encode()
+            put(marker, integration, '644')
+            with opener.open(urllib.request.Request(url, headers={'X-Probe-Token': token}), timeout=45) as response:
+                verified = json.load(response)
+            if verified.get('ok') is not True or set(verified.get('candles', {}).values()) != {3}:
+                raise RuntimeError('Main Futures strategy provider failed its live host check')
+            print('Main strategy Futures provider verified: ticker and native 15m/1h/4h candles; no production DB access.')
         for path in ['config/candle-proxy/nodes.json', 'config/candle-downloader.local.php', 'config/candle-proxy/xray']:
             try:
                 opener.open(os.environ['SITE_URL'].rstrip('/') + '/' + path, timeout=15)

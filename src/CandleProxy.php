@@ -55,11 +55,11 @@ final class CandleProxy
     }
 
     /** @return array{body:string|false,status:int,errno:int} */
-    public static function get(string $url, ?string $testDirectory = null): array
+    public static function get(string $url, ?string $testDirectory = null, float $seconds = 45): array
     {
         if (parse_url($url, PHP_URL_SCHEME) !== 'https' || parse_url($url, PHP_URL_HOST) !== 'fapi.binance.com'
-            || parse_url($url, PHP_URL_PATH) !== '/fapi/v1/klines') {
-            throw new InvalidArgumentException('پروکسی فقط برای کندل فیوچرز بایننس مجاز است.');
+            || !in_array(parse_url($url, PHP_URL_PATH), ['/fapi/v1/klines','/fapi/v1/time','/fapi/v2/ticker/price','/fapi/v1/ticker/bookTicker','/fapi/v1/depth'], true)) {
+            throw new InvalidArgumentException('پروکسی فقط برای دادهٔ عمومی فیوچرز بایننس مجاز است.');
         }
         $directory = dirname(__DIR__) . '/config/candle-proxy';
         if ($testDirectory !== null) {
@@ -78,17 +78,22 @@ final class CandleProxy
         // A deployment changes the list; stale indexes are harmless and are bounded below.
         $first = self::$selected ?? (max(0, (int)($state['index'] ?? 0)) % count($nodes));
         $last = ['body' => false, 'status' => 0, 'errno' => 0];
+        $deadline = microtime(true) + max(1, $seconds);
         for ($attempt = 0; $attempt < min(6, count($nodes)); $attempt++) {
+            if (microtime(true) >= $deadline) { break; }
             $index = ($first + $attempt) % count($nodes);
             try {
                 $proxy = self::$proxy !== null && self::$selected === $index ? self::$proxy : self::start($nodes[$index], $directory);
                 self::$selected = $index;
                 $ch = curl_init($url);
+                $headers = [];
+                $remaining = max(1, (int)ceil($deadline - microtime(true)));
                 curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_PROXY => $proxy,
-                    CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 7, CURLOPT_FOLLOWLOCATION => false,
+                    CURLOPT_CONNECTTIMEOUT => min(5, $remaining), CURLOPT_TIMEOUT => min(7, $remaining), CURLOPT_FOLLOWLOCATION => false,
+                    CURLOPT_HEADERFUNCTION => static function($ch,$line)use(&$headers){if(str_contains($line,':')){[$k,$v]=explode(':',$line,2);$headers[strtolower(trim($k))]=trim($v);}return strlen($line);},
                     CURLOPT_ENCODING => '', CURLOPT_HTTPHEADER => ['Accept: application/json'],
                     CURLOPT_USERAGENT => 'CandleDownloader-Futures/2.5']);
-                try { $last = ['body' => curl_exec($ch), 'status' => (int)curl_getinfo($ch, CURLINFO_HTTP_CODE), 'errno' => curl_errno($ch)]; }
+                try { $last = ['body' => curl_exec($ch), 'status' => (int)curl_getinfo($ch, CURLINFO_HTTP_CODE), 'errno' => curl_errno($ch), 'headers' => $headers]; }
                 finally { curl_close($ch); }
                 if ($last['body'] !== false && in_array($last['status'], [200, 400, 418, 429], true)) {
                     @file_put_contents($statePath, json_encode(['index' => $index, 'checked_at' => time()]), LOCK_EX);
@@ -99,7 +104,7 @@ final class CandleProxy
             self::stop();
         }
         self::$selected = null;
-        @file_put_contents($statePath, json_encode(['index' => ($first + 6) % count($nodes), 'checked_at' => time()]), LOCK_EX);
+        @file_put_contents($statePath, json_encode(['index' => ($first + max(1,$attempt)) % count($nodes), 'checked_at' => time()]), LOCK_EX);
         @chmod($statePath, 0600);
         throw new RuntimeException('اتصال پروکسی مستقل هاست به بایننس برقرار نشد؛ چند کانفیگ سابسکریپشن آزمایش شد. دوباره تلاش کن.');
     }

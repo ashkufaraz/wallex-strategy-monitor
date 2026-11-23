@@ -10,7 +10,7 @@ function archiveAlert(int $id,bool $archived):void {
 function alertHistory(bool $archived):array {
  $q=db()->prepare('SELECT a.*,EXISTS(SELECT 1 FROM alert_archives x WHERE x.alert_id=a.id) AS archived FROM alerts a WHERE EXISTS(SELECT 1 FROM alert_archives x WHERE x.alert_id=a.id)=? ORDER BY a.id DESC LIMIT 100');
  $q->bindValue(1,(int)$archived,PDO::PARAM_INT);$q->execute();$items=[];
- foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$items[]=['id'=>(int)$r['id'],'created'=>(int)$r['created'],'archived'=>(bool)$r['archived'],'can_manage'=>ownsAlert((int)$r['id']),'payload'=>array_replace(['exchange'=>'wallex'],json_decode($r['payload'],true))];
+ foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$items[]=['id'=>(int)$r['id'],'created'=>(int)$r['created'],'archived'=>(bool)$r['archived'],'can_manage'=>ownsAlert((int)$r['id']),'payload'=>array_replace(['exchange'=>'wallex','strategy_created_at'=>null],json_decode($r['payload'],true))];
  return $items;
 }
 

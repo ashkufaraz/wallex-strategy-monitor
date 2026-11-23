@@ -12,13 +12,16 @@ function browserCheck(?Wallex $api=null,?int $now=null,?string $lockPath=null):a
   $interval=max(5,(int)setting('interval','60'));
   $due=[];
   foreach(db()->query('SELECT id,version,config,state FROM strategies')->fetchAll(PDO::FETCH_ASSOC) as $row){
-   $s=json_decode($row['config'],true);$architecture=MarketArchitecture::config();if($architecture['analysis_enabled']&&!MarketArchitecture::approved($architecture,$row['id'],$row['version']))continue;$state=displayedState($row,$architecture);
+   $s=json_decode($row['config'],true);$architecture=MarketArchitecture::config();if(($s['exchange']??'wallex')==='wallex'&&$architecture['analysis_enabled']&&!MarketArchitecture::approved($architecture,$row['id'],$row['version']))continue;$state=displayedState($row,$architecture);
    if(!$s['enabled']||isset($state['cancelled_at']))continue;
    if($now-(int)($state['last_check']??0)>=$interval)$due[]=['id'=>$row['id'],'last'=>(int)($state['last_check']??0)];
   }
   usort($due,fn($a,$b)=>($a['last']<=>$b['last'])?:strcmp($a['id'],$b['id']));
   setSetting('heartbeat',(string)$now);
+  StrategyOutcomes::importExisting();$outcomeDue=StrategyOutcomes::oldestDue($now);
+  if($outcomeDue!==null&&$due&&$outcomeDue<$due[0]['last']){StrategyOutcomes::tick($now,null,$api);return ['status'=>'outcomes_checked'];}
   if(!$due){
+   if(StrategyOutcomes::pending($now)){StrategyOutcomes::tick($now,null,$api);return ['status'=>'outcomes_checked'];}
    $architecture=MarketArchitecture::config();
    if($architecture['analysis_enabled']){
     ExecutionMonitor::run($api instanceof BinanceMarketDataProvider?$api:new BinanceMarketDataProvider(null,null,microtime(true)+12),$now,$architecture);

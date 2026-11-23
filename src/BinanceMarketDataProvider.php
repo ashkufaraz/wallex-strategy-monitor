@@ -4,6 +4,8 @@ declare(strict_types=1);
 // Public market-data only. Inherits the existing scheduler contract, never its HTTP routing.
 class BinanceMarketDataProvider extends Wallex {
  function exchange():string {return 'binance_spot';}
+ protected function baseUrl():string{return 'https://data-api.binance.vision';}
+ protected function endpoint(string $path):string{return $path;}
  private array $responses=[];private array $responseTimes=[];private ?float $budget=null;
  function __construct(private ?Closure $transport=null,private ?Closure $clock=null,?float $deadline=null){parent::__construct();$this->budget=$deadline;}
  function now():int{return $this->clock?(int)($this->clock)():time();}
@@ -13,30 +15,34 @@ class BinanceMarketDataProvider extends Wallex {
  function get(string $path,array $params=[]):array {
   try{return $this->request($path,$params);}catch(Throwable $e){
    db()->exec('CREATE TABLE IF NOT EXISTS market_failures(id INTEGER PRIMARY KEY AUTOINCREMENT,provider TEXT NOT NULL,at INTEGER NOT NULL,path TEXT NOT NULL,error TEXT NOT NULL)');
-   db()->prepare('INSERT INTO market_failures(provider,at,path,error) VALUES(?,?,?,?)')->execute(['binance_spot',$this->now(),$path,$e->getMessage()]);
+   db()->prepare('INSERT INTO market_failures(provider,at,path,error) VALUES(?,?,?,?)')->execute([$this->exchange(),$this->now(),$path,$e->getMessage()]);
    db()->exec('DELETE FROM market_failures WHERE id NOT IN (SELECT id FROM market_failures ORDER BY id DESC LIMIT 200)');throw $e;
   }
  }
  private function request(string $path,array $params):array {
   if(!in_array($path,['/api/v3/klines','/api/v3/ticker/price','/api/v3/ticker/bookTicker','/api/v3/depth','/api/v3/time'],true))throw new RuntimeException('Only public Binance market-data endpoints are allowed');
   db()->exec('CREATE TABLE IF NOT EXISTS market_backoff(provider TEXT PRIMARY KEY, until_time INTEGER NOT NULL, error TEXT NOT NULL)');
-  $until=db()->query("SELECT until_time FROM market_backoff WHERE provider='binance_spot'")->fetchColumn();
+  $q=db()->prepare('SELECT until_time FROM market_backoff WHERE provider=?');$q->execute([$this->exchange()]);$until=$q->fetchColumn();
   if($until!==false&&(int)$until>$this->now())throw new RuntimeException('Binance backoff until '.gmdate('c',(int)$until));
-  $key='binance_spot:'.$path.':'.http_build_query($params);
+  $key=$this->exchange().':'.$path.':'.http_build_query($params);
   if(isset($this->responses[$key])&&microtime(true)-$this->responseTimes[$key]<($path==='/api/v3/klines'?60:1))return $this->responses[$key];
-  $url='https://data-api.binance.vision'.$path.($params?'?'.http_build_query($params):'');
+  $url=$this->baseUrl().$this->endpoint($path).($params?'?'.http_build_query($params):'');
   if($this->transport)$r=($this->transport)($url);else{
    $remaining=min(12,(int)floor(($this->budget??(microtime(true)+12))-microtime(true)));if($remaining<1)throw new RuntimeException('Binance request budget exceeded');
-   $headers=[];$ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>$remaining,CURLOPT_CONNECTTIMEOUT=>min(5,$remaining),CURLOPT_FOLLOWLOCATION=>false,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_HEADERFUNCTION=>static function($ch,$line)use(&$headers){if(str_contains($line,':')){[$k,$v]=explode(':',$line,2);$headers[strtolower(trim($k))]=trim($v);}return strlen($line);}]);
-   $body=curl_exec($ch);$status=curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);if($body===false)throw new RuntimeException('Binance transport: '.$error);$r=['status'=>$status,'headers'=>$headers,'body'=>$body];
+   $r=$this->httpResponse($url,$remaining);
   }
   if(in_array($r['status'],[418,429],true)){
    $retry=$r['headers']['retry-after']??null;$delay=is_numeric($retry)?max(1,(int)ceil((float)$retry)):max(60,(int)strtotime((string)$retry)-$this->now());
-   db()->prepare('INSERT OR REPLACE INTO market_backoff VALUES(?,?,?)')->execute(['binance_spot',$this->now()+$delay,'HTTP '.$r['status']]);throw new RuntimeException('Binance HTTP '.$r['status'].'; Retry-After '.$delay);
+   db()->prepare('INSERT OR REPLACE INTO market_backoff VALUES(?,?,?)')->execute([$this->exchange(),$this->now()+$delay,'HTTP '.$r['status']]);throw new RuntimeException('Binance HTTP '.$r['status'].'; Retry-After '.$delay);
   }
   if($r['status']!==200)throw new RuntimeException('Binance HTTP '.$r['status']);
   $data=json_decode($r['body'],true,512,JSON_THROW_ON_ERROR);if(!is_array($data))throw new RuntimeException('Invalid Binance JSON');
   $this->responseTimes[$key]=microtime(true);return $this->responses[$key]=$data;
+ }
+ protected function httpResponse(string $url,int $remaining):array {
+$headers=[];$ch=curl_init($url);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>$remaining,CURLOPT_CONNECTTIMEOUT=>min(5,$remaining),CURLOPT_FOLLOWLOCATION=>false,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_HEADERFUNCTION=>static function($ch,$line)use(&$headers){if(str_contains($line,':')){[$k,$v]=explode(':',$line,2);$headers[strtolower(trim($k))]=trim($v);}return strlen($line);}]);
+   $body=curl_exec($ch);$status=curl_getinfo($ch,CURLINFO_HTTP_CODE);$error=curl_error($ch);curl_close($ch);if($body===false)throw new RuntimeException('Binance transport: '.$error);$r=['status'=>$status,'headers'=>$headers,'body'=>$body];
+  return $r;
  }
  static function symbol(string $symbol):void{if(!preg_match('/^[A-Z0-9]{2,20}USDT$/D',$symbol))throw new InvalidArgumentException('Invalid Binance USDT symbol');}
  function serverTime():int{$d=$this->get('/api/v3/time');$ms=self::number($d['serverTime']??null);if($ms!=(int)$ms||abs($ms/1000-$this->now())>5)throw new RuntimeException('Binance clock skew');return (int)floor($ms/1000);}
@@ -55,7 +61,7 @@ class BinanceMarketDataProvider extends Wallex {
   if($from<0||$from%$sec||$end%$sec||$end<=$from||$end>$this->serverTime())throw new RuntimeException('Invalid closed Binance interval');
   $out=[];for($start=$from;$start<$end;$start+=$sec*1000){$until=min($end,$start+$sec*1000);$part=self::parse($this->get('/api/v3/klines',['symbol'=>$symbol,'interval'=>$tf,'startTime'=>$start*1000,'endTime'=>$until*1000-1,'limit'=>1000]),$sec,$start,$until);
    for($t=$start;$t<$until;$t+=$sec)if(!isset($part[$t]))throw new RuntimeException('Missing closed Binance candle at '.$t);$out+=$part;
-  }return $out;
+  }foreach($out as &$bar)$bar['provider']=$this->exchange();unset($bar);return $out;
  }
  function minutes(string $symbol,int $from,int $to):array{return $this->candles($symbol,'1m',$from,$to);}
  function monitoringMinutes(string $symbol,int $from,int $now):array {

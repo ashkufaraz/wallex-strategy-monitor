@@ -47,7 +47,7 @@ const tradeDetails = {
     const escape = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     return '<div class="summary">' + this.lines(trade, action).map(line => `<div>${escape(line)}</div>`).join('') + '</div>';
   },
-  notification(payload) {const text=this.notificationBody(payload),label=payload.exchange==='nobitex'?'\u0646\u0648\u0628\u06cc\u062a\u06a9\u0633':'\u0648\u0627\u0644\u06a9\u0633';return payload.exchange&&!String(text).startsWith(label)?label+' / '+text:text;},
+  notification(payload) {const text=this.notificationBody(payload),label=payload.exchange==='binance'?'بایننس فیوچرز':payload.exchange==='nobitex'?'\u0646\u0648\u0628\u06cc\u062a\u06a9\u0633':'\u0648\u0627\u0644\u06a9\u0633';return payload.exchange&&!String(text).startsWith(label)?label+' / '+text:text;},
   notificationBody(payload) {
     if(payload.type==='notification_test')return payload.message;
     if(payload.type==='scanner_pattern')return payload.message;

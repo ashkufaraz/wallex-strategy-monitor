@@ -21,6 +21,8 @@ $suites[]='mobile-alerts.php';
 $suites[]='scanner.php';
 $suites[]='exchanges.php';
 $suites[]='candle-downloader.php';
+$suites[]='binance-futures.php';
+$suites[]='strategy-outcomes.php';
 foreach($suites as $suite){
  passthru(escapeshellarg(PHP_BINARY).' -d error_reporting=32767 '.escapeshellarg(__DIR__.'/'.$suite),$code);
  if($code!==0)exit($code);

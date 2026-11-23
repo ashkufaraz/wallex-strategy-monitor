@@ -57,7 +57,7 @@ final class ExecutionGate {
   $q=$db->prepare('INSERT OR IGNORE INTO execution_signals VALUES(?,?,?,?,?,?,?)');$q->execute([$id,$s['id'],$version,'SIGNAL_CREATED',$at,$p['deadline'],encode($p)]);
   if($q->rowCount())$db->prepare('INSERT INTO execution_events(signal_id,at,status,reason) VALUES(?,?,?,?)')->execute([$id,$created,$p['status'],$p['reason']]);
   if($q->rowCount()&&self::advisory($c)){
-   $alert=['analysis_sources'=>$s['analysis_sources']??[],'type'=>'binance_signal','signal_id'=>$id,'strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>'binance_signal','event_time'=>$at,'trade'=>$s['trade']??null,'reason'=>'سیگنال بایننس شناسایی شد؛ بررسی شرایط تخمینی ورود در والکس آغاز شد.'];
+   $alert=['strategy_created_at'=>StrategyOutcomes::created($s['id']),'strategy_version'=>$version,'analysis_sources'=>$s['analysis_sources']??[],'type'=>'binance_signal','signal_id'=>$id,'strategy_id'=>$s['id'],'name'=>$s['name'],'symbol'=>$s['symbol'],'action'=>$s['action'],'price'=>$price,'event'=>'binance_signal','event_time'=>$at,'trade'=>$s['trade']??null,'reason'=>'سیگنال بایننس شناسایی شد؛ بررسی شرایط تخمینی ورود در والکس آغاز شد.'];
    $db->prepare('INSERT OR IGNORE INTO alerts(unique_key,created,payload) VALUES(?,?,?)')->execute(['binance-signal:'.$id,$created,encode($alert)]);
   }
   return $id;

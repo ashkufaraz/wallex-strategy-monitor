@@ -15,7 +15,7 @@ try {
  try{ScannerService::tickAll();}catch(Throwable $scannerError){systemLog('error','scanner.cron',$scannerError->getMessage());}
  do {
   $result=browserCheck(new Wallex($deadline));
-  if($result['status']==='checked')$checked++;
+  if(in_array($result['status'],['checked','outcomes_checked'],true))$checked++;
   else break;
  } while(microtime(true)<$deadline);
  SmsFallback::dispatch(db(),time());

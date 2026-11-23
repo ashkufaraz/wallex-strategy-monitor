@@ -1,0 +1,135 @@
+<?php
+declare(strict_types=1);
+
+/** Immutable alert cohorts, evaluated as hypothetical trades on their own exchange. */
+final class StrategyOutcomes
+{
+ static function migrate(PDO $db):void {
+  $db->exec('CREATE TABLE IF NOT EXISTS strategy_registration(strategy_id TEXT PRIMARY KEY,created INTEGER);
+   CREATE TABLE IF NOT EXISTS strategy_outcomes(alert_id INTEGER PRIMARY KEY,strategy_id TEXT NOT NULL,version TEXT,exchange TEXT NOT NULL,symbol TEXT NOT NULL,cohort TEXT NOT NULL,started INTEGER NOT NULL,owner_id INTEGER,snapshot TEXT NOT NULL,state TEXT NOT NULL,last_check INTEGER NOT NULL DEFAULT 0);
+   CREATE INDEX IF NOT EXISTS strategy_outcomes_market ON strategy_outcomes(exchange,symbol,last_check);');
+  // There was no durable creation field before this migration. Do not invent a date for old rows.
+  $db->exec('INSERT OR IGNORE INTO strategy_registration(strategy_id,created) SELECT id,NULL FROM strategies');
+ }
+ static function created(string $id):?int {
+  $q=db()->prepare('SELECT created FROM strategy_registration WHERE strategy_id=?');$q->execute([$id]);$v=$q->fetchColumn();return $v===false||$v===null?null:(int)$v;
+ }
+ static function capture(int $alertId,array $p,int $created):void {
+  if(!in_array($p['type']??'signal',['signal','entry_conditions_only','binance_signal'],true))return;
+  $trade=$p['evaluation_trade']??$p['trade']??null;$cohort=($p['type']??'')==='entry_conditions_only'?'preliminary':'confirmed';
+  $entry=$trade['entry']['reference_price']??$trade['entry']['price']??$p['price']??null;
+  $state=['status'=>'UNAVAILABLE','reason'=>'missing_trade_snapshot','cursor'=>intdiv($created,60)*60,'partial_minute'=>$created%60!==0,
+   'targets'=>[],'entered_at'=>null,'closed_at'=>null,'tp1_result'=>null,'last_price'=>$p['price']??null,
+   'coverage'=>'closed_minutes_only; barrier touches in the partial creation minute are ambiguous'];
+  if(is_array($trade)&&in_array($p['action']??null,['LONG','SHORT'],true)){
+   try {$validated=$trade;unset($validated['entry']['reference_price']);Strategy::trade($validated,$p['action']);$entry=(float)$entry;
+    if(!is_finite($entry)||$entry<=0||($p['action']==='LONG'?($entry<=(float)$trade['stop_loss']||$entry>=(float)$trade['take_profits'][0]):($entry>=(float)$trade['stop_loss']||$entry<=(float)$trade['take_profits'][0])))throw new RuntimeException('invalid_reference');
+    $state['status']=($trade['entry']['type']==='LIMIT'?'PENDING_ENTRY':'OPEN');$state['reason']=null;
+    $state['entered_at']=$state['status']==='OPEN'?$created:null;
+    $state['targets']=array_map(fn($v)=>['price'=>(float)$v,'hit_at'=>null],$trade['take_profits']);
+   }catch(Throwable $e){$state['reason']='invalid_trade_snapshot';}
+  }
+  if(($p['type']??'')==='binance_signal'||isset($p['analysis_provider'])&&$p['analysis_provider']!==($p['exchange']??'wallex')){
+   $state['status']='UNAVAILABLE';$state['reason']='legacy_reference_provider_differs_from_execution_exchange';
+  }
+  $snapshot=['name'=>$p['name']??'','action'=>$p['action']??null,'entry_price'=>$entry,'trade'=>$trade,
+   'strategy_created_at'=>$p['strategy_created_at']??null,'event_time'=>$p['event_time']??null,'price_at_alert'=>$p['price']??null];
+  $q=db()->prepare('SELECT user_id FROM alert_owners WHERE alert_id=?');$q->execute([$alertId]);$owner=$q->fetchColumn();
+  db()->prepare('INSERT OR IGNORE INTO strategy_outcomes(alert_id,strategy_id,version,exchange,symbol,cohort,started,owner_id,snapshot,state) VALUES(?,?,?,?,?,?,?,?,?,?)')
+   ->execute([$alertId,$p['strategy_id'],$p['strategy_version']??null,$p['exchange']??'wallex',$p['symbol'],$cohort,$created,$owner===false?null:(int)$owner,encode($snapshot),encode($state)]);
+ }
+ static function importExisting():void {
+  $cursor=(int)setting('outcomes_import_cursor','0');$q=db()->prepare('SELECT id,created,payload FROM alerts WHERE id>? ORDER BY id LIMIT 100');$q->execute([$cursor]);
+  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r){$p=json_decode($r['payload'],true);if(is_array($p)&&isset($p['strategy_id'],$p['symbol']))self::capture((int)$r['id'],$p,(int)$r['created']);$cursor=(int)$r['id'];}
+  setSetting('outcomes_import_cursor',(string)$cursor);
+ }
+ /** Sequential closed minutes only. Unknown intra-minute order is never resolved optimistically. */
+ static function advance(array $snapshot,array $state,array $bars,int $until):array {
+  if(!in_array($state['status'],['PENDING_ENTRY','OPEN'],true))return $state;
+  $long=$snapshot['action']==='LONG';$entry=(float)$snapshot['entry_price'];$stop=(float)$snapshot['trade']['stop_loss'];
+  for($t=(int)$state['cursor'];$t<$until;$t+=60){
+   if(!isset($bars[$t]))throw new RuntimeException('Missing outcome minute at '.$t);
+   $b=$bars[$t];foreach(['open','high','low','close','volume'] as $field)if(!is_numeric($b[$field]??null)||!is_finite((float)$b[$field]))throw new RuntimeException('Invalid outcome candle');
+   if($b['high']<max($b['open'],$b['close'],$b['low'])||$b['low']>min($b['open'],$b['close'])||$b['volume']<0)throw new RuntimeException('Invalid outcome OHLCV');
+   $state['cursor']=$t+60;
+   // A complete no-trade interval establishes time coverage, not a price touch.
+   if((float)$b['volume']===0.){$state['partial_minute']=false;continue;}
+   $state['last_price']=(float)$b['close'];
+   if($state['partial_minute']??false){
+    $state['partial_minute']=false;
+    $touch=$long?$b['low']<=$stop:$b['high']>=$stop;
+    foreach($state['targets'] as $target)if($long?$b['high']>=$target['price']:$b['low']<=$target['price'])$touch=true;
+    if($state['status']==='PENDING_ENTRY'&&($long?$b['low']<=$entry:$b['high']>=$entry))$touch=true;
+    if($touch){$state['status']='AMBIGUOUS';$state['reason']='partial_creation_minute';$state['closed_at']=$t+60;break;}
+    continue;
+   }
+   $newEntry=false;
+   if($state['status']==='PENDING_ENTRY'){
+    if($long?$b['low']>$entry:$b['high']<$entry)continue;
+    $state['status']='OPEN';$state['entered_at']=$t+60;$newEntry=true;
+   }
+   $stopHit=$long?$b['low']<=$stop:$b['high']>=$stop;$newTargets=[];
+   foreach($state['targets'] as $i=>$target)if($target['hit_at']===null&&($long?$b['high']>=$target['price']:$b['low']<=$target['price']))$newTargets[]=$i;
+   // Limit fills after the candle opens cannot establish whether the high/low came before the fill.
+   $entryAtOpen=$long?$b['open']<=$entry:$b['open']>=$entry;
+   if(!$newEntry||$entryAtOpen){
+    if($long?$b['open']<=$stop:$b['open']>=$stop){$state['status']='STOPPED';$state['closed_at']=$t+60;$state['tp1_result']??='LOSS';break;}
+    foreach($state['targets'] as $i=>$target)if($target['hit_at']===null&&($long?$b['open']>=$target['price']:$b['open']<=$target['price'])){
+     $state['targets'][$i]['hit_at']=$t+60;if($i===0)$state['tp1_result']='WIN';
+    }
+    $newTargets=array_values(array_filter($newTargets,fn($i)=>$state['targets'][$i]['hit_at']===null));
+    if($state['targets']&&end($state['targets'])['hit_at']!==null){$state['status']='ALL_TARGETS';$state['closed_at']=$t+60;break;}
+   }
+   if(($stopHit&&$newTargets)||($newEntry&&!$entryAtOpen&&($stopHit||$newTargets))){
+    $state['status']='AMBIGUOUS';$state['reason']='intraminute_order_unknown';$state['closed_at']=$t+60;break;
+   }
+   foreach($newTargets as $i){$state['targets'][$i]['hit_at']=$t+60;if($i===0)$state['tp1_result']='WIN';}
+   if($stopHit){$state['status']='STOPPED';$state['closed_at']=$t+60;$state['tp1_result']??='LOSS';break;}
+   if($state['targets']&&end($state['targets'])['hit_at']!==null){$state['status']='ALL_TARGETS';$state['closed_at']=$t+60;break;}
+  }
+  return $state;
+ }
+ static function pending(int $now):bool {
+  $q=db()->prepare("SELECT 1 FROM strategy_outcomes WHERE last_check<=? AND json_extract(state,'$.status') IN ('OPEN','PENDING_ENTRY') LIMIT 1");$q->execute([$now-max(5,(int)setting('interval','120'))]);return (bool)$q->fetchColumn();
+ }
+ static function oldestDue(int $now):?int {
+  $q=db()->prepare("SELECT MIN(last_check) FROM strategy_outcomes WHERE last_check<=? AND json_extract(state,'$.status') IN ('OPEN','PENDING_ENTRY')");$q->execute([$now-max(5,(int)setting('interval','120'))]);$v=$q->fetchColumn();return $v===null||$v===false?null:(int)$v;
+ }
+ static function tick(int $now,?string $strategyId=null,?Wallex $provided=null):int {
+  $sql="SELECT * FROM strategy_outcomes WHERE last_check<=? AND json_extract(state,'$.status') IN ('OPEN','PENDING_ENTRY')";
+  $params=[$now-max(5,(int)setting('interval','120'))];if($strategyId!==null){$sql.=' AND strategy_id=?';$params[]=$strategyId;}
+  $q=db()->prepare($sql.' ORDER BY last_check,alert_id LIMIT 100');$q->execute($params);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
+  if(!$rows)return 0;
+  // One market per bounded scheduler invocation; all alerts on it share the same immutable minute page.
+  $market=$rows[0]['exchange'].':'.$rows[0]['symbol'];$rows=array_values(array_filter($rows,fn($r)=>$r['exchange'].':'.$r['symbol']===$market));
+  $from=min(array_map(fn($r)=>(int)json_decode($r['state'],true)['cursor'],$rows));$end=min(intdiv($now,60)*60,$from+300*60);$count=0;
+  try{
+   $api=$provided&&$provided->exchange()===$rows[0]['exchange']?$provided:MarketData::provider($rows[0]['exchange'],microtime(true)+12);
+   $bars=$end>$from?$api->withBudget(12,fn()=>$api->minutes($rows[0]['symbol'],$from,$end)):[];
+   foreach($rows as $r){$state=json_decode($r['state'],true);$snapshot=json_decode($r['snapshot'],true);
+    try{$next=self::advance($snapshot,$state,$bars,$end);$next['data_error']=null;}catch(Throwable $e){$next=$state;$next['data_error']=$e->getMessage();}
+    // Backlogs keep their cursor and remain due; no missing history is skipped.
+    $checked=($next['cursor']??0)<intdiv($now,60)*60&&empty($next['data_error'])?$now-max(5,(int)setting('interval','120')):$now;
+    $u=db()->prepare('UPDATE strategy_outcomes SET state=?,last_check=? WHERE alert_id=? AND state=?');$u->execute([encode($next),$checked,$r['alert_id'],$r['state']]);$count+=$u->rowCount();
+   }
+  }catch(Throwable $e){foreach($rows as $r){$state=json_decode($r['state'],true);$state['data_error']=$e->getMessage();db()->prepare('UPDATE strategy_outcomes SET state=?,last_check=? WHERE alert_id=? AND state=?')->execute([encode($state),$now,$r['alert_id'],$r['state']]);}}
+  return $count;
+ }
+ static function view():array {
+  $q=db()->query('SELECT * FROM strategy_outcomes ORDER BY alert_id DESC');$items=[];
+  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$items[]=['alert_id'=>(int)$r['alert_id'],'strategy_id'=>$r['strategy_id'],'version'=>$r['version'],'exchange'=>$r['exchange'],'symbol'=>$r['symbol'],'cohort'=>$r['cohort'],'started'=>(int)$r['started'],'last_check'=>(int)$r['last_check'],'snapshot'=>json_decode($r['snapshot'],true),'state'=>json_decode($r['state'],true)];
+  return $items;
+ }
+ static function report(array $items):array {
+  $groups=[];
+  foreach(['all','preliminary','confirmed'] as $cohort){$rows=array_values(array_filter($items,fn($r)=>$cohort==='all'||$r['cohort']===$cohort));$wins=0;$losses=0;$ambiguous=0;$pending=0;$unavailable=0;$targets=[];$ids=[];
+   foreach($rows as $r){$s=$r['state'];$ids[$r['strategy_id']]=true;if($s['tp1_result']==='WIN')$wins++;elseif($s['tp1_result']==='LOSS')$losses++;
+    if($s['status']==='AMBIGUOUS')$ambiguous++;if(in_array($s['status'],['OPEN','PENDING_ENTRY'],true))$pending++;if($s['status']==='UNAVAILABLE')$unavailable++;
+    foreach($s['targets'] as $i=>$target){$targets[$i]??=['target'=>$i+1,'hit'=>0,'miss'=>0];if($target['hit_at']!==null)$targets[$i]['hit']++;elseif($s['status']==='STOPPED')$targets[$i]['miss']++;}
+   }
+   foreach($targets as &$target)$target['hit_rate']=$target['hit']+$target['miss']?100*$target['hit']/($target['hit']+$target['miss']):null;unset($target);
+   $groups[$cohort]=['alerts'=>count($rows),'strategies'=>count($ids),'wins'=>$wins,'losses'=>$losses,'resolved'=>$wins+$losses,'win_rate'=>$wins+$losses?100*$wins/($wins+$losses):null,'ambiguous'=>$ambiguous,'pending'=>$pending,'unavailable'=>$unavailable,'targets'=>array_values($targets)];
+  }
+  return $groups;
+ }
+}

@@ -21,7 +21,7 @@ Strategy::validate($s);$owner=(int)db()->query("SELECT id FROM users WHERE role=
 exchangeCheck(json_decode($row['config'],true)['exchange']==='wallex','legacy JSON saves explicitly as Wallex');
 $changed=$s;$changed['exchange']='nobitex';$clone=StrategyStore::save($changed,$owner,$saved['version'],$now);$preserved=db()->query("SELECT * FROM strategies WHERE id='old_json'")->fetch(PDO::FETCH_ASSOC);
 exchangeCheck($preserved===$row&&$clone['created_new_instance']&&$clone['id']!=='old_json','exchange edit clones fresh state and preserves original config, version and history identity');
-foreach(['binance','NOBITEX',null,12] as $bad){try{Strategy::validate($s+['exchange'=>$bad]);$rejected=false;}catch(Throwable $e){$rejected=true;}exchangeCheck($rejected,'unknown/non-string exchange rejected: '.encode($bad));}
+foreach(['unknown','NOBITEX',null,12] as $bad){try{Strategy::validate($s+['exchange'=>$bad]);$rejected=false;}catch(Throwable $e){$rejected=true;}exchangeCheck($rejected,'unknown/non-string exchange rejected: '.encode($bad));}
 $before=db()->query('SELECT id,version,config,state FROM strategies ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);setSetting('default_exchange','nobitex');$after=db()->query('SELECT id,version,config,state FROM strategies ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);exchangeCheck($before===$after,'changing new-item default never mutates existing strategies');
 runCycle($wallex,$now+1);$alerts=array_map(fn($p)=>json_decode($p,true),db()->query("SELECT payload FROM alerts WHERE json_extract(payload,'$.type') IS NULL ORDER BY id")->fetchAll(PDO::FETCH_COLUMN));
 exchangeCheck(count($alerts)===2,'same symbol and observation time produce independent exchange alerts');
