@@ -151,7 +151,7 @@ try {
     http_response_code(502);echo json_encode(['ok'=>false,'error'=>$e->getMessage(),'xray_version'=>$version,'exit'=>$exit]);
 }
 """).encode()
-        put(marker, payload, '600')
+        put(marker, payload, '644')
         uploaded = True
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         url = os.environ['SITE_URL'].rstrip('/') + '/' + marker
