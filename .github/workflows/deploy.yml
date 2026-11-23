@@ -32,6 +32,7 @@ jobs:
           node tests/manual-advisory.js
           node tests/order-flow.js
           python3 tests/deployment.py
+          python3 tests/candle-proxy.py
           python3 tests/accounts-integration.py
           python3 tests/indicator-reference.py
           python3 tests/candle-reference.py
@@ -68,3 +69,15 @@ jobs:
         run: |
           python3 deploy/probe.py
           python3 deploy/upload.py --source build-hosting
+      - name: Provision and verify independent Binance proxy
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/public_html' }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://ashkufaraz.ir/' }}
+          CANDLE_PROXY_SUBSCRIPTION: ${{ secrets.CANDLE_PROXY_SUBSCRIPTION }}
+        run: |
+          if [ -n "$CANDLE_PROXY_SUBSCRIPTION" ]; then
+            python3 deploy/candle_proxy.py
+          fi

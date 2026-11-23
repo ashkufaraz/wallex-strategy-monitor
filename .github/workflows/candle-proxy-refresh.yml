@@ -1,0 +1,25 @@
+name: Refresh independent candle proxy
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: production-ftp
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Refresh subscription and verify host Futures access
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/public_html' }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://ashkufaraz.ir/' }}
+          CANDLE_PROXY_SUBSCRIPTION: ${{ secrets.CANDLE_PROXY_SUBSCRIPTION }}
+        run: python3 deploy/candle_proxy.py

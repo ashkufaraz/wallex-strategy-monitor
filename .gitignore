@@ -3,6 +3,8 @@
 !/data/.keep
 /build-hosting/
 /config/hosting.php
+/config/candle-downloader.local.php
+/config/candle-proxy/
 
 # Credentials and local configuration.
 .env
