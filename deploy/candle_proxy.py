@@ -144,7 +144,12 @@ try {
     $r=normalizeBinanceKlines($raw['body'],'15',time(),$frames);
     $p=json_decode($r['json'],true,512,JSON_THROW_ON_ERROR);
     echo json_encode(['ok'=>true,'candles'=>count($p['t']),'market_type'=>$r['info']['market_type']]);
-} catch(Throwable $e){http_response_code(502);echo json_encode(['ok'=>false,'error'=>'Managed proxy connection failed']);}
+} catch(Throwable $e){
+    $pipes=[];$p=proc_open([$staging.'/xray','version'],[0=>['file','/dev/null','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+    $version=is_resource($p)?substr(stream_get_contents($pipes[1]),0,120):'not started';
+    if(is_resource($p)){fclose($pipes[1]);fclose($pipes[2]);$exit=proc_close($p);}else{$exit=-1;}
+    http_response_code(502);echo json_encode(['ok'=>false,'error'=>$e->getMessage(),'xray_version'=>$version,'exit'=>$exit]);
+}
 """).encode()
         put(marker, payload, '600')
         uploaded = True
@@ -157,7 +162,13 @@ try {
                 if result.get('ok') is True and result.get('market_type') == 'futures' and result.get('candles', 0) > 0:
                     print('Host Xray verified:', result['candles'], 'closed Futures candles;', len(nodes), 'private subscription nodes.')
                     break
-            except (OSError, ValueError):
+            except (OSError, ValueError) as error:
+                if attempt == 0 and isinstance(error, urllib.error.HTTPError):
+                    try:
+                        detail = json.loads(error.read())
+                        print('Host check:', {k: detail.get(k) for k in ['error', 'xray_version', 'exit']}, flush=True)
+                    except ValueError:
+                        print('Host check returned non-JSON HTTP', error.code, flush=True)
                 print('Testing next subscription nodes on host:', attempt + 1, flush=True)
                 time.sleep(1)
         else:
