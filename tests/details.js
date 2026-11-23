@@ -8,7 +8,7 @@ const context=vm.createContext({esc,time:n=>String(n||'—'),console,
  data:{strategies:[{version:'v1',config:sample,state:{stage:'wait_break',last_check:100}}]},
  fetch:async()=>({ok:true,json:async()=>({logs:[{id:7,version:'v1',report:{checked:100,price:75000,action:'SHORT',from_stage:'a',stage:'b',status:'checked',trace:[{event:'price',kind:'transition',rule:1,condition:{left_source:{price:true},left:75000,op:'lt',right_source:76000,right:76000,result:true}}],waiting:[],trade:sample.trade}}]})})
 });
-vm.runInContext(fs.readFileSync('public/trade.js','utf8')+'\n'+fs.readFileSync('public/details.js','utf8')+'\nthis.details=strategyDetails;',context);
+vm.runInContext(fs.readFileSync('public/outcomes.js','utf8').replace('outcomeUI.init();','')+'\n'+fs.readFileSync('public/trade.js','utf8')+'\n'+fs.readFileSync('public/details.js','utf8')+'\nthis.details=strategyDetails;',context);
 const details=context.details;
 const candle={field:'high',timeframe:'15m',open_time:1794310200,close_time:1794311100,ohlcv:{open:74000,high:74249,low:74000,close:74249,volume:1}};
 const candleHtml=details.condition({left_source:{candle:{timeframe:'15m',offset:1,field:'high'}},right_source:74300,left:74249,right:74300,op:'gte',result:false,left_candle:candle});
@@ -32,6 +32,7 @@ assert(details.trade(null,'SHORT',75000).length>0);
 (async()=>{
  details.id=sample.id;await details.refresh();
  assert(content.innerHTML.includes('75,000')&&content.innerHTML.includes('data-log="7"'));
+ assert(content.innerHTML.includes('strategy-outcomes')&&content.innerHTML.includes('Win Rate'));
  assert(!content.innerHTML.includes('data-log="7" open'));
  assert(content.innerHTML.includes('75450')&&content.innerHTML.includes('a'));
  assert.strictEqual(dialog.scrollTop,20);

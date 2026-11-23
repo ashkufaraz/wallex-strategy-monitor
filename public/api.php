@@ -7,7 +7,7 @@ if(!in_array($host,['127.0.0.1:8080','localhost:8080','127.0.0.1:5078','localhos
 session_start(['cookie_httponly'=>true,'cookie_samesite'=>'Strict','use_strict_mode'=>true]);$_SESSION['csrf']??=bin2hex(random_bytes(24));
 try {
  if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['market_chart'])){echo encode(MarketData::chart(MarketScope::exchange($_GET['exchange']??'wallex'),(string)($_GET['symbol']??'')));exit;}
- if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['patterns'])){echo encode(isset($_GET['all_markets'])?PatternService::viewAll():MarketScope::run(['exchange'=>$_GET['exchange']??'wallex','symbol'=>$_GET['symbol']??'BTCUSDT'],fn()=>PatternService::view()));exit;}
+ if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['patterns'])){if(isset($_GET['audit'])){echo encode(PatternService::audit());exit;}echo encode(isset($_GET['all_markets'])?PatternService::viewAll():MarketScope::run(['exchange'=>$_GET['exchange']??'wallex','symbol'=>$_GET['symbol']??'BTCUSDT'],fn()=>PatternService::view()));exit;}
  if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['scanner'])){echo encode(isset($_GET['all_markets'])?ScannerService::viewAll():MarketScope::run(['exchange'=>$_GET['exchange']??'wallex','symbol'=>$_GET['symbol']??'BTCUSDT'],fn()=>ScannerService::view()));exit;}
  if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['mobile_feed'])){
   $userId=MobileAlerts::authenticate(db(),$_SERVER['HTTP_AUTHORIZATION']??'',time());

@@ -2,7 +2,7 @@
 
 دادهٔ مصنوعی، شبکهٔ PHP غیرفعال، مرجع مستقل Python برای BB/RSI/ADX/ATR. آزمون تک‌شرط روی ورودی اندیکاتورها جدا از آزمون مسیر کامل OHLC است.
 
-{'total': 43, 'pass': 43, 'fail': 0}
+{'total': 46, 'pass': 46, 'fail': 0}
 
 | آزمون | ورودی | انتظار | واقعی | نتیجه |
 |---|---|---|---|---|
@@ -46,6 +46,9 @@
 | "data.classify.malformed" | {"API":"malformed"} | {"code":"PROCESSING_ERROR","evidence":true,"recovered":98} | {"code":"PROCESSING_ERROR","evidence":true,"recovered":98} | "PASS" |
 | "health.window-rolls-past-gap" | {"gap":"older than new required window"} | {"before":0,"after":98,"gap":null} | {"before":0,"after":98,"gap":null} | "PASS" |
 | "evaluation.same-candle-keeps-details" | {"checks":2} | {"same":true,"present":true} | {"same":true,"present":true} | "PASS" |
+| "source.revision-recovers-without-replaying-signal" | {"sequence":"valid, revised, repeat, next candle"} | {"revision_blocked":true,"repeat_waiting":true,"next_evaluated":true,"history_unchanged":true,"revision_count":1} | {"revision_blocked":true,"repeat_waiting":true,"next_evaluated":true,"history_unchanged":true,"revision_count":1} | "PASS" |
+| "audit.retained-observations" | {"scope":"retained public method results"} | {"present":true,"bounded":true,"no_snapshots":true} | {"present":true,"bounded":true,"no_snapshots":true} | "PASS" |
+| "audit.durable-counters-no-duplicate" | {"sequence":"blocked observation then duplicate"} | {"increment":1,"blocked_increment":1,"duplicate_unchanged":true,"period_preserved":true} | {"increment":1,"blocked_increment":1,"duplicate_unchanged":true,"period_preserved":true} | "PASS" |
 | "notification.test-isolated" | {"channel":"existing alerts; no network"} | {"signal_delta":0,"execution_delta":0,"type":"notification_test","owner":1,"message":true,"queued":true} | {"signal_delta":0,"execution_delta":0,"type":"notification_test","owner":1,"message":true,"queued":true} | "PASS" |
 | "concurrency.six-processes" | {"processes":6,"same_confirmation":true,"book":"unverified","fees":"unknown"} | {"events":1,"alerts":1,"signals":1,"no_manual":true} | {"events":1,"alerts":1,"signals":1,"no_manual":true} | "PASS" |
 | "restart.no-new-notice" | {"restart":"new PHP process","same_closed_candle":true} | {"events":1,"alerts":1,"signals":1,"no_manual":true} | {"events":1,"alerts":1,"signals":1,"no_manual":true} | "PASS" |

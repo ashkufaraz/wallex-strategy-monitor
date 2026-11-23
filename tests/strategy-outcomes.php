@@ -40,4 +40,9 @@ class OutcomeProvider extends Wallex {public int $minuteCalls=0;function minutes
 $api=new OutcomeProvider();db()->exec('DELETE FROM strategies');$lock=sys_get_temp_dir().'/outcome-test-'.bin2hex(random_bytes(5));
 try{$result=browserCheck($api,$at+120,$lock);outcomeCheck($result['status']==='outcomes_checked'&&$api->minuteCalls===1,'deleted strategy alert keeps tracking its immutable plan via scheduler');}finally{@unlink($lock);}
 StrategyOutcomes::capture($r['alert_id'],$p,$at);outcomeCheck(count(StrategyOutcomes::view())===1,'re-import cannot reset evaluated state');
+setSetting('outcomes_since',(string)($at+10));setSetting('outcomes_min_alert_id',(string)$r['alert_id']);
+outcomeCheck(StrategyOutcomes::view()===[],'new reporting period excludes existing outcomes');
+StrategyOutcomes::capture(998,$p,$at);outcomeCheck(StrategyOutcomes::view()===[],'old alerts imported later remain excluded');
+StrategyOutcomes::capture(999,$p,$at+60);outcomeCheck(count(StrategyOutcomes::view())===1,'new period accepts future alerts');
+StrategyOutcomes::migrate(db());outcomeCheck(setting('outcomes_since')===(string)($at+10),'period boundary persists across migrations');
 echo "Strategy outcomes: $n assertions passed.\n";

@@ -930,6 +930,63 @@
       "status": "PASS"
     },
     {
+      "id": "source.revision-recovers-without-replaying-signal",
+      "input": {
+        "sequence": "valid, revised, repeat, next candle"
+      },
+      "expected": {
+        "revision_blocked": true,
+        "repeat_waiting": true,
+        "next_evaluated": true,
+        "history_unchanged": true,
+        "revision_count": 1
+      },
+      "actual": {
+        "revision_blocked": true,
+        "repeat_waiting": true,
+        "next_evaluated": true,
+        "history_unchanged": true,
+        "revision_count": 1
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "audit.retained-observations",
+      "input": {
+        "scope": "retained public method results"
+      },
+      "expected": {
+        "present": true,
+        "bounded": true,
+        "no_snapshots": true
+      },
+      "actual": {
+        "present": true,
+        "bounded": true,
+        "no_snapshots": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "audit.durable-counters-no-duplicate",
+      "input": {
+        "sequence": "blocked observation then duplicate"
+      },
+      "expected": {
+        "increment": 1,
+        "blocked_increment": 1,
+        "duplicate_unchanged": true,
+        "period_preserved": true
+      },
+      "actual": {
+        "increment": 1,
+        "blocked_increment": 1,
+        "duplicate_unchanged": true,
+        "period_preserved": true
+      },
+      "status": "PASS"
+    },
+    {
       "id": "notification.test-isolated",
       "input": {
         "channel": "existing alerts; no network"
@@ -996,8 +1053,8 @@
     }
   ],
   "summary": {
-    "total": 43,
-    "pass": 43,
+    "total": 46,
+    "pass": 46,
     "fail": 0
   }
 }

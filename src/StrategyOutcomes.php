@@ -8,6 +8,7 @@ final class StrategyOutcomes
   $db->exec('CREATE TABLE IF NOT EXISTS strategy_registration(strategy_id TEXT PRIMARY KEY,created INTEGER);
    CREATE TABLE IF NOT EXISTS strategy_outcomes(alert_id INTEGER PRIMARY KEY,strategy_id TEXT NOT NULL,version TEXT,exchange TEXT NOT NULL,symbol TEXT NOT NULL,cohort TEXT NOT NULL,started INTEGER NOT NULL,owner_id INTEGER,snapshot TEXT NOT NULL,state TEXT NOT NULL,last_check INTEGER NOT NULL DEFAULT 0);
    CREATE INDEX IF NOT EXISTS strategy_outcomes_market ON strategy_outcomes(exchange,symbol,last_check);');
+  $db->exec("INSERT OR IGNORE INTO settings(k,v) VALUES('outcomes_since',strftime('%s','now')); INSERT OR IGNORE INTO settings(k,v) SELECT 'outcomes_min_alert_id',COALESCE(MAX(id),0) FROM alerts");
   // There was no durable creation field before this migration. Do not invent a date for old rows.
   $db->exec('INSERT OR IGNORE INTO strategy_registration(strategy_id,created) SELECT id,NULL FROM strategies');
  }
@@ -15,6 +16,7 @@ final class StrategyOutcomes
   $q=db()->prepare('SELECT created FROM strategy_registration WHERE strategy_id=?');$q->execute([$id]);$v=$q->fetchColumn();return $v===false||$v===null?null:(int)$v;
  }
  static function capture(int $alertId,array $p,int $created):void {
+  if($alertId<=(int)setting('outcomes_min_alert_id','0')||$created<(int)setting('outcomes_since','0'))return;
   if(!in_array($p['type']??'signal',['signal','entry_conditions_only','binance_signal'],true))return;
   $trade=$p['evaluation_trade']??$p['trade']??null;$cohort=($p['type']??'')==='entry_conditions_only'?'preliminary':'confirmed';
   $entry=$trade['entry']['reference_price']??$trade['entry']['price']??$p['price']??null;
@@ -116,7 +118,7 @@ final class StrategyOutcomes
   return $count;
  }
  static function view():array {
-  $q=db()->query('SELECT * FROM strategy_outcomes ORDER BY alert_id DESC');$items=[];
+  $q=db()->prepare('SELECT * FROM strategy_outcomes WHERE alert_id>? AND started>=? ORDER BY alert_id DESC');$q->execute([(int)setting('outcomes_min_alert_id','0'),(int)setting('outcomes_since','0')]);$items=[];
   foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$items[]=['alert_id'=>(int)$r['alert_id'],'strategy_id'=>$r['strategy_id'],'version'=>$r['version'],'exchange'=>$r['exchange'],'symbol'=>$r['symbol'],'cohort'=>$r['cohort'],'started'=>(int)$r['started'],'last_check'=>(int)$r['last_check'],'snapshot'=>json_decode($r['snapshot'],true),'state'=>json_decode($r['state'],true)];
   return $items;
  }
