@@ -30,14 +30,17 @@ final class CandleProxy
         fclose($socket);
         $file = tempnam($directory, 'request-');
         if ($file === false) { throw new RuntimeException('ایجاد تنظیم موقت پروکسی ممکن نیست.'); }
-        self::$temporary = $file;
         chmod($file, 0600);
+        // Xray's external loader requires the .json suffix even with -format json.
+        if (!rename($file, $file . '.json')) { @unlink($file); throw new RuntimeException('ایجاد تنظیم JSON پروکسی ممکن نیست.'); }
+        $file .= '.json';
+        self::$temporary = $file;
         $config = ['log' => ['loglevel' => 'none'],
             'inbounds' => [['listen' => '127.0.0.1', 'port' => $port, 'protocol' => 'socks', 'settings' => ['auth' => 'noauth', 'udp' => false]]],
             'outbounds' => [$outbound]];
         file_put_contents($file, json_encode($config, JSON_THROW_ON_ERROR));
         $pipes = [];
-        self::$process = proc_open([$directory . '/xray', 'run', '-c', $file],
+        self::$process = proc_open([$directory . '/xray', 'run', '-format', 'json', '-c', $file],
             [0 => ['file', '/dev/null', 'r'], 1 => ['file', '/dev/null', 'a'], 2 => ['file', '/dev/null', 'a']], $pipes, $directory);
         if (!is_resource(self::$process)) { self::stop(); throw new RuntimeException('اجرای Xray روی هاست ناموفق بود.'); }
         $deadline = microtime(true) + 2;

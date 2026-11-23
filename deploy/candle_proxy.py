@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import os
+from pathlib import Path
 import ssl
 import time
 import urllib.parse
@@ -70,7 +71,8 @@ def subscription_nodes(text):
 
 
 def fetch(url, limit):
-    with urllib.request.urlopen(url, timeout=40) as response:
+    request = urllib.request.Request(url, headers={'User-Agent': 'v2rayNG/1.9.46', 'Accept': '*/*'})
+    with urllib.request.urlopen(request, timeout=40) as response:
         payload = response.read(limit + 1)
         if len(payload) > limit:
             raise ValueError('Download size limit exceeded')
@@ -83,9 +85,10 @@ def provision():
         raise ValueError('Subscription must use HTTPS')
     try:
         nodes = subscription_nodes(fetch(subscription, 2 * 1024 * 1024).decode('utf-8-sig'))
-    except Exception:
+    except Exception as error:
         # urllib exceptions can contain the private subscription URL.
-        raise RuntimeError('Could not download or parse the private subscription') from None
+        kind = ('HTTP ' + str(error.code)) if isinstance(error, urllib.error.HTTPError) else type(error).__name__
+        raise RuntimeError('Could not download or parse the private subscription (' + kind + ')') from None
     archive = fetch(XRAY_URL, 80 * 1024 * 1024)
     if hashlib.sha256(archive).hexdigest() != XRAY_SHA256:
         raise ValueError('Xray release digest mismatch')
@@ -117,6 +120,7 @@ def provision():
         ftp.retrbinary('RETR config/.htaccess', protection.write)
         if b'Require all denied' not in protection.getvalue():
             raise RuntimeError('Private config directory is not protected')
+        put('src/CandleProxy.php', (Path(__file__).resolve().parents[1] / 'src/CandleProxy.php').read_bytes(), '644')
         try:
             ftp.mkd('config/candle-proxy')
         except ftplib.error_perm:
@@ -142,9 +146,14 @@ try {
     $r=normalizeBinanceKlines($raw['body'],'15',time(),$frames);
     $p=json_decode($r['json'],true,512,JSON_THROW_ON_ERROR);
     echo json_encode(['ok'=>true,'candles'=>count($p['t']),'market_type'=>$r['info']['market_type']]);
-} catch(Throwable $e){http_response_code(502);echo json_encode(['ok'=>false,'error'=>'Managed proxy connection failed']);}
+} catch(Throwable $e){
+    $pipes=[];$p=proc_open([$staging.'/xray','version'],[0=>['file','/dev/null','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+    $version=is_resource($p)?substr(stream_get_contents($pipes[1]),0,120):'not started';
+    if(is_resource($p)){fclose($pipes[1]);fclose($pipes[2]);$exit=proc_close($p);}else{$exit=-1;}
+    http_response_code(502);echo json_encode(['ok'=>false,'error'=>$e->getMessage(),'xray_version'=>$version,'exit'=>$exit]);
+}
 """).encode()
-        put(marker, payload, '600')
+        put(marker, payload, '644')
         uploaded = True
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         url = os.environ['SITE_URL'].rstrip('/') + '/' + marker
@@ -155,7 +164,13 @@ try {
                 if result.get('ok') is True and result.get('market_type') == 'futures' and result.get('candles', 0) > 0:
                     print('Host Xray verified:', result['candles'], 'closed Futures candles;', len(nodes), 'private subscription nodes.')
                     break
-            except (OSError, ValueError):
+            except (OSError, ValueError) as error:
+                if attempt == 0 and isinstance(error, urllib.error.HTTPError):
+                    try:
+                        detail = json.loads(error.read())
+                        print('Host check:', {k: detail.get(k) for k in ['error', 'xray_version', 'exit']}, flush=True)
+                    except ValueError:
+                        print('Host check returned non-JSON HTTP', error.code, flush=True)
                 print('Testing next subscription nodes on host:', attempt + 1, flush=True)
                 time.sleep(1)
         else:
