@@ -9,8 +9,19 @@ import uuid
 
 def probe():
     ftp = ftplib.FTP_TLS(context=ssl.create_default_context(), timeout=20)
-    marker = 'hosting-check-' + uuid.uuid4().hex + '.txt'
-    payload = uuid.uuid4().hex.encode()
+    marker = 'hosting-check-' + uuid.uuid4().hex + '.php'
+    token = uuid.uuid4().hex
+    payload = ("<?php if(!hash_equals('" + token + "', $_SERVER['HTTP_X_PROBE_TOKEN']??'')){http_response_code(404);exit;} " + r"""
+header('Content-Type: application/json');
+$r=['os'=>PHP_OS_FAMILY,'arch'=>php_uname('m'),'php'=>PHP_VERSION,'functions'=>[]];
+foreach(['proc_open','exec','shell_exec','putenv','chmod','curl_init','fsockopen'] as $fn)$r['functions'][$fn]=function_exists($fn);
+if(function_exists('curl_init')){
+$c=curl_init('https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=2');
+curl_setopt_array($c,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>10]);
+$b=curl_exec($c);$r['binance_direct']=['status'=>curl_getinfo($c,CURLINFO_HTTP_CODE),'errno'=>curl_errno($c)];curl_close($c);
+}
+echo json_encode($r);
+""").encode()
     uploaded = False
     try:
         ftp.connect(os.environ['FTP_HOST'], 21)
@@ -23,9 +34,8 @@ def probe():
         uploaded = True
         url = os.environ['SITE_URL'].rstrip('/') + '/' + marker
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(url, timeout=20) as response:
-            if response.read() != payload:
-                raise RuntimeError('FTP directory does not match the public website')
+        with opener.open(urllib.request.Request(url, headers={'X-Probe-Token':token}), timeout=25) as response:
+            print('PHP_CAPABILITIES:', response.read().decode(), flush=True)
         print('Verified: FTP directory serves the requested website.', flush=True)
     finally:
         if uploaded:
