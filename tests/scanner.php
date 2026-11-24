@@ -47,4 +47,13 @@ class ScannerBaseApi extends Wallex {
 }
 $api=new ScannerBaseApi();$fetched=ScannerData::fetch($api,ScannerConfig::defaults(),$base);scanCheck(count($fetched['bars']['4h'])===252&&count($fetched['bars']['15m'])===72&&$fetched['bars']['4h'][0]['volume']===4.0&&$fetched['bars']['15m'][0]['volume']===15.0,'live adapter pages base candles and aggregates exact 4h/15m UTC bars');
 scanCheck($fetched['book']['source_timestamp']===null&&$fetched['book']['trust_status']==='UNVERIFIED','live adapter never upgrades REST receipt to verified source time');
+$revisionState=ScannerPaper::fresh($c);$revisionSnapshot=$dataset['observations'][0]+['bars'=>$dataset['bars'],'market'=>$dataset['market']];ScannerRunner::step($revisionState,$revisionSnapshot,$c);
+$changed=$revisionSnapshot;$changed['observed_at']++;$changed['bars']['4h'][19]['close']+=.01;$blocked=ScannerRunner::step($revisionState,$changed,$c);$changed['observed_at']++;$recovered=ScannerRunner::step($revisionState,$changed,$c);
+scanCheck(($blocked['decision']['reason_code']??'')==='CANDLE_REVISION_RESET'&&$blocked['signal']===null,'historical revision discards dependent setup without emitting a signal');
+scanCheck(($recovered['decision']['reason_code']??'')!=='CANDLE_REVISION_RESET','unchanged revised data does not permanently block subsequent checks');
+$archived=db()->query('SELECT payload FROM scanner_candles ORDER BY opened LIMIT 1')->fetchColumn();
+$revisionSnapshot=$dataset['observations'][5]+['bars'=>$dataset['bars'],'market'=>$dataset['market'],'provider'=>'wallex','symbol'=>'BTCUSDT'];$revisionSnapshot['observed_at']++;$revisionSnapshot['bars']['4h'][19]['close']+=.01;
+ScannerService::persist($c,$revisionSnapshot,ScannerService::row($c));$revisionSnapshot['observed_at']++;ScannerService::persist($c,$revisionSnapshot,ScannerService::row($c));
+$revisionReplay=ScannerService::replay();scanCheck($revisionReplay['replay_match']===true,'replay binds each observation to its exact candle variant after provider revisions');
+scanCheck($archived===db()->query('SELECT payload FROM scanner_candles ORDER BY opened LIMIT 1')->fetchColumn(),'original stored candle history remains immutable');
 echo "Scanner strategy, strict data, execution gates, paper and replay tests passed.\n";

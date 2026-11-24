@@ -22,6 +22,11 @@ final class MarketScope {
  static function set(string $key,string $value):void {setSetting(self::settingKey($key),$value);}
  static function markets():array {$items=json_decode(setting('monitored_markets','[]'),true,64,JSON_THROW_ON_ERROR);$out=[self::key(['exchange'=>'wallex'])=>self::validate(['exchange'=>'wallex']),self::key(['exchange'=>'nobitex'])=>self::validate(['exchange'=>'nobitex'])];foreach(['wallex','nobitex'] as $exchange){$gold=self::validate(['exchange'=>$exchange,'symbol'=>'XAUTUSDT']);$out[self::key($gold)]=$gold;}foreach($items as $item){$s=self::validate($item);$out[self::key($s)]=$s;}return array_values($out);}
  static function add(array $scope):void {$s=self::validate($scope);$items=self::markets();$items[]=$s;$unique=[];foreach($items as $item)$unique[self::key($item)]=$item;setSetting('monitored_markets',encode(array_values($unique)));}
+ static function monitoringMarkets():array {
+  $out=[];foreach(['binance','nobitex'] as $exchange)foreach(['BTCUSDT','XAUTUSDT'] as $symbol){$scope=self::validate(['exchange'=>$exchange,'symbol'=>$symbol]);$out[self::key($scope)]=$scope;}
+  foreach(self::markets() as $scope)if($scope['exchange']!=='wallex')$out[self::key($scope)]=$scope;
+  return array_values($out);
+ }
  static function label(string $exchange):string {return $exchange==='binance'?'بایننس فیوچرز':($exchange==='nobitex'?'نوبیتکس':'والکس');}
 }
 

@@ -29,10 +29,10 @@ with sync_playwright() as p:
         page.route('**/*',route);page.goto('http://127.0.0.1:5078/');page.wait_for_selector('#patternCards article',state='attached')
         assert not page.locator('#patternPanel').evaluate('(p)=>p.open')
         assert not page.locator('#patternCards').is_visible()
-        assert page.evaluate("document.getElementById('patternPanel').nextElementSibling===document.getElementById('alerts').closest('section')")
+        assert page.evaluate("document.getElementById('patternPanel').nextElementSibling===document.getElementById('scannerAdvanced')")
         page.locator('#patternPanel > summary').click()
         page.wait_for_selector('#patternCards article')
-        assert page.locator('#patternCards').inner_text().count('98 / 98')==2
+        assert page.locator('#patternCards').text_content().count('98 کندل سالم متوالی از 98')==2
         assert page.locator('#patternCards article').count()==2;assert page.locator('#patternSignals article').count()==3
         assert not page.locator('#scannerReport').is_visible();assert not page.locator('#patternCards details').first.get_attribute('open')
         page.locator('#patternMethodFilter').select_option('mean_reversion_v1');assert page.locator('#patternSignals article').count()==2

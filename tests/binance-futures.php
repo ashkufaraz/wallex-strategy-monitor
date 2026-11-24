@@ -6,6 +6,8 @@ function futureCheck(bool $ok,string $label):void {global $n;if(!$ok)throw new R
 $api=new BinanceFuturesMarketDataProvider(function($url)use(&$requests,$now){$requests[]=$url;$path=parse_url($url,PHP_URL_PATH);parse_str(parse_url($url,PHP_URL_QUERY)??'',$p);
  if($path==='/fapi/v1/time')$body=['serverTime'=>$now*1000];
  elseif($path==='/fapi/v2/ticker/price')$body=['symbol'=>$p['symbol'],'price'=>'100'];
+ elseif($path==='/fapi/v1/exchangeInfo')$body=['symbols'=>[['symbol'=>'BTCUSDT','status'=>'TRADING','quoteAsset'=>'USDT','contractType'=>'PERPETUAL','filters'=>[['filterType'=>'LOT_SIZE','stepSize'=>'0.001','minQty'=>'0.001'],['filterType'=>'PRICE_FILTER','tickSize'=>'0.01'],['filterType'=>'MIN_NOTIONAL','notional'=>'5']]]]];
+ elseif($path==='/fapi/v1/depth')$body=['lastUpdateId'=>1,'T'=>$now*1000,'E'=>$now*1000,'bids'=>[['99.99','3']],'asks'=>[['100.01','4']]];
  elseif($path==='/fapi/v1/klines'){$step=Indicators::TIMEFRAMES[$p['interval']];$body=[];for($t=(int)($p['startTime']/1000);$t<=(int)($p['endTime']/1000);$t+=$step)$body[]=[$t*1000,'100','101','99','100','2',($t+$step)*1000-1,'200',1,'1','100','0'];}
  else throw new RuntimeException('Unexpected Futures route');return ['status'=>200,'headers'=>[],'body'=>encode($body)];},fn()=>$now);
 futureCheck($api->exchange()==='binance'&&$api->price('BTCUSDT')===100.,'Futures ticker uses explicit Binance identity');
@@ -17,5 +19,10 @@ futureCheck($p['exchange']==='binance'&&(float)$p['price']===100.&&$p['indicator
 futureCheck(count(StrategyOutcomes::view())===1&&StrategyOutcomes::view()[0]['cohort']==='confirmed','Futures entry starts independent outcome tracking');
 futureCheck(count(array_filter($requests,fn($url)=>!str_starts_with($url,'https://fapi.binance.com/')))===0,'no Futures request falls back to Spot or another exchange');
 futureCheck(MarketScope::label('binance')!=='والکس','Futures alert labels do not identify as Wallex');
+$limits=$api->limits('BTCUSDT');futureCheck($limits['instrument']==='FUTURES_USDM'&&$limits['supports_short']&&$limits['min_notional']===5.,'Futures exchangeInfo filters and instrument support are explicit');
+$book=$api->book('BTCUSDT',$now);futureCheck($book['trust_status']==='VERIFIED'&&$book['source_timestamp']===$now,'Futures depth uses transaction timestamp, not receipt time');
+try{$api->limits('NOTREALUSDT');$unsupported=false;}catch(RuntimeException $e){$unsupported=true;}futureCheck($unsupported,'unsupported exact symbol never substitutes another asset');
+$native=MarketScope::run(['exchange'=>'binance'],fn()=>PatternData::fetch($api,PatternConfig::defaults(),ScannerConfig::defaults(),$now));futureCheck(count($native['bars']['4h'])===252&&count($native['bars']['15m'])===98,'Futures monitoring uses complete native 4h and 15m windows');
+futureCheck(count(array_filter($requests,fn($url)=>str_contains($url,'interval=4h')))>0,'four-hour monitoring requests native four-hour Futures candles');
 try{$api->get('/api/v3/order');$rejected=false;}catch(RuntimeException $e){$rejected=true;}futureCheck($rejected,'private order endpoint remains forbidden');
 echo "Binance Futures: $n assertions passed.\n";

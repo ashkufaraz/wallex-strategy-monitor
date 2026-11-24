@@ -5,10 +5,11 @@ header('Content-Type: application/json; charset=utf-8');header('Cache-Control: n
 $host=$_SERVER['HTTP_HOST']??'';
 if(!in_array($host,['127.0.0.1:8080','localhost:8080','127.0.0.1:5078','localhost:5078'],true)) {http_response_code(403);exit('{"error":"Local access only"}');}
 session_start(['cookie_httponly'=>true,'cookie_samesite'=>'Strict','use_strict_mode'=>true]);$_SESSION['csrf']??=bin2hex(random_bytes(24));
+restoreAccountSession();
 try {
  if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['market_chart'])){echo encode(MarketData::chart(MarketScope::exchange($_GET['exchange']??'wallex'),(string)($_GET['symbol']??'')));exit;}
- if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['patterns'])){if(isset($_GET['audit'])){echo encode(PatternService::audit());exit;}echo encode(isset($_GET['all_markets'])?PatternService::viewAll():MarketScope::run(['exchange'=>$_GET['exchange']??'wallex','symbol'=>$_GET['symbol']??'BTCUSDT'],fn()=>PatternService::view()));exit;}
- if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['scanner'])){echo encode(isset($_GET['all_markets'])?ScannerService::viewAll():MarketScope::run(['exchange'=>$_GET['exchange']??'wallex','symbol'=>$_GET['symbol']??'BTCUSDT'],fn()=>ScannerService::view()));exit;}
+ if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['patterns'])){if(isset($_GET['audit'])){echo encode(PatternService::audit());exit;}echo encode(isset($_GET['all_markets'])?PatternService::viewAll():MarketScope::run(['exchange'=>$_GET['exchange']??'binance','symbol'=>$_GET['symbol']??'BTCUSDT'],fn()=>PatternService::view()));exit;}
+ if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['scanner'])){echo encode(isset($_GET['all_markets'])?ScannerService::viewAll():MarketScope::run(['exchange'=>$_GET['exchange']??'binance','symbol'=>$_GET['symbol']??'BTCUSDT'],fn()=>ScannerService::view()));exit;}
  if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['mobile_feed'])){
   $userId=MobileAlerts::authenticate(db(),$_SERVER['HTTP_AUTHORIZATION']??'',time());
   $after=isset($_GET['after'])?filter_var($_GET['after'],FILTER_VALIDATE_INT,['options'=>['min_range'=>0]]):null;

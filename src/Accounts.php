@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 function accountSchema(PDO $db):void {
+ $db->exec('CREATE TABLE IF NOT EXISTS account_sessions(token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires INTEGER NOT NULL,password_version TEXT NOT NULL)');
  $db->exec("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,email TEXT UNIQUE NOT NULL,name TEXT NOT NULL,password_hash TEXT,role TEXT NOT NULL DEFAULT 'member',created INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS strategy_owners(strategy_id TEXT PRIMARY KEY,user_id INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS alert_owners(alert_id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL);
@@ -15,10 +16,34 @@ function accountSchema(PDO $db):void {
  $db->prepare('INSERT OR IGNORE INTO alert_owners SELECT a.id,COALESCE(o.user_id,?) FROM alerts a LEFT JOIN strategy_owners o ON o.strategy_id=json_extract(a.payload,\'$.strategy_id\')')->execute([$id]);
 }
 function currentAccount():?array {
+ restoreAccountSession();
  $id=$_SESSION['user_id']??null;
- if(!$id||time()-(int)($_SESSION['auth_at']??0)>86400)return null;
+ if(!$id||time()-(int)($_SESSION['auth_at']??0)>90*86400)return null;
  $q=db()->prepare('SELECT id,name,email,role FROM users WHERE id=? AND password_hash IS NOT NULL');$q->execute([$id]);$user=$q->fetch(PDO::FETCH_ASSOC);
- if(!$user)return null;$user['id']=(int)$user['id'];return $user;
+ if(!$user)return null;if(empty($_COOKIE['wallex_remember'])&&PHP_SAPI!=='cli')rememberAccount((int)$user['id']);$user['id']=(int)$user['id'];return $user;
+}
+function rememberCookie(string $value,int $expires):void {
+ if(PHP_SAPI==='cli')return;
+ setcookie('wallex_remember',$value,['expires'=>$expires,'path'=>'/','secure'=>($_SERVER['HTTPS']??'')==='on','httponly'=>true,'samesite'=>'Lax']);
+ if($value==='')unset($_COOKIE['wallex_remember']);else $_COOKIE['wallex_remember']=$value;
+}
+function forgetAccountSession():void {
+ $token=$_COOKIE['wallex_remember']??'';if(is_string($token)&&preg_match('/^[a-f0-9]{64}$/D',$token))db()->prepare('DELETE FROM account_sessions WHERE token_hash=?')->execute([hash('sha256',$token)]);
+ rememberCookie('',time()-3600);
+}
+function rememberAccount(int $id):void {
+ forgetAccountSession();$q=db()->prepare('SELECT password_hash FROM users WHERE id=?');$q->execute([$id]);$password=$q->fetchColumn();if(!$password)return;
+ $token=bin2hex(random_bytes(32));$expires=time()+90*86400;
+ db()->prepare('INSERT INTO account_sessions VALUES(?,?,?,?)')->execute([hash('sha256',$token),$id,$expires,hash('sha256',$password)]);
+ db()->prepare('DELETE FROM account_sessions WHERE expires<?')->execute([time()]);rememberCookie($token,$expires);
+}
+function restoreAccountSession():void {
+ if(!empty($_SESSION['user_id'])&&time()-(int)($_SESSION['auth_at']??0)<=90*86400)return;
+ $token=$_COOKIE['wallex_remember']??'';if(!is_string($token)||!preg_match('/^[a-f0-9]{64}$/D',$token))return;
+ $q=db()->prepare('SELECT s.*,u.password_hash FROM account_sessions s JOIN users u ON u.id=s.user_id WHERE token_hash=? AND expires>?');$q->execute([hash('sha256',$token),time()]);$row=$q->fetch(PDO::FETCH_ASSOC);
+ if(!$row||!hash_equals($row['password_version'],hash('sha256',$row['password_hash']??''))){forgetAccountSession();return;}
+ if(session_status()===PHP_SESSION_ACTIVE)session_regenerate_id(true);
+ $_SESSION['user_id']=(int)$row['user_id'];$_SESSION['auth_at']=time();$_SESSION['csrf']=bin2hex(random_bytes(24));
 }
 function requireAccount():array {
  $user=currentAccount();if(!$user){http_response_code(401);throw new RuntimeException('برای این کار ابتدا وارد حساب شوید.');}return $user;
@@ -55,9 +80,10 @@ function accountCredentials(array $input,bool $new):array {
 }
 function signedIn(int $id):void {
  session_regenerate_id(true);$_SESSION['user_id']=$id;$_SESSION['auth_at']=time();$_SESSION['csrf']=bin2hex(random_bytes(24));
+ rememberAccount($id);
 }
 function accountAction(string $action,array $input):array {
- if($action==='logout'){$_SESSION=[];session_regenerate_id(true);$_SESSION['csrf']=bin2hex(random_bytes(24));return ['ok'=>true,'csrf'=>$_SESSION['csrf']];}
+ if($action==='logout'){forgetAccountSession();$_SESSION=[];session_regenerate_id(true);$_SESSION['csrf']=bin2hex(random_bytes(24));return ['ok'=>true,'csrf'=>$_SESSION['csrf']];}
  rateLimit('account',20,900);
  [$email,$password]=accountCredentials($input,$action!=='login');
  $q=db()->prepare('SELECT * FROM users WHERE email=?');$q->execute([$email]);$existing=$q->fetch(PDO::FETCH_ASSOC);

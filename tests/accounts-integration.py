@@ -40,7 +40,7 @@ def run(browser=False):
         package=Path(directory)/'site';builder.build(package,'127.0.0.1','admin','',public_access=True,require_https=False)
         token='a'*64
         (package/'config/owner-bootstrap.php').write_text("<?php return ['token_hash'=>'"+hashlib.sha256(token.encode()).hexdigest()+"'];",encoding='utf-8')
-        api=package/'public/api.php';api.write_text(api.read_text(encoding='utf-8').replace('$api=new Wallex();',"$api=new class extends Wallex {function price(string $symbol):float{return 75000.;}};"),encoding='utf-8')
+        api=package/'public/api.php';api.write_text(api.read_text(encoding='utf-8').replace("require dirname(__DIR__).'/src/App.php';", "require dirname(__DIR__).'/src/App.php';MarketData::$factory=fn($exchange)=>new class extends Wallex {function price(string $symbol):float{return 75000.;}};"),encoding='utf-8')
         config=json.loads((ROOT/'example-btc-short.json').read_text(encoding='utf-8'));config['id']='legacy'
         fixture=package/'fixture.json';fixture.write_text(json.dumps(config),encoding='utf-8')
         def php(code):
@@ -73,6 +73,16 @@ def run(browser=False):
             guest.request(dict(action='activate_owner',email='ashkufaraz@gmail.com',password='test-password-123',token='b'*64),expected=403)
             for client,email,name in [(a,'a@example.com','Alice'),(b,'b@example.com','Bob')]:
                 client.request();client.request(dict(action='register',email=email,name=name,password='test-password-123'))
+            import copy
+            remembered=copy.copy(next(c for c in a.cookies if c.name=='wallex_remember'))
+            assert remembered.expires>time.time()+89*86400
+            for cookie in list(a.cookies):
+                if cookie.name=='PHPSESSID':a.cookies.clear(cookie.domain,cookie.path,cookie.name)
+            assert a.request()['user']['email']=='a@example.com'
+            a.request(dict(action='logout'))
+            replay=Client(url);replay.cookies.set_cookie(remembered)
+            assert replay.request()['user'] is None,'logout must revoke the durable token'
+            a.request(dict(action='login',email='a@example.com',password='test-password-123'))
             first=dict(config,id='alice');second=dict(config,id='bob')
             a.request(dict(action='save',json=json.dumps(first)));b.request(dict(action='save',json=json.dumps(second)))
             state=a.request();alice=next(x for x in state['strategies'] if x['config']['id']=='alice');bob=next(x for x in state['strategies'] if x['config']['id']=='bob')

@@ -233,7 +233,7 @@
             "exchange": "wallex",
             "account_id": 0,
             "symbol": "BTCUSDT",
-            "strategy_version": "wallex-break-retest-v1:1.2.0:283e2fe68165acf9",
+            "strategy_version": "wallex-break-retest-v1:1.2.0:d9656f1cf1ee454c",
             "candle_close": 1728001800,
             "candle_utc": "2024-10-04T00:30:00Z",
             "break_at": 1728000000,

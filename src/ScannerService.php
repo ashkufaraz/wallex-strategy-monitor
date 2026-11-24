@@ -11,6 +11,7 @@ require_once __DIR__.'/PatternService.php';
 
 final class ScannerService {
  static function migrate(PDO $db):void {
+  $db->exec('CREATE TABLE IF NOT EXISTS scanner_candle_variants(hash TEXT PRIMARY KEY,opened INTEGER NOT NULL,payload TEXT NOT NULL)');
   $db->exec("CREATE TABLE IF NOT EXISTS scanner_runs(version TEXT PRIMARY KEY,created INTEGER NOT NULL,config TEXT NOT NULL,state TEXT NOT NULL,last_checked INTEGER,last_result TEXT);
    CREATE TABLE IF NOT EXISTS scanner_totals(version TEXT PRIMARY KEY,payload TEXT NOT NULL);
    CREATE TABLE IF NOT EXISTS scanner_checks(id INTEGER PRIMARY KEY AUTOINCREMENT,version TEXT NOT NULL,observed INTEGER NOT NULL,status TEXT NOT NULL,reason TEXT NOT NULL,payload TEXT NOT NULL,dedupe TEXT UNIQUE NOT NULL);
@@ -75,18 +76,20 @@ final class ScannerService {
   return $r;
  }
  static function storeObservation(string $v,array $snapshot):void {
-  $find=db()->prepare('SELECT payload FROM scanner_candles WHERE version=? AND timeframe=? AND opened=?');$put=db()->prepare('INSERT OR IGNORE INTO scanner_candles VALUES(?,?,?,?)');
+  $variants=db()->prepare('INSERT OR IGNORE INTO scanner_candle_variants VALUES(?,?,?)');$hashes=[];
+  $put=db()->prepare('INSERT OR IGNORE INTO scanner_candles VALUES(?,?,?,?)');
   foreach($snapshot['bars']??[] as $tf=>$bars)foreach($bars as $bar){if(!is_int($bar['time']??null)||$bar['time']+ScannerData::SECONDS[$tf]>$snapshot['observed_at'])continue;
-   $find->execute([$v,$tf,$bar['time']]);$old=$find->fetchColumn();$serialized=encode($bar);if($old!==false&&json_decode($old,true)!=$bar)throw new RuntimeException('UNAVAILABLE: previously stored closed candle revised by source');
+   $serialized=encode($bar);$hash=hash('sha256',$serialized);$variants->execute([$hash,$bar['time'],$serialized]);$hashes[$tf][]=$hash;
    $put->execute([$v,$tf,$bar['time'],$serialized]);
   }
-  $slim=$snapshot;unset($slim['bars'],$slim['boundaries']);$slim['available_candles']=[];
+  $slim=$snapshot;$slim['candle_hashes']=$hashes;unset($slim['bars'],$slim['boundaries']);$slim['available_candles']=[];
   foreach($snapshot['bars']??[] as $tf=>$bars)$slim['available_candles'][$tf]=array_values(array_map(fn($b)=>$b['time'],array_filter($bars,fn($b)=>is_int($b['time']??null)&&$b['time']+ScannerData::SECONDS[$tf]<=$snapshot['observed_at'])));
   db()->prepare('INSERT INTO scanner_observations(version,observed,payload) SELECT ?,?,? WHERE NOT EXISTS(SELECT 1 FROM scanner_observations WHERE version=? AND observed=?)')->execute([$v,$snapshot['observed_at'],encode($slim),$v,$snapshot['observed_at']]);
   db()->prepare('DELETE FROM scanner_observations WHERE version=? AND id NOT IN (SELECT id FROM scanner_observations WHERE version=? ORDER BY id DESC LIMIT 10000)')->execute([$v,$v]);
   db()->prepare('DELETE FROM scanner_observations WHERE version=? AND observed<?')->execute([$v,$snapshot['observed_at']-7*86400]);
   while((int)db()->query('SELECT coalesce(sum(length(payload)),0) FROM scanner_observations')->fetchColumn()>67108864)db()->exec('DELETE FROM scanner_observations WHERE id IN (SELECT id FROM scanner_observations ORDER BY id LIMIT 100)');
   $oldest=(int)(db()->query('SELECT min(observed) FROM scanner_observations')->fetchColumn()?:$snapshot['observed_at']);db()->prepare('DELETE FROM scanner_candles WHERE opened<?')->execute([$oldest-ScannerConfig::counts($snapshot['config_snapshot'])['4h']*14400-14400]);
+  db()->prepare('DELETE FROM scanner_candle_variants WHERE opened<?')->execute([$oldest-45*86400]);
  }
  static function tick(?Wallex $api=null,?int $at=null,?string $lockPath=null):array {
   if(!defined('TEST_DATABASE')){try{PatternService::tick($api,$at);}catch(Throwable $e){systemLog('warning','pattern.unavailable',$e->getMessage());}}
@@ -105,8 +108,8 @@ final class ScannerService {
    }
   }finally{flock($lock,LOCK_UN);fclose($lock);}
  }
- static function tickAll(?int $at=null,?Closure $factory=null):array {$out=[];foreach(MarketScope::markets() as $scope){try{$out[MarketScope::key($scope)]=MarketScope::run($scope,fn()=>self::tick($factory?$factory($scope['exchange']):MarketData::provider($scope['exchange'],microtime(true)+8),$at));}catch(Throwable $e){$out[MarketScope::key($scope)]=['status'=>'UNAVAILABLE','error'=>$e->getMessage()];}}return $out;}
- static function viewAll():array {$out=[];foreach(MarketScope::markets() as $scope){try{$out[MarketScope::key($scope)]=MarketScope::run($scope,fn()=>self::view());}catch(Throwable $e){$out[MarketScope::key($scope)]=$scope+['error'=>$e->getMessage()];}}return ['markets'=>$out];}
+ static function tickAll(?int $at=null,?Closure $factory=null):array {$out=[];foreach(MarketScope::monitoringMarkets() as $scope){try{$out[MarketScope::key($scope)]=MarketScope::run($scope,fn()=>self::tick($factory?$factory($scope['exchange']):MarketData::provider($scope['exchange'],microtime(true)+8),$at));}catch(Throwable $e){$out[MarketScope::key($scope)]=['status'=>'UNAVAILABLE','error'=>$e->getMessage()];}}return $out;}
+ static function viewAll():array {$out=[];foreach(MarketScope::monitoringMarkets() as $scope){try{$out[MarketScope::key($scope)]=MarketScope::run($scope,fn()=>self::view());}catch(Throwable $e){$out[MarketScope::key($scope)]=$scope+['error'=>$e->getMessage()];}}return ['markets'=>$out];}
  static function view():array {
   $c=self::config();$row=self::row($c);$v=ScannerConfig::version($c);$get=function(string $sql)use($v){$q=db()->prepare($sql);$q->execute([$v]);return $q->fetchAll(PDO::FETCH_ASSOC);};
   $signals=$get('SELECT payload FROM scanner_signals WHERE version=? ORDER BY created DESC LIMIT 30');$checks=$get('SELECT observed,status,reason,payload FROM scanner_checks WHERE version=? ORDER BY id DESC LIMIT 50');
@@ -123,7 +126,8 @@ final class ScannerService {
   $c=self::config();$v=ScannerConfig::version($c);$q=db()->prepare('SELECT payload FROM scanner_observations WHERE version=? ORDER BY id DESC LIMIT '.$limit);$q->execute([$v]);$observations=array_reverse(array_map(fn($r)=>json_decode($r['payload'],true),$q->fetchAll(PDO::FETCH_ASSOC)));
   if(!$observations)throw new RuntimeException('هنوز مشاهدهٔ ثبت‌شده‌ای برای بازپخش وجود ندارد.');
   $q=db()->prepare('SELECT timeframe,payload FROM scanner_candles WHERE version=? ORDER BY opened');$q->execute([$v]);$bars=[];foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$bars[$r['timeframe']][]=json_decode($r['payload'],true);
-  return ['exchange'=>$c['exchange']??'wallex','provider'=>$c['exchange']??'wallex','symbol'=>$c['symbol'],'bars'=>$bars,'observations'=>$observations,'initial_state'=>$observations[0]['state_before']??ScannerPaper::fresh($c),'config'=>$observations[0]['config_snapshot']??$c];
+  $variants=[];$find=db()->prepare('SELECT payload FROM scanner_candle_variants WHERE hash=?');foreach($observations as $observation)foreach($observation['candle_hashes']??[] as $hashes)foreach($hashes as $hash)if(!isset($variants[$hash])){$find->execute([$hash]);$value=$find->fetchColumn();if($value===false)throw new RuntimeException('REPLAY_CANDLE_VARIANT_MISSING');$variants[$hash]=json_decode($value,true);}
+  return ['exchange'=>$c['exchange']??'wallex','provider'=>$c['exchange']??'wallex','symbol'=>$c['symbol'],'bars'=>$bars,'candle_variants'=>$variants,'observations'=>$observations,'initial_state'=>$observations[0]['state_before']??ScannerPaper::fresh($c),'config'=>$observations[0]['config_snapshot']??$c];
  }
  static function replay():array {
   $data=self::dataset();$c=$data['config'];$v=ScannerConfig::version($c);$result=ScannerRunner::backtest($data,$c);

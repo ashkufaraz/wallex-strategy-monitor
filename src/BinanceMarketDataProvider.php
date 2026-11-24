@@ -20,7 +20,7 @@ class BinanceMarketDataProvider extends Wallex {
   }
  }
  private function request(string $path,array $params):array {
-  if(!in_array($path,['/api/v3/klines','/api/v3/ticker/price','/api/v3/ticker/bookTicker','/api/v3/depth','/api/v3/time'],true))throw new RuntimeException('Only public Binance market-data endpoints are allowed');
+  if(!in_array($path,['/api/v3/klines','/api/v3/ticker/price','/api/v3/ticker/bookTicker','/api/v3/depth','/api/v3/time','/api/v3/exchangeInfo'],true))throw new RuntimeException('Only public Binance market-data endpoints are allowed');
   db()->exec('CREATE TABLE IF NOT EXISTS market_backoff(provider TEXT PRIMARY KEY, until_time INTEGER NOT NULL, error TEXT NOT NULL)');
   $q=db()->prepare('SELECT until_time FROM market_backoff WHERE provider=?');$q->execute([$this->exchange()]);$until=$q->fetchColumn();
   if($until!==false&&(int)$until>$this->now())throw new RuntimeException('Binance backoff until '.gmdate('c',(int)$until));

@@ -58,7 +58,7 @@ final class CandleProxy
     public static function get(string $url, ?string $testDirectory = null, float $seconds = 45): array
     {
         if (parse_url($url, PHP_URL_SCHEME) !== 'https' || parse_url($url, PHP_URL_HOST) !== 'fapi.binance.com'
-            || !in_array(parse_url($url, PHP_URL_PATH), ['/fapi/v1/klines','/fapi/v1/time','/fapi/v2/ticker/price','/fapi/v1/ticker/bookTicker','/fapi/v1/depth'], true)) {
+            || !in_array(parse_url($url, PHP_URL_PATH), ['/fapi/v1/exchangeInfo','/fapi/v1/klines','/fapi/v1/time','/fapi/v2/ticker/price','/fapi/v1/ticker/bookTicker','/fapi/v1/depth'], true)) {
             throw new InvalidArgumentException('پروکسی فقط برای دادهٔ عمومی فیوچرز بایننس مجاز است.');
         }
         $directory = dirname(__DIR__) . '/config/candle-proxy';

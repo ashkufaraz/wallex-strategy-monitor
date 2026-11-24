@@ -18,7 +18,7 @@ with sync_playwright() as pw:
             r.fulfill(json=fixture if '?scanner=' in url else base);return
         path=ROOT/'public'/(url.split('?',1)[0] or 'index.html')
         r.fulfill(body=path.read_bytes(),content_type={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8'}.get(path.suffix,'application/octet-stream'))
-    page.route('**/*',route);page.goto('http://127.0.0.1:5078/');page.wait_for_function("document.querySelector('#scannerStatus').textContent.includes('UNAVAILABLE')")
+    page.route('**/*',route);page.goto('http://127.0.0.1:5078/');page.wait_for_function("document.querySelector('#scannerStatus').textContent.includes('فعال')")
     page.locator('#scannerAdvanced > summary').click()
     assert page.locator('#scannerReport').text_content().find('Profit Factor')>=0
     assert not page.locator('#scannerChecks').is_visible()

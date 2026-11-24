@@ -23,9 +23,10 @@ final class ScannerReadiness {
   if(($m['provider']??null)!==($c['exchange']??'wallex')||($m['symbol']??null)!==$c['symbol']||($m['quote_asset']??null)!=='USDT')$reasons[]='MARKET_IDENTITY_UNAVAILABLE';
   foreach(['step_size','tick_size','min_qty','min_notional'] as $k)if(!is_numeric($m[$k]??null)||$m[$k]<=0)$reasons[]='MARKET_LIMITS_UNAVAILABLE';
   if(($b['provider']??null)!==($c['exchange']??'wallex')||($b['symbol']??null)!==$c['symbol']||($b['trust_status']??null)!=='VERIFIED'||!is_int($source)||!is_int($received)||$source>$now||$received>$now||$now-$source>$c['quote_max_age_seconds']||$now-$received>$c['quote_max_age_seconds'])$reasons[]='QUOTE_SOURCE_TIME_UNAVAILABLE';
-  if(($m['instrument']??null)!=='SPOT'||($m['supports_long']??false)!==true)$reasons[]='INSTRUMENT_SUPPORT_UNAVAILABLE';
+  if(!in_array($m['instrument']??null,['SPOT','FUTURES_USDM'],true)||($m['supports_long']??false)!==true)$reasons[]='INSTRUMENT_SUPPORT_UNAVAILABLE';
+  if(($m['instrument']??null)==='FUTURES_USDM'&&$c['financing_bps_day']===null)$reasons[]='FINANCING_RATE_UNCONFIRMED';
   if(!$c['fees_verified']||!trim($c['fee_reference']))$reasons[]='FEE_RATE_UNCONFIRMED';
-  return ['status'=>$reasons?'UNAVAILABLE':'AVAILABLE','reasons'=>array_values(array_unique($reasons)),'source_timestamp'=>$source,'received_at'=>$received,'trust_status'=>$b['trust_status']??'UNAVAILABLE','fee_reference'=>$c['fee_reference'],'supported_live_instrument'=>'SPOT_LONG_ONLY','source_time_not_inferred_from_receipt'=>true];
+  return ['status'=>$reasons?'UNAVAILABLE':'AVAILABLE','reasons'=>array_values(array_unique($reasons)),'source_timestamp'=>$source,'received_at'=>$received,'trust_status'=>$b['trust_status']??'UNAVAILABLE','fee_reference'=>$c['fee_reference'],'supported_live_instrument'=>($m['instrument']??'UNAVAILABLE'),'source_time_not_inferred_from_receipt'=>true];
  }
  static function stages(array $s,array $c,array $state,array $r):array {
   $health=self::health($s,$c);$pre=self::preflight($s,$c);$phase=($health['status']!=='READY'||($state['paper']['unresolved']??false))?'BLOCKED_DATA':($pre['status']==='AVAILABLE'?'PAPER_RUNNING':'COLLECTING');
