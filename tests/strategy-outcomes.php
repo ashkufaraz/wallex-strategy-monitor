@@ -57,4 +57,11 @@ StrategyOutcomes::migrate(db());outcomeCheck((int)db()->query('SELECT COUNT(*) F
 $boundary=setting('outcomes_since');$minimum=setting('outcomes_min_alert_id');
 StrategyOutcomes::migrate(db());outcomeCheck(setting('outcomes_since')===$boundary&&setting('outcomes_min_alert_id')===$minimum,'reset marker prevents repeated clearing on subsequent requests');
 StrategyOutcomes::capture($r['alert_id'],$p,$at);outcomeCheck(StrategyOutcomes::view()===[],'old alert history cannot repopulate reset outcomes');
+$repairPayload=$p;$repairPayload['strategy_id']='btc-long-bounce-59400-20261124';
+db()->prepare('INSERT INTO alerts(id,unique_key,created,payload) VALUES(?,?,?,?)')->execute([467,'reset-boundary-regression',1795510038,encode($repairPayload)]);
+db()->exec("DELETE FROM settings WHERE k='outcomes_period_20261124_v2'");
+StrategyOutcomes::migrate(db());StrategyOutcomes::importExisting();$repaired=StrategyOutcomes::view();
+outcomeCheck(count($repaired)===1&&$repaired[0]['alert_id']===467,'restore identified new-period alert without restoring older outcomes');
+$repairedSince=setting('outcomes_since');StrategyOutcomes::migrate(db());
+outcomeCheck(setting('outcomes_since')===$repairedSince&&count(StrategyOutcomes::view())===1,'boundary repair runs once and does not reset tracking');
 echo "Strategy outcomes: $n assertions passed.\n";

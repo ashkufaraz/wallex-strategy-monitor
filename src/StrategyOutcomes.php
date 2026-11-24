@@ -21,6 +21,16 @@ final class StrategyOutcomes
     $set=$db->prepare('INSERT OR REPLACE INTO settings(k,v) VALUES(?,?)');
     foreach(['outcomes_since'=>time(),'outcomes_min_alert_id'=>$last,'outcomes_import_cursor'=>$last] as $key=>$value)$set->execute([$key,(string)$value]);
    }
+   // Repair the reporting boundary for the alert the user identified after the reset.
+   // Match its original timestamp and strategy so unrelated installations are untouched.
+   $repair=$db->prepare("INSERT OR IGNORE INTO settings(k,v) VALUES('outcomes_period_20261124_v2',?)");$repair->execute([(string)time()]);
+   if($repair->rowCount()){
+    $alert=$db->query("SELECT id,created FROM alerts WHERE id=467 AND created=1795510038 AND json_extract(payload,'$.strategy_id')='btc-long-bounce-59400-20261124'")->fetch(PDO::FETCH_ASSOC);
+    if($alert){
+     $set=$db->prepare('UPDATE settings SET v=CAST(MIN(CAST(v AS INTEGER),?) AS TEXT) WHERE k=?');
+     foreach(['outcomes_since'=>(int)$alert['created'],'outcomes_min_alert_id'=>(int)$alert['id']-1,'outcomes_import_cursor'=>(int)$alert['id']-1] as $key=>$value)$set->execute([$value,$key]);
+    }
+   }
    $db->commit();
   }catch(Throwable $e){$db->rollBack();throw $e;}
  }
