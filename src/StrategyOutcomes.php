@@ -27,7 +27,7 @@ final class StrategyOutcomes
    if($repair->rowCount()){
     $alert=$db->query("SELECT id,created FROM alerts WHERE id=467 AND created=1795510038 AND json_extract(payload,'$.strategy_id')='btc-long-bounce-59400-20261124'")->fetch(PDO::FETCH_ASSOC);
     if($alert){
-     $set=$db->prepare('UPDATE settings SET v=CAST(MIN(CAST(v AS INTEGER),?) AS TEXT) WHERE k=?');
+     $set=$db->prepare('UPDATE settings SET v=CAST(MIN(CAST(v AS INTEGER),CAST(? AS INTEGER)) AS TEXT) WHERE k=?');
      foreach(['outcomes_since'=>(int)$alert['created'],'outcomes_min_alert_id'=>(int)$alert['id']-1,'outcomes_import_cursor'=>(int)$alert['id']-1] as $key=>$value)$set->execute([$value,$key]);
     }
    }
