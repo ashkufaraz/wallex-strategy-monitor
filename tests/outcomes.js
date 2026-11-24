@@ -6,10 +6,14 @@ vm.runInNewContext(fs.readFileSync('public/outcomes.js','utf8').replace('outcome
 const ui=context.ui;
 const row=(id,cohort,result,status='STOPPED')=>({alert_id:id,strategy_id:'plan_'+id,exchange:'binance',cohort,started:100,last_check:200,snapshot:{name:'<img src=x onerror=alert(1)>',entry_price:100},state:{status,tp1_result:result,targets:[{price:110,hit_at:result==='WIN'?150:null}]}});
 const rows=[row(1,'preliminary','WIN'),row(2,'confirmed','LOSS'),row(3,'confirmed',null,'AMBIGUOUS'),row(4,'confirmed',null,'OPEN')];
-const g=ui.summarize(rows);assert.strictEqual(g.all.win_rate,50);assert.strictEqual(g.preliminary.win_rate,100);assert.strictEqual(g.confirmed.win_rate,0);assert.strictEqual(g.confirmed.ambiguous,1);assert.strictEqual(g.all.pending,1);
+const g=ui.summarize(rows);assert.strictEqual(g.all.win_rate,50);assert.strictEqual(g.preliminary.win_rate,100);assert.strictEqual(g.confirmed.win_rate,0);assert.strictEqual(g.confirmed.ambiguous,1);assert.strictEqual(g.all.pending,2);
 ui.render(rows);assert(!element('outcomeRows').innerHTML.includes('<img'));assert(element('outcomeRows').innerHTML.includes('&lt;img'));assert(element('outcomeSummary').innerHTML.includes('Win Rate'));
 element('outcomeCohort').value='preliminary';assert.strictEqual(ui.filtered().length,1);
 element('outcomeCohort').value='';context.exchangeUI.filter='wallex';assert.strictEqual(ui.filtered().length,0);
 const html=fs.readFileSync('public/index.html','utf8');assert(html.includes('time(a.payload.strategy_created_at)'));assert(html.includes('زمان صدور هشدار: ${time(a.created)}'));assert(!html.includes('زمان ثبت: ${time(a.created)}'));
 const exchanges=fs.readFileSync('public/exchange.js','utf8');assert.strictEqual((exchanges.match(/option value="binance"/g)||[]).length,3);
 console.log('Outcome cohort rates, ambiguity exclusion, filters, escaping, creation-time rendering, and Binance selectors passed.');
+
+const duplicate={...rows[0],alert_id:10,cohort:'confirmed'};const later={...duplicate,alert_id:11,state:rows[1].state};const once=ui.summarize([rows[0],duplicate,later]);assert.strictEqual(once.all.wins,1);assert.strictEqual(once.all.losses,0);assert.strictEqual(once.all.alerts,1);assert(element('outcomeRows').innerHTML.includes('data-outcome-strategy'));
+
+assert(/<summary>[^]*?data-outcome-strategy=[^]*?<\/summary>/.test(element('outcomeRows').innerHTML));assert(element('outcomeRows').innerHTML.includes('\u062c\u0632\u0626\u06cc\u0627\u062a \u0627\u0633\u062a\u0631\u0627\u062a\u0698\u06cc'));

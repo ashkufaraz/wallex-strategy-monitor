@@ -11,6 +11,18 @@ final class StrategyOutcomes
   $db->exec("INSERT OR IGNORE INTO settings(k,v) VALUES('outcomes_since',strftime('%s','now')); INSERT OR IGNORE INTO settings(k,v) SELECT 'outcomes_min_alert_id',COALESCE(MAX(id),0) FROM alerts");
   // There was no durable creation field before this migration. Do not invent a date for old rows.
   $db->exec('INSERT OR IGNORE INTO strategy_registration(strategy_id,created) SELECT id,NULL FROM strategies');
+  // User-requested fresh reporting period. The marker makes this reset run once.
+  $db->beginTransaction();
+  try {
+   $marker=$db->prepare("INSERT OR IGNORE INTO settings(k,v) VALUES('outcomes_reset_20261124_v1',?)");$marker->execute([(string)time()]);
+   if($marker->rowCount()){
+    $last=(int)$db->query('SELECT COALESCE(MAX(id),0) FROM alerts')->fetchColumn();
+    $db->exec('DELETE FROM strategy_outcomes');
+    $set=$db->prepare('INSERT OR REPLACE INTO settings(k,v) VALUES(?,?)');
+    foreach(['outcomes_since'=>time(),'outcomes_min_alert_id'=>$last,'outcomes_import_cursor'=>$last] as $key=>$value)$set->execute([$key,(string)$value]);
+   }
+   $db->commit();
+  }catch(Throwable $e){$db->rollBack();throw $e;}
  }
  static function created(string $id):?int {
   $q=db()->prepare('SELECT created FROM strategy_registration WHERE strategy_id=?');$q->execute([$id]);$v=$q->fetchColumn();return $v===false||$v===null?null:(int)$v;
@@ -77,7 +89,7 @@ final class StrategyOutcomes
    if(!$newEntry||$entryAtOpen){
     if($long?$b['open']<=$stop:$b['open']>=$stop){$state['status']='STOPPED';$state['closed_at']=$t+60;$state['tp1_result']??='LOSS';break;}
     foreach($state['targets'] as $i=>$target)if($target['hit_at']===null&&($long?$b['open']>=$target['price']:$b['open']<=$target['price'])){
-     $state['targets'][$i]['hit_at']=$t+60;if($i===0)$state['tp1_result']='WIN';
+     $state['targets'][$i]['hit_at']=$t+60;$state['targets'][$i]['evidence']=['minute'=>$t,'open'=>(float)$b['open'],'high'=>(float)$b['high'],'low'=>(float)$b['low'],'close'=>(float)$b['close']];if($i===0)$state['tp1_result']='WIN';
     }
     $newTargets=array_values(array_filter($newTargets,fn($i)=>$state['targets'][$i]['hit_at']===null));
     if($state['targets']&&end($state['targets'])['hit_at']!==null){$state['status']='ALL_TARGETS';$state['closed_at']=$t+60;break;}
@@ -85,7 +97,7 @@ final class StrategyOutcomes
    if(($stopHit&&$newTargets)||($newEntry&&!$entryAtOpen&&($stopHit||$newTargets))){
     $state['status']='AMBIGUOUS';$state['reason']='intraminute_order_unknown';$state['closed_at']=$t+60;break;
    }
-   foreach($newTargets as $i){$state['targets'][$i]['hit_at']=$t+60;if($i===0)$state['tp1_result']='WIN';}
+   foreach($newTargets as $i){$state['targets'][$i]['hit_at']=$t+60;$state['targets'][$i]['evidence']=['minute'=>$t,'open'=>(float)$b['open'],'high'=>(float)$b['high'],'low'=>(float)$b['low'],'close'=>(float)$b['close']];if($i===0)$state['tp1_result']='WIN';}
    if($stopHit){$state['status']='STOPPED';$state['closed_at']=$t+60;$state['tp1_result']??='LOSS';break;}
    if($state['targets']&&end($state['targets'])['hit_at']!==null){$state['status']='ALL_TARGETS';$state['closed_at']=$t+60;break;}
   }
@@ -122,11 +134,19 @@ final class StrategyOutcomes
   foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$items[]=['alert_id'=>(int)$r['alert_id'],'strategy_id'=>$r['strategy_id'],'version'=>$r['version'],'exchange'=>$r['exchange'],'symbol'=>$r['symbol'],'cohort'=>$r['cohort'],'started'=>(int)$r['started'],'last_check'=>(int)$r['last_check'],'snapshot'=>json_decode($r['snapshot'],true),'state'=>json_decode($r['state'],true)];
   return $items;
  }
+ /** One immutable baseline per strategy: earliest confirmed alert, otherwise earliest preliminary. */
+ static function uniqueStrategies(array $items):array {
+  usort($items,fn($a,$b)=>[$a['started'],$a['alert_id']]<=>[$b['started'],$b['alert_id']]);$selected=[];
+  foreach($items as $r){$key=$r['exchange'].':'.$r['strategy_id'];
+   if(!isset($selected[$key])||($selected[$key]['cohort']!=='confirmed'&&$r['cohort']==='confirmed'))$selected[$key]=$r;
+  }
+  return array_values($selected);
+ }
  static function report(array $items):array {
-  $groups=[];
+  $items=self::uniqueStrategies($items);$groups=[];
   foreach(['all','preliminary','confirmed'] as $cohort){$rows=array_values(array_filter($items,fn($r)=>$cohort==='all'||$r['cohort']===$cohort));$wins=0;$losses=0;$ambiguous=0;$pending=0;$unavailable=0;$targets=[];$ids=[];
    foreach($rows as $r){$s=$r['state'];$ids[$r['strategy_id']]=true;if($s['tp1_result']==='WIN')$wins++;elseif($s['tp1_result']==='LOSS')$losses++;
-    if($s['status']==='AMBIGUOUS')$ambiguous++;if(in_array($s['status'],['OPEN','PENDING_ENTRY'],true))$pending++;if($s['status']==='UNAVAILABLE')$unavailable++;
+    if($s['status']==='AMBIGUOUS')$ambiguous++;if(!in_array($s['tp1_result'],['WIN','LOSS'],true))$pending++;if($s['status']==='UNAVAILABLE')$unavailable++;
     foreach($s['targets'] as $i=>$target){$targets[$i]??=['target'=>$i+1,'hit'=>0,'miss'=>0];if($target['hit_at']!==null)$targets[$i]['hit']++;elseif($s['status']==='STOPPED')$targets[$i]['miss']++;}
    }
    foreach($targets as &$target)$target['hit_rate']=$target['hit']+$target['miss']?100*$target['hit']/($target['hit']+$target['miss']):null;unset($target);

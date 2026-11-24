@@ -33,8 +33,15 @@ outcomeCheck($shortState['status']==='ALL_TARGETS'&&$shortState['tp1_result']===
 $limit=$r['state'];$limit['status']='PENDING_ENTRY';$limit['entered_at']=null;
 $waiting=StrategyOutcomes::advance($r['snapshot'],$limit,[$at=>$b(105,109,101,106)],$at+60);outcomeCheck($waiting['status']==='PENDING_ENTRY','LIMIT stays pending until its entry is reached');
 $fill=StrategyOutcomes::advance($r['snapshot'],$limit,[$at=>$b(105,111,99,108)],$at+60);outcomeCheck($fill['status']==='AMBIGUOUS','same-minute LIMIT fill and target has no invented order');
-$sample=[$r+['ignored'=>true],array_replace($r,['alert_id'=>2,'cohort'=>'confirmed','state'=>$loss]),array_replace($r,['alert_id'=>3,'state'=>$ambiguous])];$sample[0]['state']=$state;$report=StrategyOutcomes::report($sample);
+$sample=[$r+['ignored'=>true],array_replace($r,['strategy_id'=>'other_plan','alert_id'=>2,'cohort'=>'confirmed','state'=>$loss]),array_replace($r,['strategy_id'=>'ambiguous_plan','alert_id'=>3,'state'=>$ambiguous])];$sample[0]['state']=$state;$report=StrategyOutcomes::report($sample);
 outcomeCheck((float)$report['all']['win_rate']===50.&&(float)$report['preliminary']['win_rate']===100.&&(float)$report['confirmed']['win_rate']===0.&&$report['all']['resolved']===2,'separate cohorts and exclude ambiguous outcomes from denominator');
+$duplicates=[$r,array_replace($r,['alert_id'=>20,'cohort'=>'confirmed','state'=>$state]),array_replace($r,['alert_id'=>21,'cohort'=>'confirmed','state'=>$loss])];
+$dedup=StrategyOutcomes::report($duplicates);outcomeCheck($dedup['all']['wins']===1&&$dedup['all']['losses']===0&&$dedup['all']['alerts']===1,'one strategy counts once using earliest confirmed alert');
+$xaut=$short;$xaut['entry_price']=3628.;$xaut['trade']['stop_loss']=3640.;$xs=$r['state'];$xs['targets']=[['price'=>3600.,'hit_at'=>null]];
+$above=StrategyOutcomes::advance($xaut,$xs,[$at=>$b(3628,3630,3611,3611)],$at+60);
+outcomeCheck($above['tp1_result']===null,'XAUT short low 3611 never reaches TP 3600');
+$rebound=StrategyOutcomes::advance($xaut,$xs,[$at=>$b(3628,3630,3599,3611)],$at+60);
+outcomeCheck($rebound['tp1_result']==='WIN'&&$rebound['targets'][0]['evidence']['low']===3599.,'XAUT touch 3599 then close 3611 records candle evidence');
 db()->prepare('UPDATE strategy_outcomes SET state=? WHERE alert_id=?')->execute([encode($r['state']),$r['alert_id']]);
 class OutcomeProvider extends Wallex {public int $minuteCalls=0;function minutes(string $symbol,int $from,int $to):array{$this->minuteCalls++;$out=[];for($t=$from;$t<$to;$t+=60)$out[$t]=['open'=>100.,'high'=>111.,'low'=>99.,'close'=>108.,'volume'=>2.];return $out;}}
 $api=new OutcomeProvider();db()->exec('DELETE FROM strategies');$lock=sys_get_temp_dir().'/outcome-test-'.bin2hex(random_bytes(5));
@@ -45,4 +52,9 @@ outcomeCheck(StrategyOutcomes::view()===[],'new reporting period excludes existi
 StrategyOutcomes::capture(998,$p,$at);outcomeCheck(StrategyOutcomes::view()===[],'old alerts imported later remain excluded');
 StrategyOutcomes::capture(999,$p,$at+60);outcomeCheck(count(StrategyOutcomes::view())===1,'new period accepts future alerts');
 StrategyOutcomes::migrate(db());outcomeCheck(setting('outcomes_since')===(string)($at+10),'period boundary persists across migrations');
+db()->exec("DELETE FROM settings WHERE k='outcomes_reset_20261124_v1'");
+StrategyOutcomes::migrate(db());outcomeCheck((int)db()->query('SELECT COUNT(*) FROM strategy_outcomes')->fetchColumn()===0,'requested reset physically deletes all prior outcome rows');
+$boundary=setting('outcomes_since');$minimum=setting('outcomes_min_alert_id');
+StrategyOutcomes::migrate(db());outcomeCheck(setting('outcomes_since')===$boundary&&setting('outcomes_min_alert_id')===$minimum,'reset marker prevents repeated clearing on subsequent requests');
+StrategyOutcomes::capture($r['alert_id'],$p,$at);outcomeCheck(StrategyOutcomes::view()===[],'old alert history cannot repopulate reset outcomes');
 echo "Strategy outcomes: $n assertions passed.\n";
