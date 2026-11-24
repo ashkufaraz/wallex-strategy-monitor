@@ -64,4 +64,8 @@ StrategyOutcomes::migrate(db());StrategyOutcomes::importExisting();$repaired=Str
 outcomeCheck(count($repaired)===1&&$repaired[0]['alert_id']===467,'restore identified new-period alert without restoring older outcomes');
 $repairedSince=setting('outcomes_since');StrategyOutcomes::migrate(db());
 outcomeCheck(setting('outcomes_since')===$repairedSince&&count(StrategyOutcomes::view())===1,'boundary repair runs once and does not reset tracking');
+StrategyOutcomes::capture(2000,$p,$at);
+db()->exec("DELETE FROM settings WHERE k='outcomes_orphan_cleanup_v1'");StrategyOutcomes::migrate(db());
+outcomeCheck((int)db()->query('SELECT COUNT(*) FROM strategy_outcomes WHERE alert_id=2000')->fetchColumn()===0,'upgrade removes outcomes whose alerts were already deleted');
+outcomeCheck(count(StrategyOutcomes::view())===1&&StrategyOutcomes::view()[0]['alert_id']===467,'orphan cleanup preserves outcomes of existing alerts');
 echo "Strategy outcomes: $n assertions passed.\n";

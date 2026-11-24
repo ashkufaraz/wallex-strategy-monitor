@@ -8,6 +8,8 @@ final class StrategyOutcomes
   $db->exec('CREATE TABLE IF NOT EXISTS strategy_registration(strategy_id TEXT PRIMARY KEY,created INTEGER);
    CREATE TABLE IF NOT EXISTS strategy_outcomes(alert_id INTEGER PRIMARY KEY,strategy_id TEXT NOT NULL,version TEXT,exchange TEXT NOT NULL,symbol TEXT NOT NULL,cohort TEXT NOT NULL,started INTEGER NOT NULL,owner_id INTEGER,snapshot TEXT NOT NULL,state TEXT NOT NULL,last_check INTEGER NOT NULL DEFAULT 0);
    CREATE INDEX IF NOT EXISTS strategy_outcomes_market ON strategy_outcomes(exchange,symbol,last_check);');
+  // Keep outcome deletion atomic with every alert deletion, including bulk/owner-scoped deletes.
+  $db->exec('CREATE TRIGGER IF NOT EXISTS alert_outcome_delete AFTER DELETE ON alerts BEGIN DELETE FROM strategy_outcomes WHERE alert_id=OLD.id; END;');
   $db->exec("INSERT OR IGNORE INTO settings(k,v) VALUES('outcomes_since',strftime('%s','now')); INSERT OR IGNORE INTO settings(k,v) SELECT 'outcomes_min_alert_id',COALESCE(MAX(id),0) FROM alerts");
   // There was no durable creation field before this migration. Do not invent a date for old rows.
   $db->exec('INSERT OR IGNORE INTO strategy_registration(strategy_id,created) SELECT id,NULL FROM strategies');
@@ -31,6 +33,8 @@ final class StrategyOutcomes
      foreach(['outcomes_since'=>(int)$alert['created'],'outcomes_min_alert_id'=>(int)$alert['id']-1,'outcomes_import_cursor'=>(int)$alert['id']-1] as $key=>$value)$set->execute([$value,$key]);
     }
    }
+   $cleanup=$db->prepare("INSERT OR IGNORE INTO settings(k,v) VALUES('outcomes_orphan_cleanup_v1',?)");$cleanup->execute([(string)time()]);
+   if($cleanup->rowCount())$db->exec('DELETE FROM strategy_outcomes WHERE NOT EXISTS (SELECT 1 FROM alerts WHERE alerts.id=strategy_outcomes.alert_id)');
    $db->commit();
   }catch(Throwable $e){$db->rollBack();throw $e;}
  }
