@@ -21,6 +21,10 @@
  const tabs=document.createElement('div');tabs.className='row strategy-tabs';
  tabs.innerHTML='<button type="button" id="activeStrategies" aria-pressed="true">استراتژی‌های فعال</button><button type="button" id="archivedStrategies" aria-pressed="false">آرشیو غیرفعال‌ها</button>';
  list.insertBefore(tabs,strategies);main.append(list,editor,history);grid.remove();
+ const strategyPanel=document.createElement('details');strategyPanel.id='strategyListPanel';strategyPanel.open=true;
+ const strategySummary=document.createElement('summary'),strategyTitle=list.querySelector('h2');
+ strategySummary.textContent=strategyTitle.textContent;strategyTitle.remove();strategyPanel.append(strategySummary);
+ while(list.firstChild)strategyPanel.append(list.firstChild);list.append(strategyPanel);
  const alertTabs=document.createElement('div');alertTabs.className='row';
  alertTabs.innerHTML='<button type="button" id="currentAlerts" aria-pressed="true">هشدارها</button><button type="button" id="archivedAlerts" aria-pressed="false">آرشیو هشدارها</button>';
  history.insertBefore(alertTabs,document.getElementById('clearAlerts'));

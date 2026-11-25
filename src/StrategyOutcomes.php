@@ -52,7 +52,7 @@ final class StrategyOutcomes
   if(is_array($trade)&&in_array($p['action']??null,['LONG','SHORT'],true)){
    try {$validated=$trade;unset($validated['entry']['reference_price']);Strategy::trade($validated,$p['action']);$entry=(float)$entry;
     if(!is_finite($entry)||$entry<=0||($p['action']==='LONG'?($entry<=(float)$trade['stop_loss']||$entry>=(float)$trade['take_profits'][0]):($entry>=(float)$trade['stop_loss']||$entry<=(float)$trade['take_profits'][0])))throw new RuntimeException('invalid_reference');
-    $state['status']=($trade['entry']['type']==='LIMIT'?'PENDING_ENTRY':'OPEN');$state['reason']=null;
+    $state['status']='OPEN';$state['reason']=null;
     $state['entered_at']=$state['status']==='OPEN'?$created:null;
     $state['targets']=array_map(fn($v)=>['price'=>(float)$v,'hit_at'=>null],$trade['take_profits']);
    }catch(Throwable $e){$state['reason']='invalid_trade_snapshot';}
@@ -62,7 +62,7 @@ final class StrategyOutcomes
   }
   $snapshot=['name'=>$p['name']??'','action'=>$p['action']??null,'entry_price'=>$entry,'trade'=>$trade,
    'strategy_created_at'=>$p['strategy_created_at']??null,'event_time'=>$p['event_time']??null,'price_at_alert'=>$p['price']??null];
-  $state['evaluation_mode']='shared_strategy_price_v1';$state['coverage']='sampled_strategy_prices; movements between checks are not observed';
+  $state['evaluation_basis']='alert_from_issuance';$state['evaluation_mode']='shared_alert_price_v2';$state['coverage']='sampled_strategy_prices; movements between checks are not observed';
   if(is_numeric($snapshot['price_at_alert']??null))$state=self::advancePrice($snapshot,$state,(float)$snapshot['price_at_alert'],$created);
   $q=db()->prepare('SELECT user_id FROM alert_owners WHERE alert_id=?');$q->execute([$alertId]);$owner=$q->fetchColumn();
   db()->prepare('INSERT OR IGNORE INTO strategy_outcomes(alert_id,strategy_id,version,exchange,symbol,cohort,started,owner_id,snapshot,state,last_check) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
@@ -142,15 +142,12 @@ final class StrategyOutcomes
  }
  /** Switch unresolved legacy candle evaluations to actual saved price observations. */
  static function sharedState(array $row,array $snapshot,array $state,int $until):array {
-  if(($state['evaluation_mode']??'')==='shared_strategy_price_v1')return $state;
+  if(($state['evaluation_mode']??'')==='shared_alert_price_v2')return $state;
   $prior=$state;
-  $state['evaluation_mode']='shared_strategy_price_v1';$state['coverage']='sampled_strategy_prices; movements between checks are not observed';
+  $state['evaluation_basis']='alert_from_issuance';$state['evaluation_mode']='shared_alert_price_v2';$state['coverage']='sampled_strategy_prices; movements between checks are not observed';
   if(in_array($state['tp1_result'],['WIN','LOSS'],true)){$state['sample_at']=(int)$row['last_check'];return $state;}
   $state['legacy_evaluation']=['status'=>$prior['status'],'reason'=>$prior['reason']??null,'last_check'=>(int)$row['last_check']];
-  $state['status']=($snapshot['trade']['entry']['type']??'MARKET')==='LIMIT'?'PENDING_ENTRY':'OPEN';
-  $state['entered_at']=$state['status']==='OPEN'?(int)$row['started']:null;
-  // A previously established fill remains valid. Ambiguous fills are not assumed.
-  if(!empty($prior['entered_at'])&&$prior['status']==='OPEN'){$state['status']='OPEN';$state['entered_at']=$prior['entered_at'];}
+  $state['status']='OPEN';$state['entered_at']=(int)$row['started'];
   $state['targets']=array_map(fn($v)=>['price'=>(float)$v,'hit_at'=>null],$snapshot['trade']['take_profits']);
   $state['closed_at']=null;$state['reason']=null;$state['sample_at']=0;$state['data_error']=null;
   if(is_numeric($snapshot['price_at_alert']??null))$state=self::advancePrice($snapshot,$state,(float)$snapshot['price_at_alert'],(int)$row['started']);
