@@ -75,6 +75,7 @@ function displayedState(array $row,array $architecture):array {
  $q=db()->prepare("SELECT state FROM analysis_states WHERE strategy_id=? AND version=? AND provider='binance_spot'");$q->execute([$row['id'],$row['version']]);$state=$q->fetchColumn();return $state===false?Strategy::fresh(json_decode($row['config'],true),time()):json_decode($state,true);
 }
 function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
+ StrategyOutcomes::importExisting();
  $architecture=MarketArchitecture::config();
  if($architecture['analysis_enabled']){
   if(!$api instanceof BinanceMarketDataProvider)$api=new BinanceMarketDataProvider(null,null,microtime(true)+($onlyId===null?30:15));
@@ -109,7 +110,7 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
   if($kind==='transition'&&($meta['to']??'signal')!=='signal'&&$record['condition']['result']===true)
    $st['completed_rules'][$meta['stage'].':'.$meta['rule']]=$record+['checked'=>$now];
  };
- try {$price=$api->price($s['symbol']);if($api instanceof BinanceMarketDataProvider)$now=max($now,$api->now());if(!$withIndicators){if($st['error']!==null || $now-$st['cursor']>max(180,3*(int)setting('interval','60'))) $st=Strategy::fresh($s,$now);}
+ try {$price=$api->price($s['symbol']);if($api instanceof BinanceMarketDataProvider)$now=max($now,$api->now());StrategyOutcomes::observe($api->exchange(),$s['symbol'],$price,$now);if(!$withIndicators){if($st['error']!==null || $now-$st['cursor']>max(180,3*(int)setting('interval','60'))) $st=Strategy::fresh($s,$now);}
  elseif($now-$st['cursor']>max(180,3*(int)setting('interval','60'))){$st['cursor']=$now;$recoveringGap=true;}$active=$st['setup']!==null;
  $cancelReason=Strategy::cancellation($s,'price',['price'=>$price]);
  if($cancelReason!==null) {$st=Strategy::fresh($s,$now);$st['cancelled_at']=$now;$st['cancel_reason']=$cancelReason;$events[]=['event'=>'cancelled:price','time'=>$now,'reason'=>$cancelReason];}
@@ -154,6 +155,6 @@ function runCycle(Wallex $api,int $now,?string $onlyId=null):void {
  db()->beginTransaction();if(persistCycleState($row,$st,$useAnalysis)){if(!isset($st['cancelled_at']))foreach($entryOnly as $candidate)recordEntryOnlyAlert($s,$row['version'],$candidate,$price,$now,$api->exchange());foreach($events as $event){if($useAnalysis&&!isset($event['reason']))ExecutionGate::create(db(),$s,$row['version'],$event['event'],$event['time'],str_starts_with($event['event'],'bar_close:')?$bars[substr($event['event'],10)][$event['time']-Strategy::TIMEFRAMES[substr($event['event'],10)]]['close']:$price,$event['indicators']??null,$architecture,$now);else recordAlert($s,$row['version'],$event['event'],$event['time'],$price,$event['reason']??null,$event['indicators']??null);}Diagnostics::save($s['id'],$row['version'],$report);}db()->commit();if($architecture['analysis_enabled']&&$events)OrderFlowAdvisory::afterSignals(db(),$now);
  } catch(Throwable $e) {if(db()->inTransaction()) db()->rollBack();$original['error']=$e->getMessage();if($withIndicators){$original['cursor']=$now;unset($original['pending_signal']);}$original['last_check']=$now;db()->beginTransaction();if(persistCycleState($row,$original,$useAnalysis))Diagnostics::save($s['id'],$row['version'],['exchange'=>$exchange,'analysis_provider'=>$api instanceof BinanceMarketDataProvider?$api->exchange():$exchange,'action'=>$s['action'],'checked'=>$now,'price'=>$price,'from_stage'=>$original['stage'],'stage'=>$original['stage'],'status'=>'error','error'=>$e->getMessage(),'trace'=>$trace,'waiting'=>[],'trade'=>$s['trade']??null]);db()->commit();}finally{Strategy::$onCheck=null;Strategy::$signalFilter=null;}
  }
- StrategyOutcomes::importExisting();StrategyOutcomes::tick($now,$onlyId,$providedApi);
+
  if($architecture['analysis_enabled'])ExecutionMonitor::run($providedApi,$now,$architecture);
 }

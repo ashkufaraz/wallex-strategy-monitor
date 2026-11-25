@@ -45,7 +45,7 @@ outcomeCheck($rebound['tp1_result']==='WIN'&&$rebound['targets'][0]['evidence'][
 db()->prepare('UPDATE strategy_outcomes SET state=? WHERE alert_id=?')->execute([encode($r['state']),$r['alert_id']]);
 class OutcomeProvider extends Wallex {public int $minuteCalls=0;function minutes(string $symbol,int $from,int $to):array{$this->minuteCalls++;$out=[];for($t=$from;$t<$to;$t+=60)$out[$t]=['open'=>100.,'high'=>111.,'low'=>99.,'close'=>108.,'volume'=>2.];return $out;}}
 $api=new OutcomeProvider();db()->exec('DELETE FROM strategies');$lock=sys_get_temp_dir().'/outcome-test-'.bin2hex(random_bytes(5));
-try{$result=browserCheck($api,$at+120,$lock);outcomeCheck($result['status']==='outcomes_checked'&&$api->minuteCalls===1,'deleted strategy alert keeps tracking its immutable plan via scheduler');}finally{@unlink($lock);}
+try{$result=browserCheck($api,$at+120,$lock);outcomeCheck($result['status']==='idle'&&$api->minuteCalls===0,'idle scheduler never fetches separate prices or candles for outcomes');}finally{@unlink($lock);}
 StrategyOutcomes::capture($r['alert_id'],$p,$at);outcomeCheck(count(StrategyOutcomes::view())===1,'re-import cannot reset evaluated state');
 setSetting('outcomes_since',(string)($at+10));setSetting('outcomes_min_alert_id',(string)$r['alert_id']);
 outcomeCheck(StrategyOutcomes::view()===[],'new reporting period excludes existing outcomes');

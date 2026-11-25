@@ -62,9 +62,11 @@ final class StrategyOutcomes
   }
   $snapshot=['name'=>$p['name']??'','action'=>$p['action']??null,'entry_price'=>$entry,'trade'=>$trade,
    'strategy_created_at'=>$p['strategy_created_at']??null,'event_time'=>$p['event_time']??null,'price_at_alert'=>$p['price']??null];
+  $state['evaluation_mode']='shared_strategy_price_v1';$state['coverage']='sampled_strategy_prices; movements between checks are not observed';
+  if(is_numeric($snapshot['price_at_alert']??null))$state=self::advancePrice($snapshot,$state,(float)$snapshot['price_at_alert'],$created);
   $q=db()->prepare('SELECT user_id FROM alert_owners WHERE alert_id=?');$q->execute([$alertId]);$owner=$q->fetchColumn();
-  db()->prepare('INSERT OR IGNORE INTO strategy_outcomes(alert_id,strategy_id,version,exchange,symbol,cohort,started,owner_id,snapshot,state) VALUES(?,?,?,?,?,?,?,?,?,?)')
-   ->execute([$alertId,$p['strategy_id'],$p['strategy_version']??null,$p['exchange']??'wallex',$p['symbol'],$cohort,$created,$owner===false?null:(int)$owner,encode($snapshot),encode($state)]);
+  db()->prepare('INSERT OR IGNORE INTO strategy_outcomes(alert_id,strategy_id,version,exchange,symbol,cohort,started,owner_id,snapshot,state,last_check) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+   ->execute([$alertId,$p['strategy_id'],$p['strategy_version']??null,$p['exchange']??'wallex',$p['symbol'],$cohort,$created,$owner===false?null:(int)$owner,encode($snapshot),encode($state),(int)($state['sample_at']??0)]);
  }
  static function importExisting():void {
   $cursor=(int)setting('outcomes_import_cursor','0');$q=db()->prepare('SELECT id,created,payload FROM alerts WHERE id>? ORDER BY id LIMIT 100');$q->execute([$cursor]);
@@ -117,30 +119,60 @@ final class StrategyOutcomes
   }
   return $state;
  }
- static function pending(int $now):bool {
-  $q=db()->prepare("SELECT 1 FROM strategy_outcomes WHERE last_check<=? AND json_extract(state,'$.status') IN ('OPEN','PENDING_ENTRY') LIMIT 1");$q->execute([$now-max(5,(int)setting('interval','120'))]);return (bool)$q->fetchColumn();
+ /** Evaluate only prices already fetched by the strategy runner. No market I/O here. */
+ static function advancePrice(array $snapshot,array $state,float $price,int $at):array {
+  if(!is_finite($price)||$price<=0)throw new InvalidArgumentException('Invalid shared outcome price');
+  if(!in_array($state['status'],['OPEN','PENDING_ENTRY'],true)||$at<=($state['sample_at']??0))return $state;
+  $state['sample_at']=$at;$state['last_price']=$price;$state['data_error']=null;
+  $long=$snapshot['action']==='LONG';$entry=(float)$snapshot['entry_price'];$stop=(float)$snapshot['trade']['stop_loss'];
+  if($state['status']==='PENDING_ENTRY'){
+   if($long?$price>$entry:$price<$entry)return $state;
+   $state['status']='OPEN';$state['entered_at']=$at;$state['entry_evidence']=['price'=>$price,'observed_at'=>$at,'source'=>'strategy_price'];
+  }
+  if($long?$price<=$stop:$price>=$stop){
+   $state['status']='STOPPED';$state['closed_at']=$at;$state['tp1_result']??='LOSS';
+   $state['stop_evidence']=['price'=>$price,'observed_at'=>$at,'source'=>'strategy_price'];return $state;
+  }
+  foreach($state['targets'] as $i=>$target)if($target['hit_at']===null&&($long?$price>=$target['price']:$price<=$target['price'])){
+   $state['targets'][$i]['hit_at']=$at;$state['targets'][$i]['evidence']=['price'=>$price,'observed_at'=>$at,'source'=>'strategy_price'];
+   if($i===0)$state['tp1_result']='WIN';
+  }
+  if($state['targets']&&end($state['targets'])['hit_at']!==null){$state['status']='ALL_TARGETS';$state['closed_at']=$at;}
+  return $state;
  }
- static function oldestDue(int $now):?int {
-  $q=db()->prepare("SELECT MIN(last_check) FROM strategy_outcomes WHERE last_check<=? AND json_extract(state,'$.status') IN ('OPEN','PENDING_ENTRY')");$q->execute([$now-max(5,(int)setting('interval','120'))]);$v=$q->fetchColumn();return $v===null||$v===false?null:(int)$v;
+ /** Switch unresolved legacy candle evaluations to actual saved price observations. */
+ static function sharedState(array $row,array $snapshot,array $state,int $until):array {
+  if(($state['evaluation_mode']??'')==='shared_strategy_price_v1')return $state;
+  $prior=$state;
+  $state['evaluation_mode']='shared_strategy_price_v1';$state['coverage']='sampled_strategy_prices; movements between checks are not observed';
+  if(in_array($state['tp1_result'],['WIN','LOSS'],true)){$state['sample_at']=(int)$row['last_check'];return $state;}
+  $state['legacy_evaluation']=['status'=>$prior['status'],'reason'=>$prior['reason']??null,'last_check'=>(int)$row['last_check']];
+  $state['status']=($snapshot['trade']['entry']['type']??'MARKET')==='LIMIT'?'PENDING_ENTRY':'OPEN';
+  $state['entered_at']=$state['status']==='OPEN'?(int)$row['started']:null;
+  // A previously established fill remains valid. Ambiguous fills are not assumed.
+  if(!empty($prior['entered_at'])&&$prior['status']==='OPEN'){$state['status']='OPEN';$state['entered_at']=$prior['entered_at'];}
+  $state['targets']=array_map(fn($v)=>['price'=>(float)$v,'hit_at'=>null],$snapshot['trade']['take_profits']);
+  $state['closed_at']=null;$state['reason']=null;$state['sample_at']=0;$state['data_error']=null;
+  if(is_numeric($snapshot['price_at_alert']??null))$state=self::advancePrice($snapshot,$state,(float)$snapshot['price_at_alert'],(int)$row['started']);
+  // Reuse retained strategy diagnostics, never download a historical price to repair an outcome.
+  $q=db()->prepare('SELECT checked,payload FROM check_logs WHERE strategy_id=? AND version=? AND checked>=? AND checked<=? ORDER BY checked,id');
+  $q->execute([$row['strategy_id'],$row['version'],(int)$row['started'],$until]);
+  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $log){$p=json_decode($log['payload'],true);
+   if(($p['exchange']??null)!==$row['exchange']||($p['analysis_provider']??$p['exchange']??null)!==$row['exchange']||!is_numeric($p['price']??null)||(float)$p['price']<=0)continue;
+   $state=self::advancePrice($snapshot,$state,(float)$p['price'],(int)$log['checked']);
+  }
+  return $state;
  }
- static function tick(int $now,?string $strategyId=null,?Wallex $provided=null):int {
-  $sql="SELECT * FROM strategy_outcomes WHERE last_check<=? AND json_extract(state,'$.status') IN ('OPEN','PENDING_ENTRY')";
-  $params=[$now-max(5,(int)setting('interval','120'))];if($strategyId!==null){$sql.=' AND strategy_id=?';$params[]=$strategyId;}
-  $q=db()->prepare($sql.' ORDER BY last_check,alert_id LIMIT 100');$q->execute($params);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
-  if(!$rows)return 0;
-  // One market per bounded scheduler invocation; all alerts on it share the same immutable minute page.
-  $market=$rows[0]['exchange'].':'.$rows[0]['symbol'];$rows=array_values(array_filter($rows,fn($r)=>$r['exchange'].':'.$r['symbol']===$market));
-  $from=min(array_map(fn($r)=>(int)json_decode($r['state'],true)['cursor'],$rows));$end=min(intdiv($now,60)*60,$from+300*60);$count=0;
-  try{
-   $api=$provided&&$provided->exchange()===$rows[0]['exchange']?$provided:MarketData::provider($rows[0]['exchange'],microtime(true)+12);
-   $bars=$end>$from?$api->withBudget(12,fn()=>$api->minutes($rows[0]['symbol'],$from,$end)):[];
-   foreach($rows as $r){$state=json_decode($r['state'],true);$snapshot=json_decode($r['snapshot'],true);
-    try{$next=self::advance($snapshot,$state,$bars,$end);$next['data_error']=null;}catch(Throwable $e){$next=$state;$next['data_error']=$e->getMessage();}
-    // Backlogs keep their cursor and remain due; no missing history is skipped.
-    $checked=($next['cursor']??0)<intdiv($now,60)*60&&empty($next['data_error'])?$now-max(5,(int)setting('interval','120')):$now;
-    $u=db()->prepare('UPDATE strategy_outcomes SET state=?,last_check=? WHERE alert_id=? AND state=?');$u->execute([encode($next),$checked,$r['alert_id'],$r['state']]);$count+=$u->rowCount();
-   }
-  }catch(Throwable $e){foreach($rows as $r){$state=json_decode($r['state'],true);$state['data_error']=$e->getMessage();db()->prepare('UPDATE strategy_outcomes SET state=?,last_check=? WHERE alert_id=? AND state=?')->execute([encode($state),$now,$r['alert_id'],$r['state']]);}}
+ static function observe(string $exchange,string $symbol,float $price,int $at):int {
+  if(!is_finite($price)||$price<=0)throw new InvalidArgumentException('Invalid shared outcome price');
+  $q=db()->prepare("SELECT * FROM strategy_outcomes WHERE exchange=? AND symbol=? AND started<=? AND json_extract(state,'$.status') IN ('OPEN','PENDING_ENTRY','AMBIGUOUS')");
+  $q->execute([$exchange,$symbol,$at]);$count=0;
+  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r){$snapshot=json_decode($r['snapshot'],true);$state=json_decode($r['state'],true);
+   if(!$snapshot['trade']||!$state['targets'])continue;
+   $next=self::sharedState($r,$snapshot,$state,$at);$next=self::advancePrice($snapshot,$next,$price,$at);
+   $checked=max((int)$r['last_check'],(int)($next['sample_at']??0));
+   $u=db()->prepare('UPDATE strategy_outcomes SET state=?,last_check=? WHERE alert_id=? AND state=?');$u->execute([encode($next),$checked,$r['alert_id'],$r['state']]);$count+=$u->rowCount();
+  }
   return $count;
  }
  static function view():array {

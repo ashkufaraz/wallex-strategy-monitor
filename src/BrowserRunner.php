@@ -18,10 +18,7 @@ function browserCheck(?Wallex $api=null,?int $now=null,?string $lockPath=null):a
   }
   usort($due,fn($a,$b)=>($a['last']<=>$b['last'])?:strcmp($a['id'],$b['id']));
   setSetting('heartbeat',(string)$now);
-  StrategyOutcomes::importExisting();$outcomeDue=StrategyOutcomes::oldestDue($now);
-  if($outcomeDue!==null&&$due&&$outcomeDue<$due[0]['last']){StrategyOutcomes::tick($now,null,$api);return ['status'=>'outcomes_checked'];}
   if(!$due){
-   if(StrategyOutcomes::pending($now)){StrategyOutcomes::tick($now,null,$api);return ['status'=>'outcomes_checked'];}
    $architecture=MarketArchitecture::config();
    if($architecture['analysis_enabled']){
     ExecutionMonitor::run($api instanceof BinanceMarketDataProvider?$api:new BinanceMarketDataProvider(null,null,microtime(true)+12),$now,$architecture);
