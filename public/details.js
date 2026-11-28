@@ -178,11 +178,24 @@ const strategyDetails = {
       const expanded = new Set([...content.querySelectorAll('details[open]')].map(d => d.dataset.log));
       const statuses = {indicator_blocked:'ورود در انتظار تأیید اندیکاتورها',checked:'بررسی شد',blocked:'ابطال ستاپ یا انقضا',signal:'ورود تأیید شد',cancelled:'لغو شد',error:'خطای بررسی'};
       const latest = result.logs.find(x => x.version === item.version)?.report;
-      content.innerHTML = this.plainOverview(item) + this.signalNotice(item) + (result.architecture?.analysis_enabled ? this.conditionOverview(item,result.logs,latest)+(item.config.indicator_conditions?.enabled?this.indicators(latest?.indicator_snapshot??item.state.indicators,item.config.indicator_conditions):'')+'<details class="detail-safety"><summary>ابطال و لغو استراتژی</summary>'+this.rules((latest?.trace||[]).filter(x=>x.kind!=='transition'),true)+'</details>' : this.dashboard(item,result.logs,latest)) + outcomeUI.strategy(id) + '<h3 class="detail-history-heading">سوابق ارزیابی واقعی و پیش‌نمایش شرط‌ها</h3>' + (result.logs.length ? result.logs.map((entry, i) => {
+      const chartKey=[id,item.version,item.config.exchange||'wallex',item.config.symbol].join(':');
+      const savedChart=content.querySelector?.('[data-market-chart]');
+      const keepChart=savedChart?.dataset.marketChart===chartKey?savedChart:null;
+      if(keepChart)keepChart.remove();
+      content.innerHTML = this.signalNotice(item) + (result.architecture?.analysis_enabled ? this.conditionOverview(item,result.logs,latest)+(item.config.indicator_conditions?.enabled?this.indicators(latest?.indicator_snapshot??item.state.indicators,item.config.indicator_conditions):'')+'<details class="detail-safety"><summary>ابطال و لغو استراتژی</summary>'+this.rules((latest?.trace||[]).filter(x=>x.kind!=='transition'),true)+'</details>' : this.dashboard(item,result.logs,latest)) + outcomeUI.strategy(id) + this.plainOverview(item) + '<h3 class="detail-history-heading">سوابق ارزیابی واقعی و پیش‌نمایش شرط‌ها</h3>' + (result.logs.length ? result.logs.map((entry, i) => {
         const r = entry.report;
         return `<details data-log="${entry.id}" ${expanded.has(String(entry.id)) ? 'open' : ''}><summary>${time(r.checked)} · ${esc(statuses[r.status] || r.status)} · ${esc(r.from_stage)} → ${esc(r.stage)}${entry.version !== item.version ? ' · نسخهٔ قبلی' : ''}</summary><div>قیمت این بررسی: ${esc(r.price ?? 'دریافت نشد')} USDT</div>${r.error ? `<div class="error">${esc(r.error)} · نتیجهٔ این چرخه ثبت عملیاتی نشده است.</div>` : ''}<h4>شرط‌هایی که موتور واقعاً به آن‌ها رسید</h4>${this.rules(r.trace,true)}${(r.indicators||[]).map(x=>this.indicators(x.snapshot)).join('')}<h4>پیش‌نمایش شرط‌های مرحلهٔ پایان بررسی</h4><div class="small muted">این بخش فقط نتیجهٔ شرط‌ها روی آخرین کندل بسته‌شده است؛ به معنی اجرای انتقال نیست. شرط کندلی تا رویداد بسته‌شدن جدید منتظر می‌ماند. نتیجهٔ شرط‌های داخلی برای توضیح کامل نمایش داده می‌شود، حتی اگر موتور به‌علت نتیجهٔ شرط قبلی به آن‌ها نیاز نداشته باشد.</div>${this.rules(r.waiting,false)}${r.trade ? `<h4>برنامهٔ معامله در زمان این بررسی</h4>${this.trade(r.trade,r.action || item.config.action,r.price)}` : ''}</details>`;
       }).join('') : '<p>هنوز گزارشی ثبت نشده است. پردازشگر باید با کد جدید اجرا شود؛ پس از اولین بررسی این بخش پر می‌شود.</p>');
-      content.insertAdjacentHTML('afterbegin',`<p>${esc(exchangeUI.label(item.config.exchange))} / ${esc(item.config.symbol)}</p><button id=marketChartButton type=button>Chart / ${esc(exchangeUI.label(item.config.exchange))}</button><div id=marketChartContent></div>`);document.getElementById('marketChartButton').onclick=e=>exchangeUI.chart(e.currentTarget,item.config.exchange||'wallex',item.config.symbol);
+      content.insertAdjacentHTML('afterbegin','<div id="marketChartSlot"></div>');
+      const slot=document.getElementById('marketChartSlot');
+      if(keepChart)slot.replaceWith(keepChart);else {
+        const chart=document.createElement('details');chart.dataset.marketChart=chartKey;chart.dataset.panel='market-chart';
+        chart.innerHTML=`<summary><b>نمودار قیمت ${esc(item.config.symbol)} · ${esc(exchangeUI.label(item.config.exchange))}</b></summary><button type="button" data-chart-refresh>دریافت / تازه‌سازی نمودار</button><div data-chart-content></div>`;
+        const button=chart.querySelector('[data-chart-refresh]');
+        button.onclick=()=>exchangeUI.chart(button,item.config.exchange||'wallex',item.config.symbol,item.config.trade);
+        chart.ontoggle=()=>{if(chart.open&&!chart.dataset.requested){chart.dataset.requested='true';button.click();}};
+        slot.replaceWith(chart);
+      }
       content.dataset.loaded = 'true';
       const signals=(result.execution_signals||[]).filter(p=>p.version===item.version);
       const flow=typeof orderFlowView!=='undefined'?orderFlowView.safeRender(result.order_flow,item,signals[0]?.id):'';

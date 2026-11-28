@@ -174,7 +174,7 @@ final class StrategyOutcomes
  }
  static function view():array {
   $q=db()->prepare('SELECT * FROM strategy_outcomes WHERE alert_id>? AND started>=? ORDER BY alert_id DESC');$q->execute([(int)setting('outcomes_min_alert_id','0'),(int)setting('outcomes_since','0')]);$items=[];
-  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$items[]=['alert_id'=>(int)$r['alert_id'],'strategy_id'=>$r['strategy_id'],'version'=>$r['version'],'exchange'=>$r['exchange'],'symbol'=>$r['symbol'],'cohort'=>$r['cohort'],'started'=>(int)$r['started'],'last_check'=>(int)$r['last_check'],'snapshot'=>json_decode($r['snapshot'],true),'state'=>json_decode($r['state'],true)];
+  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$items[]=['can_manage'=>ownsAlert((int)$r['alert_id']),'alert_id'=>(int)$r['alert_id'],'strategy_id'=>$r['strategy_id'],'version'=>$r['version'],'exchange'=>$r['exchange'],'symbol'=>$r['symbol'],'cohort'=>$r['cohort'],'started'=>(int)$r['started'],'last_check'=>(int)$r['last_check'],'snapshot'=>json_decode($r['snapshot'],true),'state'=>json_decode($r['state'],true)];
   return $items;
  }
  /** One immutable baseline per strategy: earliest confirmed alert, otherwise earliest preliminary. */

@@ -17,3 +17,5 @@ console.log('Outcome cohort rates, ambiguity exclusion, filters, escaping, creat
 const duplicate={...rows[0],alert_id:10,cohort:'confirmed'};const later={...duplicate,alert_id:11,state:rows[1].state};const once=ui.summarize([rows[0],duplicate,later]);assert.strictEqual(once.all.wins,1);assert.strictEqual(once.all.losses,0);assert.strictEqual(once.all.alerts,1);assert(element('outcomeRows').innerHTML.includes('data-outcome-strategy'));
 
 assert(/<summary>[^]*?data-outcome-strategy=[^]*?<\/summary>/.test(element('outcomeRows').innerHTML));assert(element('outcomeRows').innerHTML.includes('\u062c\u0632\u0626\u06cc\u0627\u062a \u0627\u0633\u062a\u0631\u0627\u062a\u0698\u06cc'));
+
+context.exchangeUI.filter='all';ui.render([{...rows[0],can_manage:true}]);assert(element('outcomeRows').innerHTML.includes('data-delete-outcome="1"'));ui.render([{...rows[0],can_manage:false}]);assert(!element('outcomeRows').innerHTML.includes('data-delete-outcome'));
