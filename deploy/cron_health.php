@@ -9,12 +9,14 @@ $result=['now'=>time(),'heartbeat'=>$heartbeat,'heartbeat_age'=>time()-$heartbea
 if($free)flock($handle,LOCK_UN);
 else {
  $stat=fstat($handle);$locks=@file_get_contents('/proc/locks')?:'';
- preg_match_all('/^\d+:\s+FLOCK\s+ADVISORY\s+WRITE\s+(\d+)\s+\S+:(\d+)\s+/m',$locks,$matches,PREG_SET_ORDER);
- foreach($matches as $match){
-  $pid=(int)$match[1];if((int)$match[2]!==$stat['ino'])continue;
-  $exact=false;foreach(glob('/proc/'.$pid.'/fd/*')?:[] as $fd)if(@readlink($fd)===$path){$exact=true;break;}if(!$exact)continue;
+ // An orphaned child can retain an inherited flock even after its original PID exits.
+ foreach(glob('/proc/[0-9]*',GLOB_ONLYDIR)?:[] as $proc){
+  $pid=(int)basename($proc);if($pid===getmypid()||!function_exists('posix_geteuid')||@fileowner($proc)!==posix_geteuid())continue;
+  $exact=false;foreach(glob($proc.'/fd/*')?:[] as $fd)if(@readlink($fd)===$path&&str_contains(@file_get_contents($proc.'/fdinfo/'.basename($fd))?:'','FLOCK')){$exact=true;break;}if(!$exact)continue;
   $args=explode("\0",@file_get_contents('/proc/'.$pid.'/cmdline')?:'');$cwd=@readlink('/proc/'.$pid.'/cwd');$script=null;
   foreach($args as $arg)foreach(['cron.php','worker.php'] as $name)if($arg===$root.'/'.$name||($cwd===$root&&$arg===$name))$script=$name;
+  $exe=preg_replace('/ \(deleted\)$/','',@readlink($proc.'/exe')?:'');
+  if($exe===$root.'/config/candle-proxy/xray')$script='inherited-xray-lock';
   $elapsed=function_exists('shell_exec')?(int)trim((string)shell_exec('ps -o etimes= -p '.$pid)):0;
   $own=function_exists('posix_geteuid')&&@fileowner('/proc/'.$pid)===posix_geteuid();
   $holder=['pid'=>$pid,'script'=>$script,'elapsed_seconds'=>$elapsed,'same_owner'=>$own,'exact_lock_file'=>$exact];
