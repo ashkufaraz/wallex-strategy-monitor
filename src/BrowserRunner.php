@@ -5,7 +5,7 @@ require_once __DIR__.'/App.php';
 // One bounded strategy check per request; shared lock also excludes the CLI worker.
 function browserCheck(?Wallex $api=null,?int $now=null,?string $lockPath=null):array {
  $now??=time();
- $lock=fopen($lockPath??dirname(__DIR__).'/data/worker.lock','c');
+ $lock=fopen($lockPath??dirname(__DIR__).'/data/worker.lock','ce');
  if(!$lock)throw new RuntimeException('Cannot open checking lock');
  if(!flock($lock,LOCK_EX|LOCK_NB)){fclose($lock);return ['status'=>'busy'];}
  try {

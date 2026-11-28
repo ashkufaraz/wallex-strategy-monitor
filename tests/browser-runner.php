@@ -32,3 +32,10 @@ class JsonRetryWallex extends Wallex {
 $retry=new JsonRetryWallex();verify($retry->get('/test')['value']===74000&&$retry->calls===2,'malformed JSON retried without accepting corrupted data');
 $retry=new JsonRetryWallex();$retry->alwaysBad=true;try{$retry->get('/test');throw new RuntimeException('Expected JSON error');}catch(RuntimeException $e){verify(str_contains($e->getMessage(),'Invalid market JSON at /test')&&$retry->calls===2,'persistent malformed response has contextual bounded error');}
 $expired=new JsonRetryWallex(microtime(true)-1);try{$expired->get('/test');throw new RuntimeException('Expected budget error');}catch(RuntimeException $e){verify($expired->calls===0&&str_contains($e->getMessage(),'time budget'),'expired request budget prevents network access');}
+if(PHP_OS_FAMILY!=='Windows'){
+ $path=tempnam(sys_get_temp_dir(),'close-exec-lock');$h=fopen($path,'ce');flock($h,LOCK_EX);
+ $child=proc_open([PHP_BINARY,'-r','usleep(300000);'],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+ fclose($h);$second=fopen($path,'ce');$free=flock($second,LOCK_EX|LOCK_NB);
+ verify($free,'scheduler lock is not inherited by an executed child process');
+ if($free)flock($second,LOCK_UN);fclose($second);foreach($pipes as $pipe)fclose($pipe);proc_close($child);unlink($path);
+}

@@ -35,7 +35,7 @@ final class ScannerService {
  static function capitalConflict(array $c,string $version):?string {self::migrate(db());foreach(db()->query('SELECT version,config,state FROM scanner_runs')->fetchAll(PDO::FETCH_ASSOC) as $other){$oc=json_decode($other['config'],true);if($other['version']!==$version&&($oc['exchange']??'wallex')===($c['exchange']??'wallex')&&($oc['account_id']??0)===($c['account_id']??0)&&(json_decode($other['state'],true)['paper']??null)!==null)return $other['version'];}return null;}
  static function lockPath():string {$s=MarketScope::current();return dirname(__DIR__).'/data/scanner-'.$s['account_id'].'-'.$s['exchange'].'.lock';}
  static function save(array $input):array {
-  $lock=fopen(self::lockPath(),'c');if(!$lock||!flock($lock,LOCK_EX|LOCK_NB))throw new RuntimeException('Scanner is busy; retry configuration after the current observation');try{
+  $lock=fopen(self::lockPath(),'ce');if(!$lock||!flock($lock,LOCK_EX|LOCK_NB))throw new RuntimeException('Scanner is busy; retry configuration after the current observation');try{
   $c=ScannerConfig::validate($input);if(!defined('TEST_DATABASE'))ScannerConfig::operational($c);$old=self::config();$row=self::row($old);$state=json_decode($row['state'],true);
   if($state['paper']!==null&&ScannerConfig::version($old)!==ScannerConfig::version($c))throw new RuntimeException('تا تعیین تکلیف معاملهٔ آزمایشی باز، فقط فعال/غیرفعال‌کردن اسکنر مجاز است. نسخهٔ قبلی و سرمایهٔ آن حفظ می‌شود.');
   MarketScope::set('scanner_config',encode($c));self::row($c);systemLog('info','scanner.config','تنظیمات اسکنر ذخیره شد؛ سفارش واقعی ثبت نمی‌شود.',['version'=>ScannerConfig::version($c)]);return $c;
@@ -95,7 +95,7 @@ final class ScannerService {
   if(!defined('TEST_DATABASE')){try{PatternService::tick($api,$at);}catch(Throwable $e){systemLog('warning','pattern.unavailable',$e->getMessage());}}
   $now=$at??time();self::migrate(db());$c=self::config();$row=self::row($c);$state=json_decode($row['state'],true);
   if(!$c['enabled']&&$state['paper']===null)return ['status'=>'DISABLED'];
-  $lock=fopen($lockPath??self::lockPath(),'c');if(!$lock)throw new RuntimeException('Scanner lock unavailable');if(!flock($lock,LOCK_EX|LOCK_NB)){fclose($lock);return ['status'=>'BUSY'];}
+  $lock=fopen($lockPath??self::lockPath(),'ce');if(!$lock)throw new RuntimeException('Scanner lock unavailable');if(!flock($lock,LOCK_EX|LOCK_NB)){fclose($lock);return ['status'=>'BUSY'];}
   try{
    $c=self::config();$row=self::row($c);$state=json_decode($row['state'],true);
    if($now-(int)MarketScope::setting('scanner_last_attempt','0')<$c['observation_interval_seconds'])return ['status'=>'NOT_DUE'];MarketScope::set('scanner_last_attempt',(string)$now);

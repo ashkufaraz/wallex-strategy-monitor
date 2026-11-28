@@ -37,7 +37,8 @@ final class MarketData {
  static function boundary(int $at,int $seconds,string $exchange):int {$phase=self::phase($exchange,$seconds);return intdiv($at-$phase,$seconds)*$seconds+$phase;}
  static function chart(string $exchange,string $symbol,int $count=64):array {
   MarketScope::validate(['exchange'=>$exchange,'symbol'=>$symbol]);$api=self::provider($exchange,microtime(true)+15);$now=time();$sec=900;$end=self::boundary($now,$sec,$exchange);$from=$end-$count*$sec;$raw=[];$base=in_array($exchange,['nobitex','binance'],true)?900:60;$chunk=$base===900?500*$base:21600;
-  foreach(range($from,$end-1,$chunk) as $start){$r=self::history($api,['symbol'=>$symbol,'resolution'=>(string)intdiv($base,60),'from'=>$start,'to'=>min($end,$start+$chunk)]);array_push($raw,...ScannerData::udf($r));}
+  if($count<1||$count>5000)throw new InvalidArgumentException('Chart count must be between 1 and 5000');
+  for($start=$from;$start<$end;$start+=$chunk){$r=self::history($api,['symbol'=>$symbol,'resolution'=>(string)intdiv($base,60),'from'=>$start,'to'=>min($end,$start+$chunk)]);array_push($raw,...ScannerData::udf($r));}
   $bars=[];$gaps=[];for($t=$from;$t<$end;$t+=$sec){try{$part=array_values(array_filter($raw,fn($b)=>$b['time']>=$t&&$b['time']<$t+$sec));$bucket=$base===$sec?ScannerData::closed($part,$sec,$t+$sec,1):ScannerData::aggregate($part,$base,$sec,$t+$sec,1);array_push($bars,...$bucket);}catch(Throwable $e){$gaps[]=['time'=>$t,'reason'=>$e->getMessage()];}}
   return ['exchange'=>$exchange,'symbol'=>$symbol,'timeframe'=>'15m','from'=>$from,'to'=>$end,'price_unit'=>'USDT','volume_unit'=>substr($symbol,0,-4),'time_unit'=>'UTC_SECONDS','bars'=>$bars,'gaps'=>$gaps];
  }

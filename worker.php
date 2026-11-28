@@ -1,7 +1,7 @@
 <?php
 require __DIR__.'/src/App.php';
 if(PHP_SAPI!=='cli') exit;
-$lock=fopen(__DIR__.'/data/worker.lock','c');if(!flock($lock,LOCK_EX|LOCK_NB)) exit("Worker already running\n");
+$lock=fopen(__DIR__.'/data/worker.lock','ce');if(!flock($lock,LOCK_EX|LOCK_NB)) exit("Worker already running\n");
 if(!MarketArchitecture::config()['analysis_enabled'])initializeWorkerStates(time());
 
 systemLog('info','worker.started','Strategy worker started');

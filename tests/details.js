@@ -3,7 +3,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const content={innerHTML:'',textContent:'',dataset:{},querySelectorAll:()=>[]};
 const dialog={scrollTop:20};
 const sample=JSON.parse(fs.readFileSync('public/example.json','utf8'));
-const context=vm.createContext({esc,time:n=>String(n||'—'),console,
+const context=vm.createContext({esc,time:n=>String(n||'—'),console,exchangeUI:{label:x=>x||'wallex'},
  document:{getElementById:id=>id==='detailsContent'?content:dialog},
  data:{strategies:[{version:'v1',config:sample,state:{stage:'wait_break',last_check:100}}]},
  fetch:async()=>({ok:true,json:async()=>({logs:[{id:7,version:'v1',report:{checked:100,price:75000,action:'SHORT',from_stage:'a',stage:'b',status:'checked',trace:[{event:'price',kind:'transition',rule:1,condition:{left_source:{price:true},left:75000,op:'lt',right_source:76000,right:76000,result:true}}],waiting:[],trade:sample.trade}}]})})
@@ -66,3 +66,5 @@ assert(!details.conditionOverview({...linear,state:{stage:'a',setup:null}},[],nu
 const savedRule={checked:101,condition:{left_source:{price:true},right_source:10,left:12,right:10,op:'gt',result:true}};
 const savedView=details.conditionOverview({...linear,state:{...linear.state,completed_rules:{'a:1':savedRule}}},[],null);
 assert(savedView.includes('12')&&!savedView.includes('data-stage-completed="a"'));
+
+const overview=details.plainOverview({config:sample,state:{stage:sample.initial_stage}});assert(overview.includes('data-strategy-overview')&&overview.includes('75,000'));assert(!details.plainRule({left:{price:true},op:'lt',right:{candle:{field:'<img>',timeframe:'15m',offset:1}}}).includes('<img>'));
