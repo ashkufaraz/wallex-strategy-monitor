@@ -1,0 +1,27 @@
+name: Inspect scheduler lock
+on:
+  workflow_dispatch:
+    inputs:
+      recover_stale:
+        type: boolean
+        default: false
+        description: Terminate only a proven stale same-account app scheduler lock holder
+permissions:
+  contents: read
+concurrency:
+  group: production-ftp
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Inspect scheduler lock
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/public_html' }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://ashkufaraz.ir/' }}
+          RECOVER_STALE: ${{ inputs.recover_stale && 'true' || 'false' }}
+        run: python3 deploy/cron_health.py
